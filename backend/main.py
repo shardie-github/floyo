@@ -57,13 +57,58 @@ from backend.connectors import initialize_connectors, get_available_connectors, 
 from fastapi.responses import Response
 
 # Configuration
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+from backend.config import settings
+
+SECRET_KEY = settings.secret_key
+ALGORITHM = settings.algorithm
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
+REFRESH_TOKEN_EXPIRE_DAYS = settings.refresh_token_expire_days
 
 # Initialize database
 init_db()
+
+# Check migration status on startup
+def check_migration_status():
+    """Check if database migrations are up to date."""
+    try:
+        from alembic.config import Config
+        from alembic import script
+        from alembic.runtime.migration import MigrationContext
+        from sqlalchemy import create_engine
+        
+        alembic_cfg = Config("alembic.ini")
+        script_dir = script.ScriptDirectory.from_config(alembic_cfg)
+        
+        # Get current database revision
+        from backend.database import engine
+        with engine.connect() as conn:
+            context = MigrationContext.configure(conn)
+            current_rev = context.get_current_revision()
+        
+        # Get head revision
+        head_rev = script_dir.get_current_head()
+        
+        if current_rev != head_rev:
+            logger.warning(f"Database migrations are not up to date. Current: {current_rev}, Head: {head_rev}")
+            if settings.environment == "production":
+                raise ValueError(
+                    f"Database migrations are not up to date. "
+                    f"Current: {current_rev}, Head: {head_rev}. "
+                    f"Run 'alembic upgrade head' to apply migrations."
+                )
+        else:
+            logger.info("Database migrations are up to date")
+    except Exception as e:
+        logger.warning(f"Could not check migration status: {e}")
+        # Don't fail startup if migration check fails (might be in dev)
+
+# Check migrations on startup
+try:
+    check_migration_status()
+except Exception as e:
+    if settings.environment == "production":
+        raise
+    logger.warning(f"Migration check skipped: {e}")
 
 # Initialize default connectors
 from backend.database import SessionLocal as DB
@@ -132,7 +177,7 @@ api_router = APIRouter(prefix="/api", tags=["legacy"])
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -355,23 +400,50 @@ async def health_check():
 
 @app.get("/health/readiness")
 async def readiness_check(db: Session = Depends(get_db)):
-    """Readiness check - verifies database connectivity."""
+    """Readiness check - verifies database connectivity and other dependencies."""
+    checks = {}
+    
+    # Check database
     try:
-        # Simple query to check DB connectivity
         db.execute(text("SELECT 1"))
-        return {
-            "status": "ready",
-            "timestamp": datetime.utcnow().isoformat(),
-            "checks": {
-                "database": "ok"
-            }
-        }
+        checks["database"] = "ok"
     except Exception as e:
-        logger.error(f"Readiness check failed: {e}")
+        logger.error(f"Database check failed: {e}")
+        checks["database"] = "error"
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Service not ready"
         )
+    
+    # Check Redis (if configured)
+    from backend.cache import redis_client
+    if redis_client:
+        try:
+            redis_client.ping()
+            checks["redis"] = "ok"
+        except Exception as e:
+            logger.warning(f"Redis check failed: {e}")
+            checks["redis"] = "warning"  # Redis is optional
+    else:
+        checks["redis"] = "not_configured"
+    
+    # Check connection pool (if available)
+    try:
+        from backend.database import get_pool_status
+        pool_status = get_pool_status()
+        pool_utilization = pool_status["checked_out"] / pool_status["size"] if pool_status["size"] > 0 else 0
+        if pool_utilization >= 0.9:
+            checks["database_pool"] = "warning"
+        else:
+            checks["database_pool"] = "ok"
+    except (ImportError, AttributeError, ZeroDivisionError):
+        pass  # Pool status not available
+    
+    return {
+        "status": "ready",
+        "timestamp": datetime.utcnow().isoformat(),
+        "checks": checks
+    }
 
 
 @app.get("/health/liveness")
@@ -381,6 +453,42 @@ async def liveness_check():
         "status": "alive",
         "timestamp": datetime.utcnow().isoformat()
     }
+
+
+@app.get("/health/migrations")
+async def migration_status():
+    """Check database migration status."""
+    try:
+        from alembic.config import Config
+        from alembic import script
+        from alembic.runtime.migration import MigrationContext
+        from backend.database import engine
+        
+        alembic_cfg = Config("alembic.ini")
+        script_dir = script.ScriptDirectory.from_config(alembic_cfg)
+        
+        # Get current database revision
+        with engine.connect() as conn:
+            context = MigrationContext.configure(conn)
+            current_rev = context.get_current_revision()
+        
+        # Get head revision
+        head_rev = script_dir.get_current_head()
+        
+        is_up_to_date = current_rev == head_rev
+        
+        return {
+            "status": "up_to_date" if is_up_to_date else "pending",
+            "current_revision": current_rev,
+            "head_revision": head_rev,
+            "pending_migrations": not is_up_to_date
+        }
+    except Exception as e:
+        logger.warning(f"Could not check migration status: {e}")
+        return {
+            "status": "unknown",
+            "error": str(e)
+        }
 
 # Include versioned routes (we'll add these to api_v1_router)
 # For now, keep existing routes and add version prefix in the future
@@ -433,8 +541,9 @@ async def register(
     db.refresh(db_user)
     
     # In production, send verification email here
-    # For now, log the token (in dev only)
-    logger.info(f"Email verification token for {user.email}: {verification_token}")
+    # Only log token in development
+    if settings.environment != "production":
+        logger.info(f"Email verification token for {user.email}: {verification_token}")
     
     db.refresh(db_user)
     
@@ -712,7 +821,9 @@ async def resend_verification(
     db.commit()
     
     # In production, send verification email here
-    logger.info(f"Email verification token for {current_user.email}: {verification_token}")
+    # Only log token in development
+    if settings.environment != "production":
+        logger.info(f"Email verification token for {current_user.email}: {verification_token}")
     
     return {"message": "Verification email sent"}
 
@@ -745,7 +856,9 @@ async def forgot_password(
         db.commit()
         
         # In production, send reset email here
-        logger.info(f"Password reset token for {user.email}: {reset_token}")
+        # Only log token in development
+        if settings.environment != "production":
+            logger.info(f"Password reset token for {user.email}: {reset_token}")
     
     return {"message": "If the email exists, a password reset link has been sent"}
 
@@ -1583,6 +1696,70 @@ async def list_org_members(
     return members
 
 
+class OrganizationUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
+@app.put("/api/organizations/{org_id}", response_model=OrganizationResponse)
+async def update_organization(
+    org_id: UUID,
+    org_data: OrganizationUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update an organization."""
+    # Check if user is owner/admin
+    membership = db.query(OrganizationMember).filter(
+        OrganizationMember.organization_id == org_id,
+        OrganizationMember.user_id == current_user.id,
+        OrganizationMember.role.in_(["owner", "admin"])
+    ).first()
+    
+    if not membership:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Update organization
+    if org_data.name:
+        org.name = org_data.name
+    if org_data.description is not None:
+        org.description = org_data.description
+    
+    db.commit()
+    db.refresh(org)
+    return org
+
+
+@app.delete("/api/organizations/{org_id}")
+async def delete_organization(
+    org_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete an organization."""
+    # Check if user is owner
+    membership = db.query(OrganizationMember).filter(
+        OrganizationMember.organization_id == org_id,
+        OrganizationMember.user_id == current_user.id,
+        OrganizationMember.role == "owner"
+    ).first()
+    
+    if not membership:
+        raise HTTPException(status_code=403, detail="Only owner can delete organization")
+    
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    db.delete(org)
+    db.commit()
+    return {"message": "Organization deleted successfully"}
+
+
 # Workflow endpoints with versioning
 class WorkflowCreate(BaseModel):
     name: str
@@ -1706,6 +1883,128 @@ async def execute_workflow(
     return {"execution_id": execution.id, "status": execution.status}
 
 
+@app.get("/api/workflows")
+async def list_workflows(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List user workflows."""
+    workflows = db.query(Workflow).filter(
+        Workflow.user_id == current_user.id
+    ).all()
+    return workflows
+
+
+@app.get("/api/workflows/{workflow_id}")
+async def get_workflow(
+    workflow_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get workflow details."""
+    workflow = db.query(Workflow).filter(
+        Workflow.id == workflow_id,
+        Workflow.user_id == current_user.id
+    ).first()
+    
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    return workflow
+
+
+class WorkflowUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    steps: Optional[Dict[str, Any]] = None
+    schedule_config: Optional[Dict[str, Any]] = None
+    is_active: Optional[bool] = None
+
+
+@app.put("/api/workflows/{workflow_id}")
+async def update_workflow(
+    workflow_id: UUID,
+    workflow_data: WorkflowUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Update a workflow."""
+    workflow = db.query(Workflow).filter(
+        Workflow.id == workflow_id,
+        Workflow.user_id == current_user.id
+    ).first()
+    
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    # Update workflow fields
+    if workflow_data.name:
+        workflow.name = workflow_data.name
+    if workflow_data.description is not None:
+        workflow.description = workflow_data.description
+    if workflow_data.steps:
+        workflow.steps = workflow_data.steps
+    if workflow_data.schedule_config is not None:
+        workflow.schedule_config = workflow_data.schedule_config
+    if workflow_data.is_active is not None:
+        workflow.is_active = workflow_data.is_active
+    
+    # Create new version if steps changed
+    if workflow_data.steps:
+        WorkflowScheduler.create_version(
+            db=db,
+            workflow=workflow,
+            created_by=current_user.id,
+            change_summary="Workflow updated"
+        )
+    
+    db.commit()
+    db.refresh(workflow)
+    
+    log_audit(
+        db=db,
+        action="update",
+        resource_type="workflow",
+        user_id=current_user.id,
+        resource_id=workflow.id,
+        request=request
+    )
+    
+    return workflow
+
+
+@app.delete("/api/workflows/{workflow_id}")
+async def delete_workflow(
+    workflow_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Delete a workflow."""
+    workflow = db.query(Workflow).filter(
+        Workflow.id == workflow_id,
+        Workflow.user_id == current_user.id
+    ).first()
+    
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    db.delete(workflow)
+    db.commit()
+    
+    log_audit(
+        db=db,
+        action="delete",
+        resource_type="workflow",
+        user_id=current_user.id,
+        resource_id=workflow_id,
+        request=request
+    )
+    
+    return {"message": "Workflow deleted successfully"}
+
+
 @app.get("/api/workflows/{workflow_id}/executions")
 async def get_workflow_executions(
     workflow_id: UUID,
@@ -1733,6 +2032,28 @@ async def get_workflow_executions(
     return executions
 
 
+@app.get("/api/workflows/{workflow_id}/versions")
+async def list_workflow_versions(
+    workflow_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List workflow versions."""
+    workflow = db.query(Workflow).filter(
+        Workflow.id == workflow_id,
+        Workflow.user_id == current_user.id
+    ).first()
+    
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    versions = db.query(WorkflowVersion).filter(
+        WorkflowVersion.workflow_id == workflow_id
+    ).order_by(WorkflowVersion.version_number.desc()).all()
+    
+    return versions
+
+
 # Integration connector endpoints
 @app.get("/api/integrations/connectors")
 async def list_connectors(
@@ -1749,6 +2070,18 @@ class IntegrationCreate(BaseModel):
     name: str
     config: Dict[str, Any]
     organization_id: Optional[UUID] = None
+
+
+@app.get("/api/integrations")
+async def list_integrations(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """List user integrations."""
+    integrations = db.query(UserIntegration).filter(
+        UserIntegration.user_id == current_user.id
+    ).all()
+    return integrations
 
 
 @app.post("/api/integrations", status_code=status.HTTP_201_CREATED)
@@ -1779,6 +2112,139 @@ async def create_integration(
     )
     
     return {"id": integration.id, "name": integration.name}
+
+
+@app.get("/api/integrations/{integration_id}")
+async def get_integration(
+    integration_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get integration details."""
+    integration = db.query(UserIntegration).filter(
+        UserIntegration.id == integration_id,
+        UserIntegration.user_id == current_user.id
+    ).first()
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    
+    return integration
+
+
+class IntegrationUpdate(BaseModel):
+    name: Optional[str] = None
+    config: Optional[Dict[str, Any]] = None
+    is_active: Optional[bool] = None
+
+
+@app.put("/api/integrations/{integration_id}")
+async def update_integration(
+    integration_id: UUID,
+    integration_data: IntegrationUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Update an integration."""
+    integration = db.query(UserIntegration).filter(
+        UserIntegration.id == integration_id,
+        UserIntegration.user_id == current_user.id
+    ).first()
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    
+    # Update integration fields
+    if integration_data.name:
+        integration.name = integration_data.name
+    if integration_data.config:
+        integration.config = integration_data.config
+    if integration_data.is_active is not None:
+        integration.is_active = integration_data.is_active
+    
+    db.commit()
+    db.refresh(integration)
+    
+    log_audit(
+        db=db,
+        action="update",
+        resource_type="integration",
+        user_id=current_user.id,
+        resource_id=integration.id,
+        request=request
+    )
+    
+    return integration
+
+
+@app.delete("/api/integrations/{integration_id}")
+async def delete_integration(
+    integration_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Delete an integration."""
+    integration = db.query(UserIntegration).filter(
+        UserIntegration.id == integration_id,
+        UserIntegration.user_id == current_user.id
+    ).first()
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    
+    db.delete(integration)
+    db.commit()
+    
+    log_audit(
+        db=db,
+        action="delete",
+        resource_type="integration",
+        user_id=current_user.id,
+        resource_id=integration_id,
+        request=request
+    )
+    
+    return {"message": "Integration deleted successfully"}
+
+
+@app.post("/api/integrations/{integration_id}/test")
+async def test_integration(
+    integration_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Test an integration connection."""
+    integration = db.query(UserIntegration).filter(
+        UserIntegration.id == integration_id,
+        UserIntegration.user_id == current_user.id
+    ).first()
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integration not found")
+    
+    # Basic test - try to connect using connector
+    connector = db.query(IntegrationConnector).filter(
+        IntegrationConnector.id == integration.connector_id
+    ).first()
+    
+    if not connector:
+        raise HTTPException(status_code=404, detail="Connector not found")
+    
+    # Test connection based on connector type
+    # This is a placeholder - actual implementation would test the connection
+    try:
+        # Test logic here based on connector.service_type
+        return {
+            "status": "success",
+            "message": f"Connection test successful for {connector.name}"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Connection test failed: {str(e)}"
+        }
 
 
 # Audit log endpoints

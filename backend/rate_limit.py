@@ -6,13 +6,14 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import os
+from backend.config import settings
 
 # Initialize limiter
 limiter = Limiter(key_func=get_remote_address)
 
 # Rate limit configuration
-RATE_LIMIT_PER_MINUTE = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
-RATE_LIMIT_PER_HOUR = int(os.getenv("RATE_LIMIT_PER_HOUR", "1000"))
+RATE_LIMIT_PER_MINUTE = settings.rate_limit_per_minute
+RATE_LIMIT_PER_HOUR = settings.rate_limit_per_hour
 
 def get_rate_limit_exceeded_handler():
     """Get rate limit exceeded exception handler."""
