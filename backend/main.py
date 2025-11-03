@@ -822,15 +822,28 @@ async def upload_event_file(
     db: Session = Depends(get_db)
 ):
     """Upload a file and create an event."""
+    # Validate and sanitize file upload
+    from backend.upload_validation import validate_file_upload
+    
+    try:
+        file_content, sanitized_filename = await validate_file_upload(file)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"File upload validation error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File validation failed"
+        )
+    
     # Create uploads directory if it doesn't exist
     upload_dir = Path("uploads") / str(current_user.id)
     upload_dir.mkdir(parents=True, exist_ok=True)
     
     # Save file
-    file_path = upload_dir / file.filename
+    file_path = upload_dir / sanitized_filename
     with open(file_path, "wb") as f:
-        content = await file.read()
-        f.write(content)
+        f.write(file_content)
     
     # Create event
     db_event = Event(
