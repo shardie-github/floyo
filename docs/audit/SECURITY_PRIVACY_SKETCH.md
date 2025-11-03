@@ -1,328 +1,286 @@
-# Security & Privacy Surface Analysis
+# Security & Privacy Sketch
+
+**Generated:** 2024-12-19  
+**Scope:** Security threats, privacy surface, and mitigation proposals
 
 ## Top 5 Plausible Threats
 
-### 1. JWT Secret Key Compromise
-**Threat:** Attacker gains access to SECRET_KEY, can forge tokens
-**Attack Vector:** 
-- Hardcoded default key in production
-- Secret leaked in logs/repository
-- Environment variable exposed
-
+### 1. JWT Token Forgery (Critical)
+**Threat:** Attacker gains access to SECRET_KEY, can forge tokens  
+**Impact:** Unauthorized access to all user data  
+**Likelihood:** Medium (if default SECRET_KEY used)  
 **Current Mitigation:**
-- SECRET_KEY in environment variable
-- Default value "your-secret-key-change-in-production" (weak)
+- SECRET_KEY in environment variable (`backend/config.py:23`)
+- Warning in dev if default (`backend/config.py:76-81`)
+- **Gap:** No validation in production (only warns)
 
 **Proposed Mitigation:**
 - Fail startup if SECRET_KEY is default in production
 - Require strong SECRET_KEY (min 32 characters)
 - Rotate SECRET_KEY periodically
-- Use key rotation with grace period (support old + new keys)
+- Use key management service (AWS Secrets Manager, etc.)
 
-**Files:** `backend/main.py:60`
+**Effort:** S (15 minutes)  
+**Priority:** P0
 
-### 2. SQL Injection via ORM Bypass
-**Threat:** Attacker injects SQL through unsanitized input
-**Attack Vector:**
-- Raw SQL queries without parameterization
-- String concatenation in queries
-
+### 2. CSRF Attacks (High)
+**Threat:** Permissive CORS allows cross-origin requests  
+**Impact:** Unauthorized actions on behalf of users  
+**Likelihood:** Medium (if CORS misconfigured)  
 **Current Mitigation:**
-- SQLAlchemy ORM (parameterized queries)
-- No raw SQL found (except `text("SELECT 1")` in health check)
-
-**Proposed Mitigation:**
-- Audit all database queries for raw SQL
-- Use SQLAlchemy query builder exclusively
-- Add query validation
-
-**Files:** `backend/main.py:361` (health check uses `text()` safely)
-
-### 3. CORS Misconfiguration
-**Threat:** CSRF attacks, unauthorized origins
-**Attack Vector:**
-- Permissive CORS (`allow_origins=["*"]`)
-- Missing origin validation
-
-**Current Mitigation:**
-- CORS middleware configured
-- `allow_origins=["*"]` in code (permissive)
+- CORS middleware configured (`backend/main.py:178-184`)
+- Warning if `allow_origins=["*"]` in production (`backend/config.py:84-88`)
+- **Gap:** No validation in production (only warns)
 
 **Proposed Mitigation:**
 - Use `CORS_ORIGINS` env var (already in .env.example)
 - Fail startup if `allow_origins=["*"]` in production
-- Validate origins against allowlist
+- Add CSRF tokens for state-changing operations
+- Use SameSite cookies
 
-**Files:** `backend/main.py:133-139`
+**Effort:** S (30 minutes)  
+**Priority:** P0
 
-### 4. Rate Limiting Bypass (Multi-Instance)
-**Threat:** DDoS attack, resource exhaustion
-**Attack Vector:**
-- Rate limiting per-instance (not global)
-- Attacker hits multiple instances
-
+### 3. Unencrypted Integration Credentials (High)
+**Threat:** Database compromise exposes all API keys  
+**Impact:** Attacker gains access to external services (GitHub, Slack, etc.)  
+**Likelihood:** Low (requires DB compromise)  
 **Current Mitigation:**
-- `slowapi` with `get_remote_address`
-- In-memory storage (per-instance)
+- Credentials stored in JSONB (`database/models.py:328`)
+- **Gap:** No encryption
 
 **Proposed Mitigation:**
-- Use Redis-backed rate limiting
-- Global rate limit enforcement
-- Add rate limit headers to responses
+- Encrypt sensitive fields before storage (AES-256)
+- Use key management service for encryption keys
+- Rotate encryption keys periodically
+- Document encryption strategy
 
-**Files:** `backend/rate_limit.py:11`
+**Effort:** M (1-2 days)  
+**Priority:** P1
 
-### 5. Sensitive Data in Logs
-**Threat:** PII/exposed in logs, compliance violations
-**Attack Vector:**
-- Logs contain passwords, tokens, PII
-- Logs accessible to unauthorized users
-
+### 4. SQL Injection (Low)
+**Threat:** SQL injection via user input  
+**Impact:** Database compromise, data exfiltration  
+**Likelihood:** Low (SQLAlchemy ORM protects against most cases)  
 **Current Mitigation:**
-- Structured logging (JSON)
-- No obvious PII in logs found
+- SQLAlchemy ORM (parameterized queries)
+- No raw SQL in application code
+- **Gap:** Raw SQL in migration check (`backend/main.py:408` - `text("SELECT 1")`)
 
 **Proposed Mitigation:**
-- Audit all log statements for PII
-- Add log redaction for sensitive fields
-- Use log sanitization middleware
-- Document log retention policy
+- Use SQLAlchemy for all queries (no raw SQL)
+- Input validation on all endpoints
+- Regular security audits
 
-**Files:** `backend/logging_config.py`, `backend/main.py` (various log statements)
+**Effort:** S (1 hour) - Review for raw SQL  
+**Priority:** P2
+
+### 5. Rate Limiting Bypass (Medium)
+**Threat:** DDoS attack bypasses per-instance rate limiting  
+**Impact:** Server overload, service unavailable  
+**Likelihood:** Medium (if load balancer used)  
+**Current Mitigation:**
+- Per-instance rate limiting (`backend/rate_limit.py:12`)
+- **Gap:** No global rate limiting
+
+**Proposed Mitigation:**
+- Redis-backed global rate limiting
+- IP-based rate limiting + distributed tracking
+- DDoS protection (Cloudflare/WAF)
+
+**Effort:** M (4 hours)  
+**Priority:** P1
 
 ## Environment & Secret Hygiene
 
-### Missing .env.example Keys
+### .env.example Coverage
 
-**Current `.env.example` has:
-- DATABASE_URL ✓
-- SECRET_KEY ✓
-- ALGORITHM ✓
-- ACCESS_TOKEN_EXPIRE_MINUTES ✓
-- API_HOST ✓
-- API_PORT ✓
-- CORS_ORIGINS ✓
-- SUPABASE_URL (optional)
-- SUPABASE_ANON_KEY (optional)
-- SUPABASE_SERVICE_ROLE_KEY (optional)
-- NEXT_PUBLIC_API_URL ✓
+**Location:** `.env.example`  
+**Status:** ✅ Comprehensive (40 lines)
 
-**Missing from `.env.example`:**
-- `REDIS_URL` - Used by cache but not documented
-- `RATE_LIMIT_PER_MINUTE` - Used by rate limiting but not documented
-- `RATE_LIMIT_PER_HOUR` - Used by rate limiting but not documented
-- `SENTRY_DSN` - Used by Sentry but not documented
-- `ENVIRONMENT` - Used for production checks (proposed)
+**Variables Documented:**
+- `ENVIRONMENT` ✓
+- `DATABASE_URL` ✓
+- `SECRET_KEY` ✓
+- `CORS_ORIGINS` ✓
+- `REDIS_URL` ✓
+- `SENTRY_DSN` ✓
+- `NEXT_PUBLIC_API_URL` ✓
+- `SUPABASE_URL` ✓
+- `SUPABASE_ANON_KEY` ✓
+- `SUPABASE_SERVICE_ROLE_KEY` ✓
 
-**Proposed:** Add missing environment variables to `.env.example`
+**Missing Variables:** None detected
+
+### Hardcoded Secrets
+
+1. **SECRET_KEY default** - `backend/config.py:23`
+   - **Issue:** Default value `"your-secret-key-change-in-production"` in .env.example
+   - **Risk:** Token forgery if default used
+   - **Fix:** Fail startup in production if default
+
+2. **No hardcoded tokens** - ✅ Good
 
 ### Unused Secrets
 
-**None detected** - All secrets in `.env.example` are used.
+**None detected** - All secrets in .env.example are used
 
-### Hardcoded Tokens
+### Secret Rotation
 
-**Found:**
-1. **SECRET_KEY default** - `backend/main.py:60`
-   - Default: "your-secret-key-change-in-production"
-   - **Risk:** High if used in production
-   - **Fix:** Fail startup if default in production
-
-2. **No other hardcoded tokens found** ✓
-
-### Permissive CORS
-
-**Location:** `backend/main.py:133-139`
-```python
-allow_origins=["*"],  # Configure appropriately for production
-```
-**Risk:** High - CSRF attacks possible
-**Fix:** Use `CORS_ORIGINS` env var, fail startup if `["*"]` in production
+**Current:** No rotation mechanism  
+**Proposed:**
+- Document rotation process
+- Add secret rotation endpoint (admin only)
+- Monitor secret age (alert if > 90 days)
 
 ## Data Classification Map
 
 ### PII (Personally Identifiable Information)
 
-| Data Type | Storage Location | Access | Logs | Risk |
-|-----------|----------------|--------|------|------|
-| Email | `users.email` | Authenticated users | No | Low |
-| Username | `users.username` | Authenticated users | No | Low |
-| Full Name | `users.full_name` | Authenticated users | No | Low |
-| Password Hash | `users.hashed_password` | System only | No | Medium |
-| Email Verification Token | `users.email_verification_token` | System only | **Yes (dev)** | **High** |
-| Password Reset Token | `users.password_reset_token` | System only | **Yes (dev)** | **High** |
-| IP Address | `user_sessions.ip_address`, `audit_logs.ip_address` | System only | Yes | Medium |
-| User Agent | `audit_logs.user_agent` | System only | Yes | Low |
+1. **User.email** - `database/models.py:25`
+   - **Location:** PostgreSQL `users.email`
+   - **Access:** User (own), Admin (all)
+   - **Logging:** ⚠️ Email logged in dev for verification tokens (`main.py:546, 826`)
+   - **Fix:** Remove email logging in production
 
-**Issues:**
-1. **Email verification tokens logged** - `backend/main.py:437`
-   - Logs token in dev: `logger.info(f"Email verification token for {user.email}: {verification_token}")`
-   - **Risk:** High if logs accessible
-   - **Fix:** Remove logging in production, use email service
+2. **User.full_name** - `database/models.py:28`
+   - **Location:** PostgreSQL `users.full_name`
+   - **Access:** User (own), Admin (all)
+   - **Logging:** Not logged
 
-2. **Password reset tokens logged** - `backend/main.py:748`
-   - Logs token in dev: `logger.info(f"Password reset token for {user.email}: {reset_token}")`
-   - **Risk:** High if logs accessible
-   - **Fix:** Remove logging in production, use email service
+3. **Event.file_path** - `database/models.py:76`
+   - **Location:** PostgreSQL `events.file_path`
+   - **Access:** User (own)
+   - **Logging:** May contain sensitive paths
+   - **Fix:** Add path sanitization/anonymization
 
 ### Tenant-Scoped Data
 
-| Data Type | Storage Location | Isolation | Risk |
-|-----------|----------------|-----------|------|
-| Events | `events` table | `user_id` filter | Low |
-| Patterns | `patterns` table | `user_id` filter | Low |
-| Suggestions | `suggestions` table | `user_id` filter | Low |
-| Workflows | `workflows` table | `user_id` + `organization_id` filter | Medium |
-| Organizations | `organizations` table | `organization_id` filter | Medium |
+1. **Organization data** - `database/models.py:190-207`
+   - **Location:** PostgreSQL `organizations.*`
+   - **Access:** Organization members (RBAC)
+   - **Logging:** Not logged
 
-**Issues:**
-1. **Organization data isolation** - No RLS policies (application-level only)
-   - **Risk:** Medium - Application bugs could leak data
-   - **Fix:** Add database-level RLS (if using Supabase) or audit application queries
+2. **UserIntegration.config** - `database/models.py:328`
+   - **Location:** PostgreSQL `user_integrations.config`
+   - **Access:** User (own), Admin (all)
+   - **Logging:** ⚠️ Credentials stored unencrypted
+   - **Fix:** Encrypt before storage
 
-2. **Multi-tenant queries** - All queries filter by `user_id` or `organization_id`
-   - **Risk:** Low - Queries appear correctly scoped
-   - **Fix:** Add query audit to ensure all queries have user/org filters
+### Sensitive Data Flow
 
-### Sensitive Config Data
+1. **JWT Tokens**
+   - **Flow:** Generated → Sent to client → Validated on each request
+   - **Storage:** Client-side (localStorage/cookies)
+   - **Logging:** ⚠️ Token logged in dev (`main.py:546, 826` - verification tokens)
+   - **Fix:** Remove token logging in production
 
-| Data Type | Storage Location | Encryption | Risk |
-|-----------|----------------|------------|------|
-| Integration Credentials | `user_integrations.config` (JSONB) | **None** | **High** |
-| User Config | `user_configs` (JSONB) | None | Low |
-| Workflow Steps | `workflows.steps` (JSONB) | None | Low |
+2. **Password Hashes**
+   - **Flow:** User input → bcrypt hash → Stored in DB
+   - **Storage:** PostgreSQL `users.hashed_password`
+   - **Logging:** Not logged ✅
 
-**Issues:**
-1. **Integration credentials unencrypted** - `backend/connectors.py:328`
-   - Stored in `user_integrations.config` as JSONB
-   - **Risk:** High - Database compromise exposes all credentials
-   - **Fix:** Encrypt sensitive fields (access tokens, passwords) before storage
-
-2. **Sensitive fields identified** - `backend/connectors.py:200`
-   - Code identifies sensitive fields: `['access_token', 'secret_access_key', 'password', 'api_key', 'webhook_url']`
-   - **Fix:** Implement encryption for these fields
+3. **Integration Credentials**
+   - **Flow:** User input → Stored in DB (unencrypted)
+   - **Storage:** PostgreSQL `user_integrations.config`
+   - **Logging:** Not logged
+   - **Fix:** Encrypt before storage
 
 ## Log Redaction Needs
 
 ### Current Logging
 
-**Structured Logging:** ✓ (JSON format)
-**Location:** `backend/logging_config.py`
+1. **Email verification tokens** - `backend/main.py:546, 826`
+   - **Issue:** Email + token logged in dev
+   - **Risk:** Medium - If logs accessible in production
+   - **Fix:** Remove logging in production (already conditional)
 
-**Log Statements Found:**
-1. Email verification token logged (dev only) - **Needs redaction**
-2. Password reset token logged (dev only) - **Needs redaction**
-3. IP addresses logged (audit logs) - **OK** (needed for security)
-4. User agents logged (audit logs) - **OK** (needed for security)
+2. **Password reset tokens** - `backend/main.py:861`
+   - **Issue:** Email + token logged in dev
+   - **Risk:** Medium - If logs accessible in production
+   - **Fix:** Remove logging in production (already conditional)
 
-**Proposed Log Redaction:**
-- Add log sanitization middleware
-- Redact tokens, passwords, API keys from logs
-- Use environment variable to control log verbosity
+3. **File paths** - `backend/main.py:949`
+   - **Issue:** File paths may contain sensitive information
+   - **Risk:** Low - User-specific data
+   - **Fix:** Add path sanitization
 
-**Files to Modify:**
-- `backend/logging_config.py` - Add log sanitization
-- `backend/main.py:437, 748` - Remove token logging in production
+### Proposed Log Redaction
+
+1. **Email addresses** - Redact in production logs
+2. **Tokens** - Never log (already conditional)
+3. **File paths** - Sanitize sensitive directories
+4. **API keys** - Never log (mask in error messages)
 
 ## Minimal Policy/Test Proposals
 
-### 1. Security Policy Tests
+### Security Policies
 
-**File:** `tests/test_security.py` (new)
-```python
-def test_secret_key_not_default_in_production():
-    """Test that SECRET_KEY is not default in production"""
-    if os.getenv("ENVIRONMENT") == "production":
-        assert SECRET_KEY != "your-secret-key-change-in-production"
+1. **SECRET_KEY Policy**
+   - Must be 32+ characters
+   - Must not be default value
+   - Must be rotated every 90 days
+   - Must be stored in key management service
 
-def test_cors_not_permissive_in_production():
-    """Test that CORS is not permissive in production"""
-    if os.getenv("ENVIRONMENT") == "production":
-        assert "*" not in app.state.cors_origins
+2. **CORS Policy**
+   - Must not allow `["*"]` in production
+   - Must be restricted to specific origins
+   - Must be validated on startup
 
-def test_integration_credentials_encrypted():
-    """Test that integration credentials are encrypted"""
-    # Check that sensitive fields are encrypted in database
-```
+3. **Encryption Policy**
+   - All integration credentials must be encrypted
+   - Encryption keys must be rotated every 90 days
+   - Encryption keys must be stored in key management service
 
-### 2. Privacy Policy Tests
+### Security Tests
 
-**File:** `tests/test_privacy.py` (new)
-```python
-def test_no_pii_in_logs():
-    """Test that PII is not logged"""
-    # Check log files for PII patterns (emails, tokens, etc.)
+1. **SECRET_KEY Validation Test**
+   ```python
+   def test_secret_key_not_default_in_production():
+       """Test that SECRET_KEY is not default in production"""
+       if os.getenv("ENVIRONMENT") == "production":
+           assert SECRET_KEY != "your-secret-key-change-in-production"
+   ```
 
-def test_user_data_isolation():
-    """Test that users can only access their own data"""
-    # Test that user A cannot access user B's data
-```
+2. **CORS Validation Test**
+   ```python
+   def test_cors_not_permissive_in_production():
+       """Test that CORS is not permissive in production"""
+       if os.getenv("ENVIRONMENT") == "production":
+           assert "*" not in app.state.cors_origins
+   ```
 
-### 3. Data Retention Policy
+3. **Integration Credentials Encryption Test**
+   ```python
+   def test_integration_credentials_encrypted():
+       """Test that integration credentials are encrypted"""
+       # Verify encryption in database
+   ```
 
-**Current State:** No retention policy implemented
-**Proposed:**
-- Add data retention configuration
-- Implement cleanup job for old data
-- Document retention periods
+## Threat Summary
 
-**Files to Modify:**
-- `backend/main.py:1485-1516` (cleanup endpoint exists but needs policy)
+| Threat | Risk | Current Mitigation | Proposed Mitigation | Effort | Priority |
+|--------|------|-------------------|---------------------|--------|----------|
+| JWT Token Forgery | Critical | Warning in dev | Fail startup in prod | S (15m) | P0 |
+| CSRF Attacks | High | Warning in prod | Fail startup in prod | S (30m) | P0 |
+| Unencrypted Credentials | High | None | Encrypt before storage | M (1-2d) | P1 |
+| SQL Injection | Low | SQLAlchemy ORM | Review for raw SQL | S (1h) | P2 |
+| Rate Limiting Bypass | Medium | Per-instance | Redis-backed global | M (4h) | P1 |
 
-## Threat Model Summary
+## Recommendations
 
-### Attack Surface
-
-**External:**
-- API endpoints (40+ endpoints)
-- WebSocket connections
-- File uploads
-- Authentication endpoints
-
-**Internal:**
-- Database connections
-- Redis connections (optional)
-- File system (uploads)
-
-### Attack Vectors
-
-1. **Authentication Bypass** - JWT token forgery (if SECRET_KEY compromised)
-2. **SQL Injection** - Low risk (ORM used)
-3. **CSRF** - Medium risk (permissive CORS)
-4. **DDoS** - Medium risk (per-instance rate limiting)
-5. **Data Leakage** - Low risk (queries properly scoped)
-6. **Credential Theft** - High risk (unencrypted integration credentials)
-
-### Security Posture
-
-**Overall:** **Medium Risk**
-
-**Strengths:**
-- ORM prevents SQL injection
-- JWT authentication implemented
-- Rate limiting implemented
-- Structured logging
-
-**Weaknesses:**
-- Permissive CORS
-- Unencrypted integration credentials
-- Hardcoded SECRET_KEY default
-- Per-instance rate limiting
-- Token logging in dev
-
-## Recommended Security Improvements
-
-### P0 (Critical)
+### Immediate (Week 1)
 1. **Fail startup if SECRET_KEY is default in production**
-2. **Encrypt integration credentials**
-3. **Remove token logging in production**
-
-### P1 (High)
-1. **Use Redis-backed rate limiting**
 2. **Validate CORS origins in production**
-3. **Add log sanitization**
 
-### P2 (Medium)
-1. **Add database-level RLS (if using Supabase)**
-2. **Implement data retention policy**
-3. **Add security policy tests**
+### Short-term (Week 2-3)
+3. **Encrypt integration credentials**
+4. **Remove token logging in production**
+5. **Add path sanitization for logs**
+
+### Medium-term (Week 3-4)
+6. **Implement Redis-backed rate limiting**
+7. **Add security tests**
+8. **Document security policies**
+
+See `docs/audit/PR_PLAN_GUARDRAILS.md` for implementation details.

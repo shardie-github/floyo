@@ -1,22 +1,23 @@
 # Executive Summary: Meta-System Coherence & Resilience Audit
 
-**Date:** 2024-01-01
-**Scope:** Full-stack codebase (backend, frontend, database, CI/CD)
-**Methodology:** Non-destructive analysis, file-specific findings
+**Date:** 2024-12-19  
+**Scope:** Full-stack codebase (backend, frontend, database, CI/CD)  
+**Methodology:** Non-destructive analysis, file-specific findings  
+**Audit Artifacts:** 13 comprehensive reports generated
 
 ## Top 7 Risks Across Lenses
 
 ### 1. **JWT Secret Key Hardcoded Default** (Security)
-- **Impact:** High - Token forgery if default used in production
-- **Location:** `backend/main.py:60`
-- **Mitigation:** Fail startup if SECRET_KEY is default in production
+- **Impact:** Critical - Token forgery if default used in production
+- **Location:** `backend/config.py:23`, `.env.example:11`
+- **Mitigation:** Fail startup if SECRET_KEY is default in production (`backend/config.py:76-81`)
 - **Effort:** S (15 minutes)
 - **Status:** P0 - Critical
 
 ### 2. **CORS Permissive Configuration** (Security)
-- **Impact:** High - CSRF attacks possible
-- **Location:** `backend/main.py:133-139`
-- **Mitigation:** Use `CORS_ORIGINS` env var, fail startup if `["*"]` in production
+- **Impact:** Critical - CSRF attacks possible
+- **Location:** `backend/main.py:178-184`, `backend/config.py:33`
+- **Mitigation:** Use `CORS_ORIGINS` env var, fail startup if `["*"]` in production (`backend/config.py:84-88`)
 - **Effort:** S (30 minutes)
 - **Status:** P0 - Critical
 
@@ -29,7 +30,7 @@
 
 ### 4. **Unencrypted Integration Credentials** (Security/Privacy)
 - **Impact:** High - Database compromise exposes all credentials
-- **Location:** `backend/connectors.py:328`, `database/models.py:UserIntegration`
+- **Location:** `database/models.py:328` (UserIntegration.config)
 - **Mitigation:** Encrypt sensitive fields (access tokens, passwords) before storage
 - **Effort:** M (1-2 days)
 - **Status:** P1 - High
@@ -50,10 +51,17 @@
 
 ### 7. **Schema.sql Incomplete** (Architecture/Contracts)
 - **Impact:** Medium - Confusion about actual database schema
-- **Location:** `database/schema.sql` (178 lines, missing 10+ tables)
+- **Location:** `database/schema.sql` (178 lines, missing 9/17 tables)
 - **Mitigation:** Generate from models or archive, document migration-only approach
 - **Effort:** S (1 hour)
 - **Status:** P1 - High
+
+### 8. **API Versioning Not Implemented** (Architecture)
+- **Impact:** Medium - Versioning promised but not implemented
+- **Location:** `backend/api_v1.py` (empty stub, 8 lines)
+- **Mitigation:** Move routes to `/api/v1/*` or remove versioning promise
+- **Effort:** S (2 hours)
+- **Status:** P1 - Medium
 
 ## Heatmap of Hotspots
 
@@ -61,9 +69,10 @@
 
 | Path | Reason | Risk Level | Effort to Fix |
 |------|--------|------------|---------------|
-| `backend/main.py` (1,832 lines) | Monolithic file, all routes, hardcoded config, security issues | High | M (split into modules) |
-| `backend/main.py:60` | SECRET_KEY hardcoded default | Critical | S (15 min) |
-| `backend/main.py:133-139` | CORS permissive configuration | Critical | S (30 min) |
+| `backend/main.py` (2,298 lines) | Monolithic file, all 50+ routes, security issues | High | M (split into modules) |
+| `backend/config.py:23` | SECRET_KEY hardcoded default | Critical | S (15 min) |
+| `backend/main.py:178-184` | CORS permissive configuration | Critical | S (30 min) |
+| `backend/api_v1.py` | Empty stub (versioning not implemented) | Medium | S (2h) |
 | `backend/database.py` | Connection pool exhaustion risk | High | M (4-6 hours) |
 | `backend/cache.py` | Redis fallback to in-memory (no persistence) | Medium | S (document) |
 | `backend/rate_limit.py` | Per-instance rate limiting (not global) | High | M (4 hours) |
@@ -85,13 +94,13 @@
 
 ### Phase 1: Critical Security Fixes (Week 1)
 - [ ] **SECRET_KEY validation** - Fail startup if default in production
-  - **File:** `backend/main.py:60`
+  - **File:** `backend/config.py:76-81`
   - **Dependencies:** None
   - **Effort:** 15 minutes
   - **PR:** `docs/audit/PR_PLAN_GUARDRAILS.md`
 
 - [ ] **CORS validation** - Use env var, fail startup if `["*"]` in production
-  - **File:** `backend/main.py:133-139`
+  - **File:** `backend/config.py:84-88`
   - **Dependencies:** None
   - **Effort:** 30 minutes
   - **PR:** `docs/audit/PR_PLAN_GUARDRAILS.md`
@@ -200,33 +209,36 @@
 ## Summary Statistics
 
 ### Codebase Health
-- **Total Python Lines:** ~3,000 lines
-- **Largest File:** `backend/main.py` (1,832 lines) - **Monolithic**
+- **Total Python Lines:** ~5,000+ lines
+- **Largest File:** `backend/main.py` (2,298 lines) - **Monolithic** ⚠️
 - **Module Count:** 15+ backend modules
-- **Dependencies:** 25+ Python, 30+ JavaScript
+- **Dependencies:** ~25 Python, ~30 JavaScript
 - **Test Coverage:** Unknown (needs assessment)
+- **API Endpoints:** 57 endpoints implemented
 
 ### Architecture Drift
-- **ADRs vs Reality:** 2/2 aligned (FastAPI, PostgreSQL)
+- **ADRs vs Reality:** 2/2 aligned (FastAPI, PostgreSQL) ✅
 - **Documented vs Implemented:** 70% aligned
-- **Schema vs Models:** 47% aligned (8/17 tables in schema.sql)
-- **API Versioning:** 0% implemented (stub exists but unused)
+- **Schema vs Models:** 47% aligned (8/17 tables in schema.sql) ⚠️
+- **API Versioning:** 0% implemented (empty stub exists) ⚠️
+- **Feature Flags/Experiments:** Models exist but not integrated ⚠️
 
 ### Resilience Gaps
-- **SPOFs Identified:** 10 critical
-- **Guardrails Missing:** 8 critical
-- **Circuit Breakers:** 0 implemented
-- **Health Checks:** 3 implemented (basic)
+- **SPOFs Identified:** 10 critical (see `ROOT_CAUSE_AND_DRIFT_MAP.md`)
+- **Guardrails Missing:** 8 critical (see `RESILIENCE_TABLE.md`)
+- **Circuit Breakers:** 1 exists but not wired (`circuit_breaker.py`)
+- **Health Checks:** 4 implemented (`/health`, `/health/readiness`, `/health/liveness`, `/health/migrations`)
 
 ### Security Issues
-- **Critical:** 2 (SECRET_KEY, CORS)
-- **High:** 2 (unencrypted credentials, rate limiting)
-- **Medium:** 3 (token logging, permissive config, missing env vars)
+- **Critical:** 2 (SECRET_KEY default, CORS permissive) - See `SECURITY_PRIVACY_SKETCH.md`
+- **High:** 2 (unencrypted credentials, rate limiting per-instance)
+- **Medium:** 3 (token logging in dev, config validation gaps, missing encryption)
 
 ### Documentation Gaps
-- **Narrative Coherence Score:** 6/10
-- **Missing Docs:** Architecture overview, API docs, Runbook
+- **Narrative Coherence Score:** 6/10 (see `NARRATIVE_COHERENCE_SCORE.md`)
+- **Missing Docs:** Architecture overview, Runbook, Configuration guide
 - **Onboarding Time:** 2-3 days (target: 1 day)
+- **API Documentation:** ✅ Auto-generated OpenAPI/Swagger UI
 
 ## Recommended Priority Order
 
