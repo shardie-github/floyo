@@ -10,7 +10,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
     defaultOptions: {
       queries: {
         refetchOnWindowFocus: false,
-        retry: 2,
+        retry: (failureCount, error: any) => {
+          // Don't retry on 4xx errors (client errors)
+          if (error?.status >= 400 && error?.status < 500) {
+            return false
+          }
+          // Retry up to 2 times for other errors
+          return failureCount < 2
+        },
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+        staleTime: 30000, // Consider data stale after 30 seconds
+      },
+      mutations: {
+        retry: 1, // Retry mutations once on network errors
       },
     },
   }))

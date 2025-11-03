@@ -105,6 +105,7 @@ class Pattern(Base):
 
     __table_args__ = (
         Index('idx_patterns_user_extension', 'user_id', 'file_extension', unique=True),
+        Index('idx_patterns_user_updated', 'user_id', 'updated_at'),
     )
 
 
@@ -162,6 +163,11 @@ class Suggestion(Base):
     viewed_at = Column(TIMESTAMP(timezone=True), nullable=True)
 
     user = relationship("User", back_populates="suggestions")
+
+    __table_args__ = (
+        Index('idx_suggestions_user_confidence', 'user_id', 'confidence'),
+        Index('idx_suggestions_user_dismissed', 'user_id', 'is_dismissed'),
+    )
 
 
 class UserConfig(Base):
@@ -321,6 +327,10 @@ class UserIntegration(Base):
     name = Column(String(255), nullable=False)
     config = Column(JSONB, nullable=False)  # Encrypted connection credentials
     is_active = Column(Boolean, default=True)
+    
+    __table_args__ = (
+        Index('idx_user_integration_user_active', 'user_id', 'is_active'),
+    )
     last_sync_at = Column(TIMESTAMP(timezone=True), nullable=True)
     last_error = Column(Text, nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
