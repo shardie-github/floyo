@@ -1,0 +1,36 @@
+{
+  "timestamp": "2025-11-03T15:48:40.624010",
+  "backend_healthy": true,
+  "results": {
+    "frontend_backend": true,
+    "api_database": true,
+    "websocket": true,
+    "job_scheduler": true,
+    "auth_flow": true,
+    "data_export": true,
+    "organizations": true,
+    "workflows": true,
+    "integrations": true
+  },
+  "health_percentage": 100.0,
+  "healthy_count": 9,
+  "total_count": 9,
+  "heatmap": {
+    "frontend": {
+      "backend": true,
+      "websocket": true
+    },
+    "backend": {
+      "database": true,
+      "auth": true,
+      "jobs": true,
+      "organizations": true,
+      "workflows": true,
+      "integrations": true
+    },
+    "api": {
+      "export": true
+    }
+  },
+  "weakest_links": []
+}
