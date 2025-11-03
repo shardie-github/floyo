@@ -131,6 +131,10 @@ const nextConfig = {
       },
     ]
   },
+  // Enable i18n support
+  experimental: {
+    // Enable next-intl compatibility
+  },
 }
 
 module.exports = withPWA(nextConfig)

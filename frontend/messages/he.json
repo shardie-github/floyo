@@ -1,0 +1,38 @@
+{
+  "common": {
+    "welcome": "ברוכים הבאים ל-Floyo",
+    "loading": "טוען...",
+    "error": "אירעה שגיאה",
+    "save": "שמור",
+    "cancel": "בטל",
+    "delete": "מחק",
+    "edit": "ערוך",
+    "create": "צור",
+    "search": "חפש",
+    "filter": "סנן",
+    "export": "ייצא",
+    "import": "ייבא"
+  },
+  "auth": {
+    "login": "התחבר",
+    "logout": "התנתק",
+    "register": "הרשמה",
+    "email": "אימייל",
+    "password": "סיסמה",
+    "forgotPassword": "שכחת סיסמה?",
+    "rememberMe": "זכור אותי"
+  },
+  "dashboard": {
+    "title": "לוח בקרה",
+    "events": "אירועים",
+    "patterns": "דפוסים",
+    "suggestions": "הצעות",
+    "stats": "סטטיסטיקות"
+  },
+  "accessibility": {
+    "skipToContent": "דלג לתוכן הראשי",
+    "close": "סגור",
+    "menu": "תפריט",
+    "navigation": "ניווט"
+  }
+}
