@@ -13,6 +13,9 @@ import { Pagination } from './Pagination'
 import { PatternChart } from './PatternChart'
 import { EventTimeline } from './EventTimeline'
 import { LoadingSkeleton } from './LoadingSkeleton'
+import { InstallPrompt } from './InstallPrompt'
+import { OfflineIndicator } from './OfflineIndicator'
+import { ServiceWorkerUpdate } from './ServiceWorkerUpdate'
 import { useEffect, useState } from 'react'
 
 export function Dashboard() {
@@ -136,6 +139,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+      <OfflineIndicator />
       <nav className="bg-white dark:bg-gray-800 shadow-sm transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
@@ -321,6 +325,8 @@ export function Dashboard() {
           </div>
         </div>
       </main>
+      <InstallPrompt />
+      <ServiceWorkerUpdate />
     </div>
   )
 }

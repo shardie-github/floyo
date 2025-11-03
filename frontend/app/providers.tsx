@@ -1,11 +1,21 @@
 'use client'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NotificationProvider } from '@/components/NotificationProvider'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { initBackgroundSync } from '@/lib/backgroundSync'
+import { initOfflineDB } from '@/lib/offline'
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  // Initialize offline services
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      initOfflineDB().catch(console.error)
+      initBackgroundSync()
+    }
+  }, [])
+
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
