@@ -43,6 +43,9 @@ class User(Base):
     config = relationship("UserConfig", back_populates="user", uselist=False, cascade="all, delete-orphan")
     workflows = relationship("Workflow", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("UserSession", back_populates="user", cascade="all, delete-orphan")
+    organization_memberships = relationship("OrganizationMember", back_populates="user", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
+    integrations = relationship("UserIntegration", back_populates="user", cascade="all, delete-orphan")
 
 
 class UserSession(Base):
@@ -176,17 +179,173 @@ class UserConfig(Base):
     user = relationship("User", back_populates="config")
 
 
+class Organization(Base):
+    """Organization/Workspace model for multi-tenant support."""
+    __tablename__ = "organizations"
+
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    name = Column(String(255), nullable=False)
+    slug = Column(String(100), unique=True, nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    subscription_tier = Column(String(50), default="free")  # free, pro, enterprise
+    is_active = Column(Boolean, default=True)
+    settings = Column(JSONB, nullable=True)  # Organization-specific settings
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relationships
+    members = relationship("OrganizationMember", back_populates="organization", cascade="all, delete-orphan")
+    workflows_org = relationship("Workflow", back_populates="organization", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="organization", cascade="all, delete-orphan")
+
+
+class OrganizationMember(Base):
+    """Organization membership with roles."""
+    __tablename__ = "organization_members"
+
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    organization_id = Column(PGUUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(String(50), nullable=False, default="member")  # owner, admin, member, viewer
+    joined_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    organization = relationship("Organization", back_populates="members")
+    user = relationship("User", back_populates="organization_memberships")
+
+    __table_args__ = (
+        Index('idx_org_member_unique', 'organization_id', 'user_id', unique=True),
+    )
+
+
+class Role(Base):
+    """RBAC role definitions."""
+    __tablename__ = "roles"
+
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    name = Column(String(100), unique=True, nullable=False)
+    description = Column(Text, nullable=True)
+    permissions = Column(JSONB, nullable=False)  # List of permission strings
+    is_system = Column(Boolean, default=False)  # System roles can't be deleted
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class AuditLog(Base):
+    """Audit trail for all operations."""
+    __tablename__ = "audit_logs"
+
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    organization_id = Column(PGUUID(as_uuid=True), ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    action = Column(String(100), nullable=False, index=True)  # create, update, delete, login, etc.
+    resource_type = Column(String(100), nullable=False)  # event, pattern, workflow, etc.
+    resource_id = Column(PGUUID(as_uuid=True), nullable=True)
+    details = Column(JSONB, nullable=True)  # Additional context
+    ip_address = Column(String(45), nullable=True)
+    user_agent = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
+
+    organization = relationship("Organization", back_populates="audit_logs")
+    user = relationship("User", back_populates="audit_logs")
+
+    __table_args__ = (
+        Index('idx_audit_org_created', 'organization_id', 'created_at'),
+        Index('idx_audit_user_created', 'user_id', 'created_at'),
+    )
+
+
+class WorkflowVersion(Base):
+    """Workflow versioning for rollback capability."""
+    __tablename__ = "workflow_versions"
+
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    workflow_id = Column(PGUUID(as_uuid=True), ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False, index=True)
+    version_number = Column(Integer, nullable=False)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    steps = Column(JSONB, nullable=False)
+    change_summary = Column(Text, nullable=True)
+    created_by = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
+
+    workflow = relationship("Workflow", back_populates="versions")
+
+
+class WorkflowExecution(Base):
+    """Workflow execution history."""
+    __tablename__ = "workflow_executions"
+
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    workflow_id = Column(PGUUID(as_uuid=True), ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False, index=True)
+    status = Column(String(50), nullable=False, default="pending")  # pending, running, completed, failed
+    triggered_by = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    started_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    completed_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    error_message = Column(Text, nullable=True)
+    execution_log = Column(JSONB, nullable=True)  # Step-by-step execution details
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
+
+    workflow = relationship("Workflow", back_populates="executions")
+
+    __table_args__ = (
+        Index('idx_workflow_exec_status', 'workflow_id', 'status', 'created_at'),
+    )
+
+
+class IntegrationConnector(Base):
+    """Pre-built integration connectors."""
+    __tablename__ = "integration_connectors"
+
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    name = Column(String(255), nullable=False)
+    service_type = Column(String(100), nullable=False, index=True)  # github, slack, googledrive, etc.
+    description = Column(Text, nullable=True)
+    config_schema = Column(JSONB, nullable=False)  # JSON schema for configuration
+    is_active = Column(Boolean, default=True)
+    is_system = Column(Boolean, default=False)  # System connectors can't be deleted
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class UserIntegration(Base):
+    """User-configured integrations."""
+    __tablename__ = "user_integrations"
+
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    organization_id = Column(PGUUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True)
+    connector_id = Column(PGUUID(as_uuid=True), ForeignKey("integration_connectors.id", ondelete="CASCADE"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    config = Column(JSONB, nullable=False)  # Encrypted connection credentials
+    is_active = Column(Boolean, default=True)
+    last_sync_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    last_error = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="integrations")
+    organization = relationship("Organization")
+    connector = relationship("IntegrationConnector")
+
+
 class Workflow(Base):
     """Workflow model for user-defined workflows."""
     __tablename__ = "workflows"
 
     id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    organization_id = Column(PGUUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     steps = Column(JSONB, nullable=False)
+    schedule_config = Column(JSONB, nullable=True)  # Cron schedule, triggers, etc.
     is_active = Column(Boolean, default=True)
+    version = Column(Integer, default=1)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
 
     user = relationship("User", back_populates="workflows")
+    organization = relationship("Organization", back_populates="workflows_org")
+    versions = relationship("WorkflowVersion", back_populates="workflow", cascade="all, delete-orphan")
+    executions = relationship("WorkflowExecution", back_populates="workflow", cascade="all, delete-orphan")
