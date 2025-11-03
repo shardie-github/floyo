@@ -13,6 +13,9 @@ import { Pagination } from './Pagination'
 import { PatternChart } from './PatternChart'
 import { EventTimeline } from './EventTimeline'
 import { LoadingSkeleton } from './LoadingSkeleton'
+import { InstallPrompt } from './InstallPrompt'
+import { OfflineIndicator } from './OfflineIndicator'
+import { ServiceWorkerUpdate } from './ServiceWorkerUpdate'
 import { useEffect, useState } from 'react'
 
 export function Dashboard() {
@@ -63,32 +66,80 @@ export function Dashboard() {
   const patterns = patternsData?.items || []
   const events = eventsData?.items || []
 
-  // Set up WebSocket connection for realtime updates
+  // Set up WebSocket connection for realtime updates with reconnection logic
   useEffect(() => {
-    const ws = new WebSocket(`ws://localhost:8000/ws`)
+    let ws: WebSocket | null = null
+    let reconnectTimeout: NodeJS.Timeout | null = null
+    let reconnectAttempts = 0
+    const maxReconnectAttempts = 5
+    const baseReconnectDelay = 1000 // 1 second
     
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data)
-      // Refresh relevant queries on updates
-      if (message.type === 'event') {
-        queryClient.invalidateQueries({ queryKey: ['events'] })
-        queryClient.invalidateQueries({ queryKey: ['stats'] })
-      } else if (message.type === 'suggestion') {
-        queryClient.invalidateQueries({ queryKey: ['suggestions'] })
+    const connect = () => {
+      try {
+        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws'
+        ws = new WebSocket(wsUrl)
+        
+        ws.onopen = () => {
+          reconnectAttempts = 0 // Reset on successful connection
+        }
+        
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data)
+            // Refresh relevant queries on updates
+            if (message.type === 'event') {
+              queryClient.invalidateQueries({ queryKey: ['events'] })
+              queryClient.invalidateQueries({ queryKey: ['stats'] })
+            } else if (message.type === 'suggestion') {
+              queryClient.invalidateQueries({ queryKey: ['suggestions'] })
+            }
+          } catch (error) {
+            // Silently handle parse errors
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Failed to parse WebSocket message:', error)
+            }
+          }
+        }
+
+        ws.onerror = (error) => {
+          // Silently handle WebSocket errors - connection will retry automatically
+          if (process.env.NODE_ENV === 'development') {
+            console.error('WebSocket error:', error)
+          }
+        }
+
+        ws.onclose = () => {
+          // Attempt reconnection if not manually closed
+          if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++
+            const delay = baseReconnectDelay * Math.pow(2, reconnectAttempts - 1)
+            reconnectTimeout = setTimeout(() => {
+              connect()
+            }, delay)
+          }
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('WebSocket connection error:', error)
+        }
       }
     }
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error)
-    }
+    
+    connect()
 
     return () => {
-      ws.close()
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout)
+      }
+      if (ws) {
+        ws.close()
+      }
     }
   }, [queryClient])
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+      <OfflineIndicator />
       <nav className="bg-white dark:bg-gray-800 shadow-sm transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
@@ -100,7 +151,8 @@ export function Dashboard() {
               <span className="text-sm text-gray-700 dark:text-gray-300">{user?.email}</span>
               <button
                 onClick={logout}
-                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+                aria-label="Logout"
               >
                 Logout
               </button>
@@ -137,7 +189,8 @@ export function Dashboard() {
             <button
               onClick={() => generateSuggestionsMutation.mutate()}
               disabled={generateSuggestionsMutation.isPending}
-              className="px-4 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 bg-primary-600 dark:bg-primary-500 text-white rounded-md hover:bg-primary-700 dark:hover:bg-primary-600 disabled:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
+              aria-label="Generate integration suggestions"
             >
               {generateSuggestionsMutation.isPending
                 ? 'Generating...'
@@ -149,8 +202,34 @@ export function Dashboard() {
           ) : suggestions.length > 0 ? (
             <SuggestionsList suggestions={suggestions} />
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <p className="text-gray-500 dark:text-gray-400 text-center">No suggestions yet.</p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
+              <svg
+                className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No suggestions yet</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Start tracking your file usage to get personalized integration suggestions.
+              </p>
+              <div className="mt-6">
+                <button
+                  onClick={() => generateSuggestionsMutation.mutate()}
+                  disabled={generateSuggestionsMutation.isPending}
+                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
+                >
+                  Generate Suggestions
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -176,8 +255,25 @@ export function Dashboard() {
               )}
             </>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <p className="text-gray-500 dark:text-gray-400 text-center">No patterns detected yet.</p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
+              <svg
+                className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No patterns detected</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                Patterns will appear here as you use files and tools.
+              </p>
             </div>
           )}
         </div>
@@ -205,13 +301,32 @@ export function Dashboard() {
                 )}
               </>
             ) : (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-                <p className="text-gray-500 dark:text-gray-400 text-center">No events recorded yet.</p>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
+                <svg
+                  className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No events recorded</h3>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Events will appear here as you work with files.
+                </p>
               </div>
             )}
           </div>
         </div>
       </main>
+      <InstallPrompt />
+      <ServiceWorkerUpdate />
     </div>
   )
 }

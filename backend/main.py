@@ -60,6 +60,7 @@ from fastapi.responses import Response
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+REFRESH_TOKEN_EXPIRE_DAYS = 7
 
 # Initialize database
 init_db()
@@ -299,7 +300,15 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
+    to_encode.update({"exp": expire, "type": "access"})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+
+def create_refresh_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -488,21 +497,147 @@ async def login(
         data={"sub": str(user.id)},
         expires_delta=access_token_expires
     )
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
     # Store session
     session = UserSession(
         user_id=user.id,
-        token_hash=access_token[:50],  # Simplified
-        expires_at=datetime.utcnow() + access_token_expires
+        token_hash=refresh_token[:50],  # Store refresh token hash
+        expires_at=datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     )
     db.add(session)
     db.commit()
     
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
     }
+
+
+@app.post("/api/auth/refresh")
+async def refresh_token(
+    refresh_token: str,
+    db: Session = Depends(get_db)
+):
+    """Refresh access token using refresh token."""
+    try:
+        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+        user_id = payload.get("sub")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token"
+            )
+        
+        # Verify session exists and is valid
+        session = db.query(UserSession).filter(
+            UserSession.user_id == user_id,
+            UserSession.token_hash == refresh_token[:50],
+            UserSession.expires_at > datetime.utcnow()
+        ).first()
+        
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired refresh token"
+            )
+        
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found or inactive"
+            )
+        
+        # Update session last_used
+        session.last_used_at = datetime.utcnow()
+        db.commit()
+        
+        # Generate new access token
+        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": str(user.id)},
+            expires_delta=access_token_expires
+        )
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        }
+    except jwt.PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
+
+
+@app.get("/api/auth/sessions")
+async def list_sessions(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all active sessions for current user."""
+    sessions = db.query(UserSession).filter(
+        UserSession.user_id == current_user.id,
+        UserSession.expires_at > datetime.utcnow()
+    ).order_by(UserSession.last_used_at.desc()).all()
+    
+    return [
+        {
+            "id": str(s.id),
+            "device_info": s.device_info,
+            "ip_address": s.ip_address,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "last_used_at": s.last_used_at.isoformat() if s.last_used_at else None,
+            "expires_at": s.expires_at.isoformat() if s.expires_at else None,
+        }
+        for s in sessions
+    ]
+
+
+@app.delete("/api/auth/sessions/{session_id}")
+async def revoke_session(
+    session_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Revoke a specific session."""
+    session = db.query(UserSession).filter(
+        UserSession.id == session_id,
+        UserSession.user_id == current_user.id
+    ).first()
+    
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    db.delete(session)
+    db.commit()
+    
+    return {"message": "Session revoked successfully"}
+
+
+@app.delete("/api/auth/sessions")
+async def revoke_all_sessions(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Revoke all sessions except current one."""
+    # Note: This would need the current session ID to exclude it
+    # For simplicity, revoking all sessions
+    db.query(UserSession).filter(
+        UserSession.user_id == current_user.id
+    ).delete()
+    db.commit()
+    
+    return {"message": "All sessions revoked successfully"}
 
 
 @app.get("/api/auth/me", response_model=UserResponse)

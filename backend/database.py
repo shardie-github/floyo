@@ -19,7 +19,15 @@ if DATABASE_URL.startswith("sqlite"):
         poolclass=StaticPool,
     )
 else:
-    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+    # Optimize connection pooling for PostgreSQL
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,  # Verify connections before using
+        pool_size=10,  # Number of connections to maintain
+        max_overflow=20,  # Additional connections allowed beyond pool_size
+        pool_recycle=3600,  # Recycle connections after 1 hour
+        echo=False,  # Set to True for SQL logging
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
