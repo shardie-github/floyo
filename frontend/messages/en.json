@@ -1,0 +1,38 @@
+{
+  "common": {
+    "welcome": "Welcome to Floyo",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot Password?",
+    "rememberMe": "Remember me"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "events": "Events",
+    "patterns": "Patterns",
+    "suggestions": "Suggestions",
+    "stats": "Statistics"
+  },
+  "accessibility": {
+    "skipToContent": "Skip to main content",
+    "close": "Close",
+    "menu": "Menu",
+    "navigation": "Navigation"
+  }
+}
