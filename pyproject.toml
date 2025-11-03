@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "floyo"
+version = "0.1.0"
+description = "Tiny system app that suggests concrete, niche API integrations based on actual user routine"
+readme = "README.md"
+requires-python = ">=3.7"
+license = "Apache-2.0"
+authors = [
+    {name = "floyo contributors"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+]
+
+[tool.setuptools]
+packages = ["floyo"]
+
+[project.scripts]
+floyo = "floyo.cli:main"
