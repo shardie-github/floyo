@@ -1,0 +1,525 @@
+{
+  "timestamp": "2025-11-03T15:48:03.135651",
+  "findings": {
+    "orphaned_modules": [],
+    "missing_imports": [],
+    "missing_connections": [],
+    "unused_endpoints": [],
+    "unregistered_jobs": [],
+    "missing_tests": [],
+    "circular_dependencies": [],
+    "stale_dependencies": [],
+    "missing_migrations": [],
+    "broken_links": []
+  },
+  "coverage": {
+    "components": {
+      "experiments": {
+        "path": "backend/experiments.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "logging_config": {
+        "path": "backend/logging_config.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "feature_flags": {
+        "path": "backend/feature_flags.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "cache": {
+        "path": "backend/cache.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "rate_limit": {
+        "path": "backend/rate_limit.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "workflow_scheduler": {
+        "path": "backend/workflow_scheduler.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "api_v1": {
+        "path": "backend/api_v1.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "connectors": {
+        "path": "backend/connectors.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "database": {
+        "path": "backend/database.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "sentry_config": {
+        "path": "backend/sentry_config.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "fraud_scoring": {
+        "path": "backend/fraud_scoring.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "organizations": {
+        "path": "backend/organizations.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "batch_processor": {
+        "path": "backend/batch_processor.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "main": {
+        "path": "backend/main.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "rbac": {
+        "path": "backend/rbac.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "audit": {
+        "path": "backend/audit.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "export": {
+        "path": "backend/export.py",
+        "type": "backend",
+        "imports": [],
+        "exports": []
+      },
+      "LoadingSkeleton": {
+        "path": "frontend/components/LoadingSkeleton.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "Dashboard": {
+        "path": "frontend/components/Dashboard.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "EventFilters": {
+        "path": "frontend/components/EventFilters.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "OfflineIndicator": {
+        "path": "frontend/components/OfflineIndicator.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "I18nProvider": {
+        "path": "frontend/components/I18nProvider.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "InstallPrompt": {
+        "path": "frontend/components/InstallPrompt.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "NotificationProvider": {
+        "path": "frontend/components/NotificationProvider.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "PatternChart": {
+        "path": "frontend/components/PatternChart.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "Pagination": {
+        "path": "frontend/components/Pagination.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "EventTimeline": {
+        "path": "frontend/components/EventTimeline.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "LoginForm": {
+        "path": "frontend/components/LoginForm.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "EventsList": {
+        "path": "frontend/components/EventsList.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "SuggestionsList": {
+        "path": "frontend/components/SuggestionsList.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "DarkModeToggle": {
+        "path": "frontend/components/DarkModeToggle.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "ErrorBoundary": {
+        "path": "frontend/components/ErrorBoundary.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "ServiceWorkerUpdate": {
+        "path": "frontend/components/ServiceWorkerUpdate.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "PatternsList": {
+        "path": "frontend/components/PatternsList.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      },
+      "StatsCards": {
+        "path": "frontend/components/StatsCards.tsx",
+        "type": "frontend",
+        "imports": [],
+        "exports": []
+      }
+    },
+    "routes": {
+      "GET /": {
+        "method": "GET",
+        "path": "/"
+      },
+      "GET /health": {
+        "method": "GET",
+        "path": "/health"
+      },
+      "GET /health/readiness": {
+        "method": "GET",
+        "path": "/health/readiness"
+      },
+      "GET /health/liveness": {
+        "method": "GET",
+        "path": "/health/liveness"
+      },
+      "POST /api/auth/register": {
+        "method": "POST",
+        "path": "/api/auth/register"
+      },
+      "POST /api/auth/login": {
+        "method": "POST",
+        "path": "/api/auth/login"
+      },
+      "POST /api/auth/refresh": {
+        "method": "POST",
+        "path": "/api/auth/refresh"
+      },
+      "GET /api/auth/sessions": {
+        "method": "GET",
+        "path": "/api/auth/sessions"
+      },
+      "DELETE /api/auth/sessions/{session_id}": {
+        "method": "DELETE",
+        "path": "/api/auth/sessions/{session_id}"
+      },
+      "DELETE /api/auth/sessions": {
+        "method": "DELETE",
+        "path": "/api/auth/sessions"
+      },
+      "GET /api/auth/me": {
+        "method": "GET",
+        "path": "/api/auth/me"
+      },
+      "PUT /api/auth/profile": {
+        "method": "PUT",
+        "path": "/api/auth/profile"
+      },
+      "GET /api/auth/verify-email/{token}": {
+        "method": "GET",
+        "path": "/api/auth/verify-email/{token}"
+      },
+      "POST /api/auth/resend-verification": {
+        "method": "POST",
+        "path": "/api/auth/resend-verification"
+      },
+      "POST /api/auth/forgot-password": {
+        "method": "POST",
+        "path": "/api/auth/forgot-password"
+      },
+      "POST /api/auth/reset-password": {
+        "method": "POST",
+        "path": "/api/auth/reset-password"
+      },
+      "POST /api/auth/change-password": {
+        "method": "POST",
+        "path": "/api/auth/change-password"
+      },
+      "POST /api/events/upload": {
+        "method": "POST",
+        "path": "/api/events/upload"
+      },
+      "POST /api/events": {
+        "method": "POST",
+        "path": "/api/events"
+      },
+      "POST /api/events/batch": {
+        "method": "POST",
+        "path": "/api/events/batch"
+      },
+      "GET /api/events": {
+        "method": "GET",
+        "path": "/api/events"
+      },
+      "GET /api/suggestions": {
+        "method": "GET",
+        "path": "/api/suggestions"
+      },
+      "POST /api/suggestions/generate": {
+        "method": "POST",
+        "path": "/api/suggestions/generate"
+      },
+      "GET /api/patterns": {
+        "method": "GET",
+        "path": "/api/patterns"
+      },
+      "GET /api/stats": {
+        "method": "GET",
+        "path": "/api/stats"
+      },
+      "GET /api/config": {
+        "method": "GET",
+        "path": "/api/config"
+      },
+      "PUT /api/config": {
+        "method": "PUT",
+        "path": "/api/config"
+      },
+      "POST /api/suggestions/{suggestion_id}/bookmark": {
+        "method": "POST",
+        "path": "/api/suggestions/{suggestion_id}/bookmark"
+      },
+      "POST /api/suggestions/{suggestion_id}/apply": {
+        "method": "POST",
+        "path": "/api/suggestions/{suggestion_id}/apply"
+      },
+      "POST /api/suggestions/{suggestion_id}/dismiss": {
+        "method": "POST",
+        "path": "/api/suggestions/{suggestion_id}/dismiss"
+      },
+      "GET /api/patterns/export": {
+        "method": "GET",
+        "path": "/api/patterns/export"
+      },
+      "GET /api/events/export": {
+        "method": "GET",
+        "path": "/api/events/export"
+      },
+      "GET /api/data/export": {
+        "method": "GET",
+        "path": "/api/data/export"
+      },
+      "DELETE /api/data/delete": {
+        "method": "DELETE",
+        "path": "/api/data/delete"
+      },
+      "POST /api/data/retention/cleanup": {
+        "method": "POST",
+        "path": "/api/data/retention/cleanup"
+      },
+      "POST /api/organizations": {
+        "method": "POST",
+        "path": "/api/organizations"
+      },
+      "GET /api/organizations": {
+        "method": "GET",
+        "path": "/api/organizations"
+      },
+      "GET /api/organizations/{org_id}/members": {
+        "method": "GET",
+        "path": "/api/organizations/{org_id}/members"
+      },
+      "POST /api/workflows": {
+        "method": "POST",
+        "path": "/api/workflows"
+      },
+      "POST /api/workflows/{workflow_id}/rollback": {
+        "method": "POST",
+        "path": "/api/workflows/{workflow_id}/rollback"
+      },
+      "POST /api/workflows/{workflow_id}/execute": {
+        "method": "POST",
+        "path": "/api/workflows/{workflow_id}/execute"
+      },
+      "GET /api/workflows/{workflow_id}/executions": {
+        "method": "GET",
+        "path": "/api/workflows/{workflow_id}/executions"
+      },
+      "GET /api/integrations/connectors": {
+        "method": "GET",
+        "path": "/api/integrations/connectors"
+      },
+      "POST /api/integrations": {
+        "method": "POST",
+        "path": "/api/integrations"
+      },
+      "GET /api/audit-logs": {
+        "method": "GET",
+        "path": "/api/audit-logs"
+      }
+    },
+    "models": {
+      "User": {
+        "name": "User"
+      },
+      "UserSession": {
+        "name": "UserSession"
+      },
+      "Event": {
+        "name": "Event"
+      },
+      "Pattern": {
+        "name": "Pattern"
+      },
+      "FileRelationship": {
+        "name": "FileRelationship"
+      },
+      "TemporalPattern": {
+        "name": "TemporalPattern"
+      },
+      "Suggestion": {
+        "name": "Suggestion"
+      },
+      "UserConfig": {
+        "name": "UserConfig"
+      },
+      "Organization": {
+        "name": "Organization"
+      },
+      "OrganizationMember": {
+        "name": "OrganizationMember"
+      },
+      "Role": {
+        "name": "Role"
+      },
+      "AuditLog": {
+        "name": "AuditLog"
+      },
+      "WorkflowVersion": {
+        "name": "WorkflowVersion"
+      },
+      "WorkflowExecution": {
+        "name": "WorkflowExecution"
+      },
+      "IntegrationConnector": {
+        "name": "IntegrationConnector"
+      },
+      "UserIntegration": {
+        "name": "UserIntegration"
+      },
+      "Workflow": {
+        "name": "Workflow"
+      }
+    },
+    "jobs": {
+      "workflow_scheduler": {
+        "type": "workflow",
+        "registered": true
+      }
+    },
+    "tests": {
+      "test_config": {
+        "path": "tests/test_config.py",
+        "type": "pytest"
+      },
+      "test_integration": {
+        "path": "tests/test_integration.py",
+        "type": "pytest"
+      },
+      "test_watcher": {
+        "path": "tests/test_watcher.py",
+        "type": "pytest"
+      },
+      "test_rls": {
+        "path": "tests/test_rls.py",
+        "type": "pytest"
+      },
+      "test_suggester": {
+        "path": "tests/test_suggester.py",
+        "type": "pytest"
+      },
+      "test_api": {
+        "path": "tests/test_api.py",
+        "type": "pytest"
+      },
+      "test_tracker": {
+        "path": "tests/test_tracker.py",
+        "type": "pytest"
+      },
+      "test_chaos": {
+        "path": "tests/test_chaos.py",
+        "type": "pytest"
+      }
+    },
+    "connections": {}
+  },
+  "inventory": {
+    "components_count": 35,
+    "routes_count": 45,
+    "models_count": 17,
+    "jobs_count": 1,
+    "tests_count": 8,
+    "timestamp": "2025-11-03T15:48:03.135562"
+  },
+  "connectivity": {
+    "connections": {
+      "frontend_backend": true,
+      "backend_database": true,
+      "api_models": true,
+      "jobs_registered": true,
+      "tests_coverage": true
+    },
+    "health_score": 100.0,
+    "timestamp": "2025-11-03T15:48:03.135643"
+  },
+  "health_score": 100
+}
