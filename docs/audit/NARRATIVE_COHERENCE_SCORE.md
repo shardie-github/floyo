@@ -1,255 +1,205 @@
 # Narrative Coherence Score
 
-## Overall Score: 6/10
+**Generated:** 2024-12-19  
+**Scope:** Developer onboarding, documentation discoverability, and code legibility
 
-### Rationale
+## Coherence Score: 6/10
 
-**Strengths (+4 points):**
-- Clear README with installation and quick start
-- ADRs document architectural decisions
-- System diagram shows high-level architecture
-- Developer guide exists
-- User guide exists
+### Scoring Breakdown
 
-**Weaknesses (-4 points):**
-- API documentation scattered (OpenAPI generated, not documented)
-- No clear data flow diagrams for complex workflows
-- Missing architecture overview document
-- Versioning strategy unclear (api_v1.py stub)
-- No boot sequence documentation
-- Missing runbook for common operations
+| Category | Score | Weight | Weighted Score |
+|----------|-------|--------|----------------|
+| **Strategic Intent Clarity** | 7/10 | 20% | 1.4 |
+| **Architecture Documentation** | 5/10 | 20% | 1.0 |
+| **Onboarding Experience** | 6/10 | 20% | 1.2 |
+| **Code Discoverability** | 6/10 | 15% | 0.9 |
+| **API Documentation** | 8/10 | 10% | 0.8 |
+| **Runbook/Operations** | 4/10 | 10% | 0.4 |
+| **Configuration Guide** | 7/10 | 5% | 0.35 |
+
+**Total Score: 6.05/10** (rounded to 6/10)
+
+## Rationale
+
+### Strengths (What Works)
+
+1. **API Documentation** - Auto-generated OpenAPI/Swagger UI ✅
+   - Location: `/docs` endpoint
+   - Status: Comprehensive, interactive
+
+2. **Configuration Guide** - `.env.example` comprehensive ✅
+   - Location: `.env.example`
+   - Status: All variables documented
+
+3. **ADRs Present** - Architecture decisions documented ✅
+   - Location: `docs/ADRs/`
+   - Status: FastAPI, PostgreSQL decisions documented
+
+### Weaknesses (Gaps)
+
+1. **Architecture Overview Missing** - No system diagram or module map
+   - **Impact:** High - New developers struggle to understand system
+   - **Fix:** Create `docs/ARCHITECTURE.md` with module graph
+
+2. **Onboarding Time Too Long** - 2-3 days (target: 1 day)
+   - **Impact:** Medium - Slows team velocity
+   - **Fix:** Improve `docs/DEVELOPER_ONBOARDING.md`
+
+3. **Runbook Missing** - No operations playbook
+   - **Impact:** Medium - Incident response slow
+   - **Fix:** Create `docs/RUNBOOK.md`
+
+4. **Code Discoverability** - Large monolithic `main.py` (2,298 lines)
+   - **Impact:** High - Hard to find specific endpoints
+   - **Fix:** Split into route modules
+
+## Priority Documentation Gaps
+
+### High Priority (Reach +2 Score)
+
+1. **Architecture Overview** - `docs/ARCHITECTURE.md`
+   - **Content:** System diagram, module graph, data flow
+   - **Effort:** M (4-6 hours)
+   - **Impact:** +0.5 score
+
+2. **Operations Runbook** - `docs/RUNBOOK.md`
+   - **Content:** Common incidents, health checks, troubleshooting
+   - **Effort:** M (4-6 hours)
+   - **Impact:** +0.5 score
+
+3. **Developer Quick Start** - `docs/QUICKSTART.md` (exists but may need update)
+   - **Content:** 5-minute setup, first API call
+   - **Effort:** S (1-2 hours)
+   - **Impact:** +0.3 score
+
+4. **Split main.py** - `backend/routes/` modules
+   - **Content:** Route modules (auth, events, workflows, etc.)
+   - **Effort:** M (1-2 days)
+   - **Impact:** +0.7 score (code discoverability)
+
+**Total Effort:** ~2-3 days  
+**Score Improvement:** +2.0 (from 6/10 to 8/10)
+
+### Medium Priority
+
+5. **API Contract Documentation** - Export OpenAPI schema
+   - **Content:** Versioned OpenAPI schema file
+   - **Effort:** S (1 hour)
+   - **Impact:** +0.2 score
+
+6. **Configuration Guide** - `docs/CONFIGURATION.md`
+   - **Content:** Configuration schema, validation rules, env-specific config
+   - **Effort:** M (2-3 hours)
+   - **Impact:** +0.3 score
 
 ## Discoverability Assessment
 
-### Can a new dev find data flow? **Partially (4/10)**
+### Can a New Dev Find...
 
-**Finding:**
-- System diagram shows high-level components but not data flow
-- No sequence diagrams for user journeys
-- Event tracking flow not documented
-- Pattern analysis flow not documented
+1. **Data Flow?** ⚠️ Partially
+   - **Location:** Scattered across `backend/main.py`, `database/models.py`
+   - **Fix:** Add data flow diagram in `docs/ARCHITECTURE.md`
 
-**Proposed Fix:**
-- Add sequence diagrams to `docs/ARCHITECTURE.md`
-- Document data flow: CLI → API → DB → Pattern Analysis → Suggestions
-- Add flow diagrams for: registration, event tracking, workflow execution
+2. **Boot Path?** ✅ Yes
+   - **Location:** `backend/main.py:120-171` (FastAPI app initialization)
+   - **Status:** Clear entry point
 
-### Can a new dev find boot path? **Good (7/10)**
+3. **Run Commands?** ✅ Yes
+   - **Location:** `README.md`, `docs/QUICKSTART.md`
+   - **Status:** Documented
 
-**Finding:**
-- `README.md` has installation steps
-- `docker-compose.yml` shows service dependencies
-- `backend/main.py` shows initialization order
-- Missing: startup sequence documentation, environment variable requirements
+4. **API Endpoints?** ✅ Yes
+   - **Location:** `/docs` (Swagger UI), `backend/main.py`
+   - **Status:** Auto-generated docs
 
-**Proposed Fix:**
-- Add `docs/BOOT_SEQUENCE.md` with startup order
-- Document required vs optional environment variables
-- Add troubleshooting guide for common startup issues
+5. **Database Schema?** ⚠️ Partially
+   - **Location:** `database/models.py`, `database/schema.sql` (incomplete)
+   - **Fix:** Generate complete schema from models
 
-### Can a new dev find run commands? **Good (7/10)**
+6. **Configuration?** ✅ Yes
+   - **Location:** `.env.example`, `backend/config.py`
+   - **Status:** Comprehensive
 
-**Finding:**
-- `README.md` has quick start commands
-- `package.json` has npm scripts
-- `docker-compose.yml` shows service commands
-- Missing: development workflow, testing commands, deployment commands
+## Critical Logic Documentation
 
-**Proposed Fix:**
-- Add `docs/DEVELOPMENT.md` with common commands
-- Document testing workflow
-- Add deployment checklist
+### Undocumented Critical Logic
 
-## Priority Doc Patches to Reach +2 Score (8/10)
+1. **JWT Token Validation** - `backend/main.py:361-382`
+   - **Issue:** No comments explaining token validation flow
+   - **Fix:** Add docstring explaining JWT validation
 
-### 1. Architecture Overview Document
-**File:** `docs/ARCHITECTURE.md` (new)
-**Content:**
-- System overview with data flow
-- Component responsibilities
-- Technology stack
-- Deployment architecture
-- Sequence diagrams for key flows
+2. **Workflow Execution** - `backend/workflow_scheduler.py:125-174`
+   - **Issue:** No documentation on workflow execution model
+   - **Fix:** Add docstring explaining execution flow
 
-**Effort:** M (1-2 days)
+3. **Batch Event Processing** - `backend/batch_processor.py:8-45`
+   - **Issue:** No documentation on transaction handling
+   - **Fix:** Add docstring explaining batch processing
 
-### 2. Boot Sequence Documentation
-**File:** `docs/BOOT_SEQUENCE.md` (new)
-**Content:**
-- Startup order (database → backend → frontend)
-- Required environment variables
-- Health check endpoints
-- Troubleshooting common startup issues
+4. **Circuit Breaker** - `backend/circuit_breaker.py` (not used)
+   - **Issue:** Circuit breaker exists but not documented
+   - **Fix:** Document why it's not used or wire it
 
-**Effort:** S (0.5 days)
+## README/ARCHITECTURE Sections to Add
 
-### 3. API Documentation
-**File:** `docs/API.md` (new)
-**Content:**
-- API versioning strategy (explain api_v1.py stub)
-- Authentication flow
-- Endpoint catalog (reference OpenAPI)
-- Rate limiting
-- Error handling
-
-**Effort:** M (1 day)
-
-### 4. Data Flow Diagrams
-**File:** `docs/DATA_FLOW.md` (new)
-**Content:**
-- Event tracking flow
-- Pattern analysis flow
-- Suggestion generation flow
-- Workflow execution flow
-
-**Effort:** S (0.5 days)
-
-### 5. Development Workflow
-**File:** `docs/DEVELOPMENT.md` (new)
-**Content:**
-- Local setup
-- Testing workflow
-- Code organization
-- Common commands
-- Debugging tips
-
-**Effort:** S (0.5 days)
-
-### 6. Runbook for Operations
-**File:** `docs/RUNBOOK.md` (new)
-**Content:**
-- Common operations (deploy, rollback, backup)
-- Troubleshooting guide
-- Monitoring setup
-- Incident response
-
-**Effort:** M (1 day)
-
-## Critical Logic Lacking Documentation
-
-### 1. Pattern Analysis Algorithm
-**File:** `floyo/suggester.py`, `backend/main.py:1087-1104`
-**Issue:** Suggestion generation logic not documented
-**Proposed:** Add docstring explaining algorithm, add to `docs/ALGORITHMS.md`
-
-### 2. Workflow Execution Logic
-**File:** `backend/workflow_scheduler.py`
-**Issue:** Cron logic and execution steps not documented
-**Proposed:** Add docstring, add sequence diagram
-
-### 3. Rate Limiting Strategy
-**File:** `backend/rate_limit.py`
-**Issue:** Rate limits and per-instance behavior not documented
-**Proposed:** Add to `docs/API.md`, document Redis-backed option
-
-### 4. Cache Strategy
-**File:** `backend/cache.py`
-**Issue:** Cache TTL, invalidation strategy not documented
-**Proposed:** Add to `docs/ARCHITECTURE.md`, document cache keys
-
-### 5. Database Schema Evolution
-**File:** `database/models.py`, `migrations/`
-**Issue:** Migration strategy and schema evolution not documented
-**Proposed:** Add to `docs/DATABASE.md`, document migration process
-
-## Documentation Gaps by Category
-
-### Architecture Documentation
-- [ ] Complete architecture overview
-- [ ] Data flow diagrams
-- [x] System diagram (exists but incomplete)
-- [ ] Deployment architecture
-- [ ] Scaling strategy
-
-### API Documentation
-- [x] OpenAPI/Swagger (auto-generated)
-- [ ] API versioning strategy
-- [ ] Authentication flow
-- [ ] Rate limiting documentation
-- [ ] Error handling guide
-
-### Development Documentation
-- [x] Developer guide (exists)
-- [ ] Development workflow
-- [ ] Testing strategy
-- [ ] Code organization
-- [ ] Debugging guide
-
-### Operations Documentation
-- [ ] Runbook
-- [ ] Monitoring setup
-- [ ] Backup/restore procedures
-- [ ] Incident response
-- [ ] Troubleshooting guide
-
-### Algorithm Documentation
-- [ ] Pattern analysis algorithm
-- [ ] Suggestion generation algorithm
-- [ ] Workflow execution logic
-- [ ] Fraud scoring algorithm (if implemented)
-
-## Proposed README Sections
-
-### Add to `README.md`:
+### README.md Enhancements
 
 1. **Architecture Overview**
-   - Link to `docs/ARCHITECTURE.md`
-   - Quick system diagram
+   ```markdown
+   ## Architecture
+   
+   Floyo is a full-stack application with:
+   - **Backend:** FastAPI (Python) - REST API + WebSocket
+   - **Frontend:** Next.js (React/TypeScript) - PWA
+   - **Database:** PostgreSQL 15 - SQLAlchemy ORM
+   - **Cache:** Redis (optional, falls back to in-memory)
+   ```
 
-2. **Development**
-   - Link to `docs/DEVELOPMENT.md`
-   - Quick start commands
+2. **Quick Start Section**
+   ```markdown
+   ## Quick Start
+   
+   1. Clone repository
+   2. Copy `.env.example` to `.env`
+   3. Run `docker-compose up`
+   4. Visit http://localhost:3000
+   ```
 
-3. **API Documentation**
-   - Link to `/docs` (Swagger UI)
-   - Link to `docs/API.md`
+3. **Development Workflow**
+   ```markdown
+   ## Development
+   
+   - Backend: `cd backend && uvicorn main:app --reload`
+   - Frontend: `cd frontend && npm run dev`
+   - Tests: `pytest tests/`
+   ```
 
-4. **Deployment**
-   - Link to `docs/DEPLOYMENT.md`
-   - Quick deployment commands
+### ARCHITECTURE.md (New File)
 
-## Human Legibility Checklist
+**Content:**
+- System diagram
+- Module dependency graph
+- Data flow diagram
+- Technology stack
+- Deployment architecture
 
-### Code Comments
-- [ ] Complex algorithms documented (pattern analysis, suggestion generation)
-- [ ] Business logic explained (workflow execution)
-- [ ] Configuration options documented (env vars)
-- [ ] Error handling documented (exception handling)
+## Improvement Roadmap
 
-### Documentation Structure
-- [x] README exists and is clear
-- [x] ADRs exist for key decisions
-- [ ] Architecture overview exists
-- [x] Developer guide exists
-- [x] User guide exists
-- [ ] API documentation exists (needs expansion)
-- [ ] Operations runbook exists
+### Week 1: Critical Docs
+- [ ] Create `docs/ARCHITECTURE.md` (system diagram)
+- [ ] Update `README.md` with architecture overview
+- [ ] Add docstrings to critical logic
 
-### Onboarding Time Estimate
+### Week 2: Operations Docs
+- [ ] Create `docs/RUNBOOK.md` (incident response)
+- [ ] Create `docs/CONFIGURATION.md` (config guide)
+- [ ] Export OpenAPI schema
 
-**Current:** 2-3 days for a new developer to understand the system
-**Target:** 1 day for a new developer to understand the system
+### Week 3: Code Organization
+- [ ] Split `main.py` into route modules
+- [ ] Add module-level docstrings
+- [ ] Generate complete database schema
 
-**Gaps:**
-- Missing architecture overview
-- Missing data flow diagrams
-- Missing development workflow
-- Missing API documentation
-
-**Proposed Fixes:**
-- Add architecture overview (1 day)
-- Add data flow diagrams (0.5 days)
-- Add development workflow (0.5 days)
-- Expand API documentation (1 day)
-
-## Narrative Coherence Score Breakdown
-
-| Category | Score | Max | Notes |
-|----------|-------|-----|-------|
-| README Quality | 8 | 10 | Good quick start, missing architecture overview |
-| Architecture Docs | 5 | 10 | ADRs exist, but no overview document |
-| API Documentation | 6 | 10 | OpenAPI exists, but no narrative docs |
-| Development Docs | 7 | 10 | Developer guide exists, but missing workflow |
-| Operations Docs | 3 | 10 | No runbook, no troubleshooting guide |
-| Code Comments | 6 | 10 | Some comments, but complex logic undocumented |
-| **Total** | **6.0** | **10** | **Needs improvement in operations and architecture docs** |
+**Target Score:** 8/10 (from 6/10)  
+**Effort:** ~2-3 weeks  
+**Impact:** Faster onboarding, better maintainability

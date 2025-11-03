@@ -1,10 +1,12 @@
 """Database connection and session management."""
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 import os
+from typing import Generator
 from backend.config import settings
+from backend.circuit_breaker import db_circuit_breaker
 
 # Database URL from settings
 DATABASE_URL = settings.database_url
@@ -48,13 +50,66 @@ def init_db():
     Base.metadata.create_all(bind=engine)
 
 
-def get_db() -> Session:
-    """Get database session."""
-    # Note: Circuit breaker protection is available but not applied here
-    # due to generator function complexity. Circuit breaker can be applied
-    # at the endpoint level if needed.
-    db = SessionLocal()
+def get_db() -> Generator[Session, None, None]:
+    """
+    Get database session with circuit breaker protection.
+    
+    This generator function yields a database session and ensures proper cleanup.
+    The circuit breaker protects against cascading failures when the database is unavailable.
+    """
+    # Check circuit breaker state before creating session
+    if db_circuit_breaker.state == "open":
+        # Check if timeout has passed
+        import time
+        if db_circuit_breaker.last_failure_time and \
+           time.time() - db_circuit_breaker.last_failure_time > db_circuit_breaker.timeout:
+            db_circuit_breaker.state = "half_open"
+            from backend.logging_config import get_logger
+            logger = get_logger(__name__)
+            logger.info("Circuit breaker transitioning to half_open for database")
+        else:
+            from backend.logging_config import get_logger
+            logger = get_logger(__name__)
+            logger.warning("Circuit breaker is open for database - request rejected")
+            raise Exception("Circuit breaker is open - database service unavailable")
+    
+    # Try to create session
+    db = None
     try:
+        db = SessionLocal()
+        
+        # Test connection
+        db.execute(text("SELECT 1"))
+        
+        # Success - reset circuit breaker if in half_open
+        if db_circuit_breaker.state == "half_open":
+            db_circuit_breaker.state = "closed"
+            db_circuit_breaker.failure_count = 0
+            from backend.logging_config import get_logger
+            logger = get_logger(__name__)
+            logger.info("Circuit breaker closed for database after successful request")
+        
         yield db
+    except Exception as e:
+        # Failure - increment failure count
+        import time
+        db_circuit_breaker.failure_count += 1
+        db_circuit_breaker.last_failure_time = time.time()
+        
+        if db_circuit_breaker.failure_count >= db_circuit_breaker.failure_threshold:
+            db_circuit_breaker.state = "open"
+            from backend.logging_config import get_logger
+            logger = get_logger(__name__)
+            logger.error(
+                f"Circuit breaker opened for database "
+                f"after {db_circuit_breaker.failure_count} failures"
+            )
+        
+        # Close session if it was created
+        if db is not None:
+            db.close()
+        
+        raise
     finally:
-        db.close()
+        if db is not None:
+            db.close()

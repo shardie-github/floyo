@@ -490,6 +490,114 @@ async def migration_status():
             "error": str(e)
         }
 
+
+@app.get("/health/detailed")
+async def detailed_health_check(db: Session = Depends(get_db)):
+    """Detailed health check with all component status."""
+    from backend.database import get_pool_status
+    from backend.cache import redis_client
+    from backend.circuit_breaker import db_circuit_breaker
+    
+    checks = {}
+    
+    # Database
+    try:
+        db.execute(text("SELECT 1"))
+        checks["database"] = {
+            "status": "ok",
+            "message": "Database connection successful"
+        }
+    except Exception as e:
+        checks["database"] = {
+            "status": "error",
+            "message": str(e)
+        }
+    
+    # Connection pool
+    try:
+        pool_status = get_pool_status()
+        pool_size = pool_status.get("size", 0)
+        checked_out = pool_status.get("checked_out", 0)
+        if pool_size > 0:
+            utilization = checked_out / pool_size
+            checks["database_pool"] = {
+                "status": "ok" if utilization < 0.9 else "warning",
+                "utilization": round(utilization, 3),
+                "checked_out": checked_out,
+                "size": pool_size,
+                "available": pool_size - checked_out
+            }
+        else:
+            checks["database_pool"] = {"status": "unknown"}
+    except Exception as e:
+        checks["database_pool"] = {"status": "error", "message": str(e)}
+    
+    # Circuit breaker
+    try:
+        checks["circuit_breaker"] = {
+            "status": "ok" if db_circuit_breaker.state == "closed" else "warning",
+            "state": db_circuit_breaker.state,
+            "failure_count": db_circuit_breaker.failure_count
+        }
+    except Exception:
+        checks["circuit_breaker"] = {"status": "unknown"}
+    
+    # Redis
+    if redis_client:
+        try:
+            redis_client.ping()
+            checks["redis"] = {
+                "status": "ok",
+                "message": "Redis connection successful"
+            }
+        except Exception as e:
+            checks["redis"] = {
+                "status": "warning",
+                "message": str(e)
+            }
+    else:
+        checks["redis"] = {"status": "not_configured"}
+    
+    # Cache
+    from backend.cache import get as cache_get
+    try:
+        test_key = "health_check_test"
+        test_value = {"test": True}
+        from backend.cache import set as cache_set, delete as cache_delete
+        cache_set(test_key, test_value, ttl=1)
+        cached = cache_get(test_key)
+        cache_delete(test_key)
+        checks["cache"] = {
+            "status": "ok" if cached else "warning",
+            "backend": "redis" if redis_client else "memory"
+        }
+    except Exception as e:
+        checks["cache"] = {"status": "error", "message": str(e)}
+    
+    # Rate limiter
+    from backend.rate_limit import limiter
+    try:
+        # Check if Redis is being used for rate limiting
+        using_redis = hasattr(limiter, "storage") and limiter.storage is not None
+        checks["rate_limiter"] = {
+            "status": "ok",
+            "backend": "redis" if using_redis else "memory"
+        }
+    except Exception:
+        checks["rate_limiter"] = {"status": "unknown"}
+    
+    overall_status = "ok"
+    if any(c.get("status") == "error" for c in checks.values() if isinstance(c, dict)):
+        overall_status = "error"
+    elif any(c.get("status") == "warning" for c in checks.values() if isinstance(c, dict)):
+        overall_status = "warning"
+    
+    return {
+        "status": overall_status,
+        "timestamp": datetime.utcnow().isoformat(),
+        "checks": checks
+    }
+
 # Include versioned routes (we'll add these to api_v1_router)
 # For now, keep existing routes and add version prefix in the future
 

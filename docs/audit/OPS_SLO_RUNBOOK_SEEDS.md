@@ -1,400 +1,272 @@
-# Operations: SLO, Observability & Runbook Seeds
+# Ops SLO & Runbook Seeds
+
+**Generated:** 2024-12-19  
+**Scope:** SLOs, health checks, observability, and incident response
 
 ## Draft SLOs (Service Level Objectives)
 
 ### API Availability
 
-**SLO:** 99.9% uptime (8.76 hours downtime/year)
-**SLA:** 99.5% uptime (43.8 hours downtime/year)
+**Target:** 99.9% uptime (8.76 hours downtime/year)  
+**Measurement:** `GET /health` returns 200  
+**Error Budget:** 0.1% (52.56 minutes/year)
 
-**Measurement:**
-- Health check endpoint: `/health`
-- Readiness check: `/health/readiness`
-- Liveness check: `/health/liveness`
+**Current Status:**
+- Health check exists: `GET /health` (`backend/main.py:391`)
+- Readiness check exists: `GET /health/readiness` (`backend/main.py:401`)
+- Liveness check exists: `GET /health/liveness` (`backend/main.py:449`)
 
-**Error Budget:** 0.1% (52.56 minutes/month)
-
-**Current State:**
-- Health checks exist ✓
-- No SLO monitoring implemented
-- **Proposed:** Add SLO monitoring (Prometheus + Grafana)
+**Gaps:**
+- No SLO tracking/monitoring
+- No error budget tracking
+- No alerting on SLO violations
 
 ### API Latency
 
-**SLO:** 95th percentile latency < 200ms
-**SLA:** 99th percentile latency < 500ms
+**Target:** P95 < 200ms, P99 < 500ms  
+**Measurement:** Endpoint response time  
+**Error Budget:** 5% of requests exceed thresholds
 
-**Measurement:**
-- Endpoint response times
-- Database query times
-- Cache hit rates
+**Current Status:**
+- No latency tracking
+- No performance monitoring
 
-**Error Budget:** 5% of requests can exceed 200ms
-
-**Current State:**
+**Gaps:**
+- No metrics collection
 - No latency monitoring
-- **Proposed:** Add APM (Application Performance Monitoring)
+- No performance alerts
 
-### API Error Rate
+### Data Consistency
 
-**SLO:** Error rate < 0.1% (1 in 1000 requests)
-**SLA:** Error rate < 0.5% (1 in 200 requests)
+**Target:** 99.99% consistency (eventual consistency acceptable)  
+**Measurement:** Database replication lag < 100ms  
+**Error Budget:** 0.01% (5.26 minutes/year)
 
-**Measurement:**
-- 4xx/5xx response codes
-- Exception rates
-- Database errors
+**Current Status:**
+- Single database instance (no replication)
+- No replication lag monitoring
 
-**Error Budget:** 0.1% of requests can fail
-
-**Current State:**
-- Sentry configured for error tracking
-- **Proposed:** Add error rate monitoring
-
-### Database Performance
-
-**SLO:** Database query time < 100ms (95th percentile)
-**SLA:** Database query time < 500ms (99th percentile)
-
-**Measurement:**
-- Query execution times
-- Connection pool utilization
-- Slow query log
-
-**Error Budget:** 5% of queries can exceed 100ms
-
-**Current State:**
-- No database monitoring
-- **Proposed:** Add database performance monitoring
+**Gaps:**
+- No replication
+- No consistency monitoring
 
 ## Health Check Endpoints
 
-### Current Implementation
+### Existing Health Checks
 
-**Files:** `backend/main.py:346-383`
+1. **`GET /health`** - Basic health check
+   - **Location:** `backend/main.py:391`
+   - **Status:** Returns `{"status": "healthy", "timestamp": "...", "version": "1.0.0"}`
+   - **Use Case:** Load balancer health check
 
-1. **`/health`** - Basic health check
-   - Returns: `{"status": "healthy", "timestamp": "...", "version": "1.0.0"}`
-   - **Status:** ✓ Implemented
+2. **`GET /health/readiness`** - Readiness check
+   - **Location:** `backend/main.py:401`
+   - **Status:** Checks database, Redis, connection pool
+   - **Use Case:** Kubernetes readiness probe
 
-2. **`/health/readiness`** - Readiness check
-   - Checks: Database connectivity
-   - Returns: `{"status": "ready", "checks": {"database": "ok"}}`
-   - **Status:** ✓ Implemented (checks database only)
+3. **`GET /health/liveness`** - Liveness check
+   - **Location:** `backend/main.py:449`
+   - **Status:** Returns `{"status": "alive", "timestamp": "..."}`
+   - **Use Case:** Kubernetes liveness probe
 
-3. **`/health/liveness`** - Liveness check
-   - Returns: `{"status": "alive", "timestamp": "..."}`
-   - **Status:** ✓ Implemented
+4. **`GET /health/migrations`** - Migration status
+   - **Location:** `backend/main.py:458`
+   - **Status:** ✅ Exists
+   - **Use Case:** Check schema consistency
 
-### Proposed Enhancements
+### Proposed Health Checks
 
-**Add to `/health/readiness`:**
-- Redis connectivity (if Redis configured)
-- Database connection pool status
-- Migration status (pending migrations)
+5. **`GET /health/detailed`** - Detailed health check
+   - **Content:** All component status (DB, Redis, cache, rate limiter)
+   - **Effort:** S (1 hour)
 
-**Add to `/health`:**
-- Component status (database, cache, etc.)
-- Uptime metrics
-- Version information
+6. **`GET /health/metrics`** - Prometheus metrics
+   - **Content:** Prometheus-compatible metrics
+   - **Effort:** M (2-3 hours)
 
-**Example Enhanced Response:**
-```json
-{
-  "status": "healthy",
-  "timestamp": "2024-01-01T00:00:00Z",
-  "version": "1.0.0",
-  "components": {
-    "database": "ok",
-    "cache": "ok",
-    "redis": "ok"
-  },
-  "uptime_seconds": 3600
-}
-```
+## Log/Metric/Tracing Points
 
-## Metrics, Logs & Tracing Points
+### Current Logging
 
-### Current Observability
+**Location:** `backend/logging_config.py`
 
-**Logging:**
-- Structured logging (JSON) - `backend/logging_config.py`
-- Sentry error tracking - `backend/sentry_config.py`
-- **Missing:** Metrics, tracing
+**Logged:**
+- Application logs (INFO, WARNING, ERROR)
+- Error tracking (Sentry integration)
+- Audit logs (`backend/audit.py`)
+
+**Gaps:**
+- No structured logging (JSON)
+- No log aggregation
+- No distributed tracing
 
 ### Proposed Metrics
 
-**Application Metrics:**
-- Request count (per endpoint)
-- Request latency (per endpoint)
-- Error rate (per endpoint)
-- Authentication failures
-- Rate limit hits
+1. **Request Metrics**
+   - Request count (by endpoint, method, status)
+   - Request latency (P50, P95, P99)
+   - Error rate (by endpoint)
 
-**Database Metrics:**
-- Connection pool size/utilization
-- Query execution time
-- Slow queries
-- Transaction count
+2. **Database Metrics**
+   - Connection pool utilization
+   - Query latency
+   - Transaction count
 
-**Cache Metrics:**
-- Cache hit rate
-- Cache miss rate
-- Cache eviction rate
-- Redis connection status
+3. **Cache Metrics**
+   - Cache hit rate
+   - Cache miss rate
+   - Cache size
 
-**System Metrics:**
-- CPU usage
-- Memory usage
-- Disk I/O
-- Network I/O
+4. **Rate Limiting Metrics**
+   - Rate limit hits
+   - Rate limit bypasses
 
-**Proposed Tools:**
-- **Prometheus** - Metrics collection
-- **Grafana** - Metrics visualization
-- **Jaeger** - Distributed tracing
-- **ELK Stack** - Log aggregation
+### Proposed Tracing
 
-### Logging Points
-
-**Current Logging:**
-- Email verification tokens (dev only) - **Remove in production**
-- Password reset tokens (dev only) - **Remove in production**
-- Error logs via Sentry
-- **Missing:** Request logging, audit logging (partially implemented)
-
-**Proposed Logging:**
-- Request/response logging (with PII redaction)
-- Authentication events
-- Authorization failures
-- Data access events
-- Configuration changes
-
-**Files to Modify:**
-- `backend/logging_config.py` - Add request logging middleware
-- `backend/main.py` - Remove token logging in production
-
-### Tracing Points
-
-**Current State:** No tracing implemented
-
-**Proposed Tracing:**
-- HTTP request/response
-- Database queries
-- Cache operations
-- External API calls (integrations)
-- Workflow execution
-
-**Proposed Tool:** OpenTelemetry + Jaeger
-
-## Runbook Seeds
-
-### 1. Deployment
-
-**File:** `docs/RUNBOOK.md` (new)
-
-**Deployment Steps:**
-1. Run database migrations (`alembic upgrade head`)
-2. Check migration status
-3. Verify environment variables
-4. Build Docker images
-5. Deploy backend service
-6. Deploy frontend service
-7. Verify health checks
-8. Run smoke tests
-
-**Rollback Steps:**
-1. Identify previous version
-2. Rollback database migrations (if needed)
-3. Deploy previous Docker images
-4. Verify health checks
-5. Monitor error rates
-
-### 2. Database Migration
-
-**File:** `docs/RUNBOOK.md` (new)
-
-**Migration Steps:**
-1. Backup database
-2. Run migrations in staging
-3. Verify migration success
-4. Run migrations in production
-5. Verify schema changes
-6. Monitor for errors
-
-**Rollback Steps:**
-1. Identify migration to rollback
-2. Run `alembic downgrade -1`
-3. Verify rollback success
-4. Monitor for errors
-
-### 3. Incident Response
-
-**File:** `docs/RUNBOOK.md` (new)
-
-**Incident Types:**
-1. **API Unavailable**
-   - Check health endpoints
-   - Check database connectivity
-   - Check Redis connectivity
-   - Check process status
-   - Check logs for errors
-
-2. **Database Issues**
-   - Check connection pool status
-   - Check slow queries
-   - Check database logs
-   - Check disk space
-   - Check replication status (if applicable)
-
-3. **High Error Rate**
-   - Check Sentry for errors
-   - Check logs for patterns
-   - Check rate limiting
-   - Check database performance
-   - Check external dependencies
-
-4. **Security Incident**
-   - Check audit logs
-   - Check for unauthorized access
-   - Rotate secrets (SECRET_KEY, etc.)
-   - Notify security team
-   - Document incident
-
-### 4. Monitoring Setup
-
-**File:** `docs/RUNBOOK.md` (new)
-
-**Monitoring Components:**
-1. **Health Checks**
-   - Configure `/health` endpoint monitoring
-   - Configure `/health/readiness` endpoint monitoring
-   - Configure `/health/liveness` endpoint monitoring
-   - Set up alerts for failures
-
-2. **Metrics Collection**
-   - Set up Prometheus
-   - Configure metric exporters
-   - Set up Grafana dashboards
-   - Configure alerts
-
-3. **Log Aggregation**
-   - Set up ELK Stack or similar
-   - Configure log shipping
-   - Set up log retention policies
-   - Configure log search
-
-4. **Error Tracking**
-   - Configure Sentry
-   - Set up error alerts
-   - Configure error grouping
-   - Set up error notifications
+1. **Distributed Tracing** - OpenTelemetry
+   - Trace requests across services
+   - Identify bottlenecks
+   - Debug slow requests
 
 ## Oncall Quick-Wins
 
-### 1. Health Check Monitoring
+### Common Incidents
 
-**Setup:**
-- Monitor `/health` endpoint (every 30 seconds)
-- Alert on failures
-- **Effort:** S (1 hour)
+1. **Database Connection Pool Exhausted**
+   - **Symptoms:** 500 errors, slow responses
+   - **Diagnosis:** Check `/health/readiness` → database_pool status
+   - **Fix:** Restart app, increase pool size, check for connection leaks
+   - **Prevention:** Add pool monitoring, circuit breaker
 
-### 2. Error Rate Monitoring
+2. **Migration Drift**
+   - **Symptoms:** Database errors, schema mismatch
+   - **Diagnosis:** Check `/health/migrations` → status
+   - **Fix:** Run `alembic upgrade head`
+   - **Prevention:** Migration check in CI/CD
 
-**Setup:**
-- Monitor 5xx error rate
-- Alert if error rate > 0.5%
-- **Effort:** S (1 hour)
+3. **Rate Limiting Issues**
+   - **Symptoms:** 429 errors, legitimate users blocked
+   - **Diagnosis:** Check rate limit configuration
+   - **Fix:** Adjust rate limits, check Redis availability
+   - **Prevention:** Redis-backed rate limiting
 
-### 3. Database Connection Pool Monitoring
+4. **Redis Unavailable**
+   - **Symptoms:** Cache misses, performance degradation
+   - **Diagnosis:** Check `/health/readiness` → redis status
+   - **Fix:** Restart Redis, check network
+   - **Prevention:** Health check + alerting
 
-**Setup:**
-- Monitor connection pool utilization
-- Alert if pool > 80% utilized
-- **Effort:** M (4 hours)
+5. **SECRET_KEY Issues**
+   - **Symptoms:** JWT validation failures, 401 errors
+   - **Diagnosis:** Check SECRET_KEY consistency across instances
+   - **Fix:** Ensure SECRET_KEY same across all instances
+   - **Prevention:** Centralized secret management
 
-### 4. Slow Query Detection
+## Runbook Skeleton
 
-**Setup:**
-- Enable slow query log
-- Alert on queries > 1 second
-- **Effort:** M (4 hours)
+### Incident Response
 
-### 5. Cache Hit Rate Monitoring
+1. **Identify Issue**
+   - Check health endpoints
+   - Check logs (Sentry, application logs)
+   - Check metrics (if available)
 
-**Setup:**
-- Monitor Redis cache hit rate
-- Alert if hit rate < 80%
-- **Effort:** M (4 hours)
+2. **Diagnose Root Cause**
+   - Review error messages
+   - Check database status
+   - Check Redis status
+   - Check configuration
+
+3. **Apply Fix**
+   - Follow runbook for specific incident
+   - Document fix
+   - Verify resolution
+
+4. **Post-Incident**
+   - Root cause analysis
+   - Update runbook
+   - Prevent recurrence
+
+### Top 3 User Journeys
+
+1. **User Registration**
+   - **Path:** `POST /api/auth/register` → Email verification
+   - **Failure Points:** Database write, email service
+   - **Runbook:** Check database, check email service, resend verification
+
+2. **Event Creation**
+   - **Path:** `POST /api/events` → Database write → Pattern analysis
+   - **Failure Points:** Database write, pattern analysis
+   - **Runbook:** Check database, check pattern analysis service
+
+3. **Workflow Execution**
+   - **Path:** `POST /api/workflows/{id}/execute` → Execute steps
+   - **Failure Points:** Workflow execution, external API calls
+   - **Runbook:** Check workflow status, check external APIs, retry execution
 
 ## Flaky CI Checklist
 
-### Current CI Jobs
+### CI Job Graph
 
-**File:** `.github/workflows/ci.yml`
+**Location:** `.github/workflows/ci.yml`
 
 **Jobs:**
-1. **backend-tests** - Backend unit tests
-2. **frontend-tests** - Frontend unit tests
-3. **security-scan** - Security scanning
-4. **performance-tests** - Performance testing
-5. **e2e-tests** - End-to-end tests
+1. `backend-tests` - Python tests, linting
+2. `frontend-tests` - JavaScript tests, linting
+3. `security-scan` - CodeQL, SBOM generation
+4. `performance-tests` - k6 load tests
+5. `e2e-tests` - Playwright tests
 
-### Potential Flaky Tests
+**Dependencies:**
+- `backend-tests` → `security-scan`
+- `frontend-tests` → `security-scan`
+- `performance-tests` → `backend-tests`
+- `e2e-tests` → `backend-tests`, `frontend-tests`
 
-**Issues Found:**
-1. **Database Tests** - May fail if database not ready
-   - **Mitigation:** Health check wait already implemented ✓
+### Potential Flaky Steps
 
-2. **Performance Tests** - May fail if system under load
-   - **Mitigation:** Baseline checks implemented ✓
+1. **Database Setup** - Postgres service health check
+   - **Location:** `.github/workflows/ci.yml:12-25`
+   - **Risk:** Medium - Service startup timing
+   - **Fix:** Add retry logic, increase timeout
 
-3. **E2E Tests** - May fail if services not ready
-   - **Mitigation:** Wait for services implemented ✓
+2. **Backend Startup** - Backend service startup
+   - **Location:** `.github/workflows/ci.yml:262-268`
+   - **Risk:** Medium - Port binding, startup timing
+   - **Fix:** Add retry logic, increase timeout
 
-4. **Security Scan** - May fail if dependencies have issues
-   - **Mitigation:** SBOM generation implemented ✓
+3. **Frontend Build** - Next.js build
+   - **Location:** `.github/workflows/ci.yml:270-277`
+   - **Risk:** Low - Usually stable
+   - **Fix:** Cache dependencies
 
-### CI Improvement Recommendations
+### Cache Misses
 
-1. **Add Retry Logic** - Retry flaky tests 3 times
-2. **Add Test Timeouts** - Prevent tests from hanging
-3. **Add Test Isolation** - Ensure tests don't interfere
-4. **Add Parallel Execution** - Speed up test runs
-5. **Add Test Caching** - Cache test dependencies
+1. **Python Dependencies** - `pip cache`
+   - **Location:** `.github/workflows/ci.yml:34`
+   - **Status:** ✅ Cached
+   - **Risk:** Low
 
-## Observability Gaps
+2. **Node Dependencies** - `npm cache`
+   - **Location:** `.github/workflows/ci.yml:72`
+   - **Status:** ✅ Cached
+   - **Risk:** Low
 
-### Missing Components
+## Recommendations
 
-1. **Metrics Collection** - No Prometheus/metrics
-2. **Distributed Tracing** - No tracing implementation
-3. **Log Aggregation** - No centralized logging
-4. **APM** - No application performance monitoring
-5. **Alerting** - No alerting system
+### Immediate (Week 1)
+1. **Add detailed health check** - All component status
+2. **Add metrics collection** - Request metrics, latency
+3. **Create runbook** - Common incidents, troubleshooting
 
-### Proposed Observability Stack
+### Short-term (Week 2-3)
+4. **Add distributed tracing** - OpenTelemetry
+5. **Add SLO tracking** - Error budget monitoring
+6. **Add alerting** - SLO violations, health check failures
 
-**Metrics:** Prometheus + Grafana
-**Logging:** ELK Stack (Elasticsearch, Logstash, Kibana)
-**Tracing:** Jaeger + OpenTelemetry
-**APM:** Sentry (already configured) + New Relic/Datadog
-**Alerting:** PagerDuty + Slack
+### Medium-term (Week 3-4)
+7. **Add log aggregation** - Centralized logging
+8. **Add performance monitoring** - APM tool
+9. **Improve CI reliability** - Retry logic, better error handling
 
-## SLO Monitoring Implementation
-
-### Phase 1: Basic Monitoring (Week 1)
-- Set up health check monitoring
-- Set up error rate monitoring
-- Set up basic alerts
-
-### Phase 2: Metrics Collection (Week 2)
-- Set up Prometheus
-- Configure metric exporters
-- Set up Grafana dashboards
-
-### Phase 3: Advanced Observability (Week 3-4)
-- Set up distributed tracing
-- Set up log aggregation
-- Set up APM
-- Set up comprehensive alerting
+See `docs/audit/PR_PLAN_GUARDRAILS.md` for health check implementation details.
