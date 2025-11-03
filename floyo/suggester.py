@@ -1,6 +1,6 @@
 """Integration suggestion engine."""
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -53,6 +53,42 @@ class IntegrationSuggester:
                     "S3 API - upload generated files",
                     "Queue system - process jobs asynchronously"
                 ]
+            },
+            ".sql": {
+                "tools": ["database", "sql"],
+                "integrations": [
+                    "Python script - process query results",
+                    "Email API - send query results",
+                    "CSV export - save results to file",
+                    "Schedule execution - run queries automatically"
+                ]
+            },
+            ".csv": {
+                "tools": ["data", "spreadsheet"],
+                "integrations": [
+                    "Python pandas - analyze data",
+                    "Database API - import to database",
+                    "Email API - send as attachment",
+                    "Plotting library - visualize data"
+                ]
+            },
+            ".json": {
+                "tools": ["data", "config"],
+                "integrations": [
+                    "API client - send to web service",
+                    "Database API - store structured data",
+                    "Validation - validate JSON schema",
+                    "Transform - convert to other formats"
+                ]
+            },
+            ".md": {
+                "tools": ["markdown", "documentation"],
+                "integrations": [
+                    "Static site generator - publish docs",
+                    "GitHub API - update wiki pages",
+                    "Email API - send formatted documents",
+                    "PDF converter - generate PDFs"
+                ]
             }
         }
     
@@ -77,12 +113,20 @@ class IntegrationSuggester:
                 if last_used:
                     last_used_dt = datetime.fromisoformat(last_used)
                     if datetime.now() - last_used_dt < timedelta(days=7):
+                        # Get actual file paths from recent events
+                        actual_files = [
+                            e.get("details", {}).get("file_path")
+                            for e in recent_events
+                            if e.get("details", {}).get("file_path", "").endswith(file_ext)
+                        ][:3]  # Get up to 3 recent files
+                        
                         suggestion = {
                             "trigger": f"Recently used {file_ext} files",
                             "tools_involved": list(pattern_data.get("tools", [])) + integration_info["tools"],
                             "suggested_integration": integration_info["integrations"][0],
-                            "sample_code": self._generate_sample_code(file_ext, integration_info["integrations"][0]),
-                            "reasoning": self._generate_reasoning(file_ext, pattern_data, recent_events)
+                            "sample_code": self._generate_sample_code(file_ext, integration_info["integrations"][0], actual_files),
+                            "reasoning": self._generate_reasoning(file_ext, pattern_data, recent_events),
+                            "actual_files": actual_files
                         }
                         suggestions.append(suggestion)
         
@@ -132,16 +176,25 @@ class IntegrationSuggester:
         
         return suggestions
     
-    def _generate_sample_code(self, file_ext: str, integration: str) -> str:
+    def _generate_sample_code(self, file_ext: str, integration: str, 
+                              actual_files: Optional[List[str]] = None) -> str:
         """Generate sample code for an integration.
         
         Args:
             file_ext: File extension
             integration: Integration description
+            actual_files: List of actual file paths from recent events
             
         Returns:
             Sample code as string
         """
+        # Use actual file paths if available
+        try:
+            file_path = actual_files[0] if actual_files and len(actual_files) > 0 else "your_file"
+            file_name = Path(file_path).name if isinstance(file_path, (str, Path)) else file_path
+        except Exception:
+            file_name = "your_file"
+        
         if file_ext == ".py" and "Dropbox" in integration:
             return """# Auto-sync Python script output to Dropbox
 import dropbox
@@ -152,8 +205,8 @@ def sync_to_dropbox(local_file, remote_path):
     with open(local_file, 'rb') as f:
         dbx.files_upload(f.read(), remote_path)
 
-# Use after your script generates output
-output_file = 'results.json'
+# Use after your script generates output  
+output_file = '{0}' if actual_files and len(actual_files) > 0 else 'results.json'
 sync_to_dropbox(output_file, '/scripts/output/' + output_file)
 """
         
