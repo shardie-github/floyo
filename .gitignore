@@ -19,12 +19,21 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
-# Virtual environments
+MANIFEST
 venv/
-env/
 ENV/
+env/
 .venv
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment
+.env
+.env.local
+.env.*.local
 
 # IDE
 .vscode/
@@ -33,9 +42,37 @@ ENV/
 *.swo
 *~
 
-# floyo data
-.floyo/
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.next/
+out/
+build/
+dist/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Docker
+.dockerignore
+
+# Alembic
+alembic/versions/*.pyc
+
+# Floyo data
+.floyo/
