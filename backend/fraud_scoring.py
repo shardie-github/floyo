@@ -168,15 +168,33 @@ class FraudDetectionService:
         score = 0.0
         reasons = []
         
-        # Check for VPN/proxy indicators (simplified)
-        # In production, use a proper IP reputation service
-        suspicious_ips = ["127.0.0.1"]  # Placeholder
-        if ip_address in suspicious_ips:
+        # Check for localhost/internal IPs in production
+        if ip_address in ["127.0.0.1", "localhost", "::1"]:
             score += 25.0
-            reasons.append("Suspicious IP address")
+            reasons.append("Suspicious IP address (localhost)")
         
-        # Check for TOR exit nodes (would need external service)
-        # Check for known malicious IPs (would need threat intelligence)
+        # Check for private network IPs (may indicate proxy/VPN)
+        ip_parts = ip_address.split(".")
+        if len(ip_parts) == 4:
+            try:
+                first_octet = int(ip_parts[0])
+                second_octet = int(ip_parts[1])
+                
+                # Private IP ranges
+                if first_octet == 10 or \
+                   (first_octet == 172 and 16 <= second_octet <= 31) or \
+                   (first_octet == 192 and second_octet == 168):
+                    score += 15.0
+                    reasons.append("Private network IP address")
+            except ValueError:
+                pass
+        
+        # Check for known suspicious patterns
+        # In production, integrate with IP reputation services like:
+        # - AbuseIPDB
+        # - VirusTotal
+        # - IPQualityScore
+        # - MaxMind GeoIP2
         
         return {"score": score, "reasons": reasons}
     
@@ -207,23 +225,97 @@ class FraudDetectionService:
     @staticmethod
     def _check_rate_limits(db: Session, user_id: Optional[UUID], ip_address: Optional[str]) -> Dict[str, Any]:
         """Check for rate limiting violations."""
+        from database.models import Event, AuditLog
+        
         score = 0.0
         reasons = []
         
-        # Would check actual rate limit violations
-        # For now, placeholder
+        # Check recent request frequency
+        one_minute_ago = datetime.utcnow() - timedelta(minutes=1)
+        five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
+        
+        # Check by user
+        if user_id:
+            recent_events = db.query(Event).filter(
+                Event.user_id == user_id,
+                Event.timestamp >= one_minute_ago
+            ).count()
+            
+            if recent_events > 100:
+                score += 30.0
+                reasons.append(f"Excessive requests: {recent_events} in last minute")
+            elif recent_events > 50:
+                score += 15.0
+                reasons.append(f"High request rate: {recent_events} in last minute")
+            
+            # Check for burst patterns
+            five_min_events = db.query(Event).filter(
+                Event.user_id == user_id,
+                Event.timestamp >= five_minutes_ago
+            ).count()
+            
+            if five_min_events > 500:
+                score += 20.0
+                reasons.append(f"Burst pattern detected: {five_min_events} requests in 5 minutes")
+        
+        # Check by IP
+        if ip_address:
+            # Check audit logs for failed authentication attempts
+            failed_logins = db.query(AuditLog).filter(
+                AuditLog.ip_address == ip_address,
+                AuditLog.action == "login_failed",
+                AuditLog.timestamp >= one_minute_ago
+            ).count()
+            
+            if failed_logins > 10:
+                score += 40.0
+                reasons.append(f"Multiple failed login attempts: {failed_logins}")
+            elif failed_logins > 5:
+                score += 20.0
+                reasons.append(f"Suspicious login attempts: {failed_logins}")
         
         return {"score": score, "reasons": reasons}
     
     @staticmethod
     def _check_geography(db: Session, user_id: Optional[UUID], ip_address: Optional[str]) -> Dict[str, Any]:
         """Check for geographic anomalies."""
+        from database.models import UserSession, AuditLog
+        
         score = 0.0
         reasons = []
         
-        # Would check IP geolocation against user's normal locations
-        # Would detect impossible travel (e.g., login from US and Europe in same hour)
-        # Placeholder for now
+        if not user_id or not ip_address:
+            return {"score": score, "reasons": reasons}
+        
+        # Check recent sessions for geographic consistency
+        one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+        recent_sessions = db.query(UserSession).filter(
+            UserSession.user_id == user_id,
+            UserSession.created_at >= one_hour_ago
+        ).order_by(UserSession.created_at.desc()).limit(5).all()
+        
+        # In production, would use IP geolocation service
+        # For now, check for IP address changes (which could indicate location changes)
+        unique_ips = set()
+        for session in recent_sessions:
+            if session.ip_address:
+                unique_ips.add(session.ip_address)
+        
+        # If user has sessions from multiple different IPs in short time, flag it
+        if len(unique_ips) > 3:
+            score += 25.0
+            reasons.append(f"Multiple IP addresses detected: {len(unique_ips)} unique IPs")
+        elif len(unique_ips) > 1:
+            # Check time between IP changes
+            if len(recent_sessions) >= 2:
+                time_diff = (recent_sessions[0].created_at - recent_sessions[-1].created_at).total_seconds()
+                if time_diff < 3600 and len(unique_ips) > 1:  # Multiple IPs in < 1 hour
+                    score += 30.0
+                    reasons.append("Impossible travel detected (multiple locations in short time)")
+        
+        # Check for known high-risk countries/regions
+        # In production, integrate with GeoIP service
+        # For now, placeholder
         
         return {"score": score, "reasons": reasons}
     

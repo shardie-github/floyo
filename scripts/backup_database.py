@@ -65,7 +65,7 @@ def parse_db_url(url: str) -> dict:
     }
 
 
-def create_backup(full: bool = True, output_path: Optional[Path] = None) -> Path:
+def create_backup(full: bool = True, output_path: Optional[Path] = None, parallel_jobs: int = 4) -> Path:
     """
     Create a database backup.
     
@@ -90,16 +90,40 @@ def create_backup(full: bool = True, output_path: Optional[Path] = None) -> Path
     if db_config["password"]:
         env["PGPASSWORD"] = db_config["password"]
     
-    # Build pg_dump command
-    cmd = [
-        "pg_dump",
-        "-h", db_config["host"],
-        "-p", db_config["port"],
-        "-U", db_config["user"],
-        "-d", db_config["dbname"],
-        "-F", "c",  # Custom format (allows compression)
-        "-f", str(output_path)
-    ]
+    # Build pg_dump command with optimizations
+    # Note: Custom format (-F c) doesn't support parallel jobs, but we can use directory format instead
+    # For better performance, use directory format with parallel jobs when available
+    use_directory_format = parallel_jobs > 1
+    
+    if use_directory_format:
+        # Directory format supports parallel jobs
+        output_dir = output_path.with_suffix('.d')
+        output_dir.mkdir(parents=True, exist_ok=True)
+        cmd = [
+            "pg_dump",
+            "-h", db_config["host"],
+            "-p", db_config["port"],
+            "-U", db_config["user"],
+            "-d", db_config["dbname"],
+            "-F", "d",  # Directory format (supports parallel jobs)
+            "-f", str(output_dir),
+            "-j", str(parallel_jobs),  # Parallel jobs for faster backup
+            "--verbose"  # Progress output
+        ]
+        actual_output = output_dir
+    else:
+        # Custom format (single-threaded but compressed)
+        cmd = [
+            "pg_dump",
+            "-h", db_config["host"],
+            "-p", db_config["port"],
+            "-U", db_config["user"],
+            "-d", db_config["dbname"],
+            "-F", "c",  # Custom format (allows compression)
+            "-f", str(output_path),
+            "--verbose"  # Progress output
+        ]
+        actual_output = output_path
     
     if full:
         cmd.append("--clean")  # Include DROP statements
@@ -115,33 +139,51 @@ def create_backup(full: bool = True, output_path: Optional[Path] = None) -> Path
             check=True
         )
         
-        # Compress if requested
-        if COMPRESSION and output_path.suffix != ".gz":
-            compressed_path = Path(str(output_path) + ".gz")
-            logger.info(f"Compressing backup to {compressed_path}")
-            with open(output_path, "rb") as f_in:
-                with gzip.open(compressed_path, "wb") as f_out:
-                    shutil.copyfileobj(f_in, f_out)
-            output_path.unlink()
-            output_path = compressed_path
+        # Handle directory format output
+        if use_directory_format:
+            # For directory format, compress the entire directory
+            if COMPRESSION:
+                import tarfile
+                compressed_path = Path(str(output_dir) + ".tar.gz")
+                logger.info(f"Compressing backup directory to {compressed_path}")
+                with tarfile.open(compressed_path, "w:gz") as tar:
+                    tar.add(output_dir, arcname=output_dir.name)
+                shutil.rmtree(output_dir)
+                final_output = compressed_path
+            else:
+                final_output = output_dir
+        else:
+            # Compress single file if requested
+            if COMPRESSION and output_path.suffix != ".gz":
+                compressed_path = Path(str(output_path) + ".gz")
+                logger.info(f"Compressing backup to {compressed_path}")
+                with open(output_path, "rb") as f_in:
+                    with gzip.open(compressed_path, "wb") as f_out:
+                        shutil.copyfileobj(f_in, f_out)
+                output_path.unlink()
+                final_output = compressed_path
+            else:
+                final_output = output_path
         
         # Create metadata file
-        metadata_path = output_path.with_suffix(output_path.suffix + ".meta.json")
+        metadata_path = final_output.with_suffix(final_output.suffix + ".meta.json")
         metadata = {
             "backup_type": backup_type,
             "timestamp": timestamp,
             "database": db_config["dbname"],
             "host": db_config["host"],
-            "size_bytes": output_path.stat().st_size,
+            "size_bytes": final_output.stat().st_size,
             "compressed": COMPRESSION,
+            "parallel_jobs": parallel_jobs if use_directory_format else 1,
+            "format": "directory" if use_directory_format else "custom",
             "created_at": datetime.utcnow().isoformat()
         }
         
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=2)
         
-        logger.info(f"Backup created successfully: {output_path} ({output_path.stat().st_size / 1024 / 1024:.2f} MB)")
-        return output_path
+        logger.info(f"Backup created successfully: {final_output} ({final_output.stat().st_size / 1024 / 1024:.2f} MB)")
+        return final_output
         
     except subprocess.CalledProcessError as e:
         logger.error(f"Backup failed: {e.stderr}")

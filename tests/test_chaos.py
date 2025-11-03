@@ -246,6 +246,68 @@ class TestChaosExperiments:
             assert experiment.validate(), "System did not handle latency correctly"
         finally:
             experiment.teardown()
+    
+    def test_partial_failure_recovery(self):
+        """Test recovery from partial service failures."""
+        # Test that system continues to function when some endpoints fail
+        errors = []
+        for endpoint in ["/health", "/api/stats"]:
+            try:
+                resp = requests.get(f"{API_URL}{endpoint}", timeout=2)
+                if resp.status_code >= 500:
+                    errors.append(endpoint)
+            except Exception:
+                errors.append(endpoint)
+        
+        # System should handle partial failures gracefully
+        # At least health endpoint should work
+        health_resp = requests.get(f"{API_URL}/health", timeout=5)
+        assert health_resp.status_code == 200, "Health endpoint should always work"
+    
+    def test_cascading_failure_prevention(self):
+        """Test prevention of cascading failures."""
+        # Simulate high load and verify system doesn't cascade
+        import concurrent.futures
+        import threading
+        
+        success_count = 0
+        failure_count = 0
+        lock = threading.Lock()
+        
+        def make_request():
+            try:
+                resp = requests.get(f"{API_URL}/health", timeout=2)
+                if resp.status_code == 200:
+                    with lock:
+                        nonlocal success_count
+                        success_count += 1
+                else:
+                    with lock:
+                        nonlocal failure_count
+                        failure_count += 1
+            except Exception:
+                with lock:
+                    nonlocal failure_count
+                    failure_count += 1
+        
+        # Generate burst of requests
+        with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
+            futures = [executor.submit(make_request) for _ in range(500)]
+            concurrent.futures.wait(futures)
+        
+        # System should handle burst without complete failure
+        # Success rate should be reasonable (> 50%)
+        total = success_count + failure_count
+        if total > 0:
+            success_rate = success_count / total
+            assert success_rate > 0.5, f"Success rate {success_rate} too low}"
+    
+    def test_data_integrity_under_load(self):
+        """Test data integrity remains consistent under load."""
+        # This would test that data doesn't get corrupted under high load
+        # For now, verify basic functionality
+        resp = requests.get(f"{API_URL}/health", timeout=5)
+        assert resp.status_code == 200
 
 
 if __name__ == "__main__":

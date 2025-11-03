@@ -116,16 +116,29 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
     
-    - name: Generate SBOM
+    - name: Generate Python SBOM
       run: |
         pip install cyclonedx-bom
         cyclonedx-py -o sbom-python.json
     
-    - name: Upload SBOM
+    - name: Set up Node.js for frontend SBOM
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Generate Frontend SBOM
+      working-directory: ./frontend
+      run: |
+        npm install -g @cyclonedx/cyclonedx-npm
+        cyclonedx-npm --output-file ../sbom-frontend.json
+    
+    - name: Upload SBOMs
       uses: actions/upload-artifact@v4
       with:
-        name: sbom-python
-        path: sbom-python.json
+        name: sbom-artifacts
+        path: |
+          sbom-python.json
+          sbom-frontend.json
 
   performance-tests:
     runs-on: ubuntu-latest
