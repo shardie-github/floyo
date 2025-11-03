@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 
-from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File, APIRouter
+from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File, APIRouter, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr, Field
@@ -43,10 +43,16 @@ init_sentry()
 init_cache()
 from database.models import (
     Base, User, Event, Pattern, FileRelationship, TemporalPattern,
-    Suggestion, UserConfig, Workflow, UserSession
+    Suggestion, UserConfig, Workflow, UserSession, Organization,
+    OrganizationMember, AuditLog, IntegrationConnector, UserIntegration,
+    WorkflowVersion, WorkflowExecution
 )
 from backend.batch_processor import process_event_batch
 from backend.export import export_patterns_csv, export_patterns_json, export_events_csv, export_events_json
+from backend.audit import log_audit
+from backend.organizations import create_organization, get_user_organizations, get_organization_members, add_member, update_member_role
+from backend.workflow_scheduler import WorkflowScheduler
+from backend.connectors import initialize_connectors, get_available_connectors, create_user_integration
 from fastapi.responses import Response
 
 # Configuration
@@ -56,6 +62,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Initialize database
 init_db()
+
+# Initialize default connectors
+from backend.database import SessionLocal as DB
+db_init = DB()
+initialize_connectors(db_init)
+db_init.close()
 
 # FastAPI app
 app = FastAPI(
@@ -581,6 +593,17 @@ async def create_event(
     db.commit()
     db.refresh(db_event)
     
+    # Audit log
+    log_audit(
+        db=db,
+        action="create",
+        resource_type="event",
+        user_id=current_user.id,
+        resource_id=db_event.id,
+        details={"event_type": event.event_type, "tool": event.tool},
+        request=request
+    )
+    
     # Trigger pattern analysis (simplified)
     await manager.broadcast(f"Event created: {event.event_type}")
     
@@ -1044,6 +1067,304 @@ async def export_events(
             media_type="application/json",
             headers={"Content-Disposition": "attachment; filename=events.json"}
         )
+
+
+# Organization endpoints
+class OrganizationCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+
+class OrganizationResponse(BaseModel):
+    id: UUID
+    name: str
+    slug: str
+    description: Optional[str]
+    subscription_tier: str
+    is_active: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+@app.post("/api/organizations", response_model=OrganizationResponse, status_code=status.HTTP_201_CREATED)
+async def create_org(
+    org_data: OrganizationCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Create a new organization."""
+    org = create_organization(
+        db=db,
+        name=org_data.name,
+        owner=current_user,
+        description=org_data.description,
+        request=request
+    )
+    return org
+
+
+@app.get("/api/organizations", response_model=List[OrganizationResponse])
+async def list_organizations(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get all organizations the user belongs to."""
+    orgs = get_user_organizations(db, current_user.id)
+    return orgs
+
+
+@app.get("/api/organizations/{org_id}/members")
+async def list_org_members(
+    org_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get members of an organization."""
+    # Check if user is member
+    membership = db.query(OrganizationMember).filter(
+        OrganizationMember.organization_id == org_id,
+        OrganizationMember.user_id == current_user.id
+    ).first()
+    
+    if not membership:
+        raise HTTPException(status_code=403, detail="Not a member of this organization")
+    
+    members = get_organization_members(db, org_id)
+    return members
+
+
+# Workflow endpoints with versioning
+class WorkflowCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    steps: Dict[str, Any]
+    schedule_config: Optional[Dict[str, Any]] = None
+    organization_id: Optional[UUID] = None
+
+
+@app.post("/api/workflows", response_model=Dict, status_code=status.HTTP_201_CREATED)
+async def create_workflow(
+    workflow_data: WorkflowCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Create a new workflow."""
+    workflow = Workflow(
+        user_id=current_user.id,
+        organization_id=workflow_data.organization_id,
+        name=workflow_data.name,
+        description=workflow_data.description,
+        steps=workflow_data.steps,
+        schedule_config=workflow_data.schedule_config,
+        is_active=True,
+        version=1
+    )
+    db.add(workflow)
+    db.commit()
+    db.refresh(workflow)
+    
+    # Create initial version
+    WorkflowScheduler.create_version(
+        db=db,
+        workflow=workflow,
+        created_by=current_user.id,
+        change_summary="Initial version"
+    )
+    
+    log_audit(
+        db=db,
+        action="create",
+        resource_type="workflow",
+        user_id=current_user.id,
+        organization_id=workflow_data.organization_id,
+        resource_id=workflow.id,
+        request=request
+    )
+    
+    return {"id": workflow.id, "name": workflow.name, "version": workflow.version}
+
+
+@app.post("/api/workflows/{workflow_id}/rollback")
+async def rollback_workflow(
+    workflow_id: UUID,
+    version_number: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Rollback workflow to a previous version."""
+    workflow = db.query(Workflow).filter(
+        Workflow.id == workflow_id,
+        Workflow.user_id == current_user.id
+    ).first()
+    
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    workflow = WorkflowScheduler.rollback_to_version(
+        db=db,
+        workflow=workflow,
+        version_number=version_number,
+        rollback_by=current_user.id
+    )
+    
+    log_audit(
+        db=db,
+        action="rollback",
+        resource_type="workflow",
+        user_id=current_user.id,
+        resource_id=workflow.id,
+        details={"version": version_number},
+        request=request
+    )
+    
+    return {"message": f"Rolled back to version {version_number}"}
+
+
+@app.post("/api/workflows/{workflow_id}/execute")
+async def execute_workflow(
+    workflow_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Execute a workflow manually."""
+    workflow = db.query(Workflow).filter(
+        Workflow.id == workflow_id,
+        Workflow.user_id == current_user.id
+    ).first()
+    
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    execution = WorkflowScheduler.execute_workflow(
+        db=db,
+        workflow=workflow,
+        triggered_by=current_user.id
+    )
+    
+    log_audit(
+        db=db,
+        action="execute",
+        resource_type="workflow",
+        user_id=current_user.id,
+        resource_id=workflow.id,
+        request=request
+    )
+    
+    return {"execution_id": execution.id, "status": execution.status}
+
+
+@app.get("/api/workflows/{workflow_id}/executions")
+async def get_workflow_executions(
+    workflow_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get execution history for a workflow."""
+    workflow = db.query(Workflow).filter(
+        Workflow.id == workflow_id,
+        Workflow.user_id == current_user.id
+    ).first()
+    
+    if not workflow:
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    
+    executions = WorkflowScheduler.get_execution_history(
+        db=db,
+        workflow_id=workflow_id,
+        limit=limit,
+        offset=offset
+    )
+    
+    return executions
+
+
+# Integration connector endpoints
+@app.get("/api/integrations/connectors")
+async def list_connectors(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get available integration connectors."""
+    connectors = get_available_connectors(db)
+    return connectors
+
+
+class IntegrationCreate(BaseModel):
+    connector_id: UUID
+    name: str
+    config: Dict[str, Any]
+    organization_id: Optional[UUID] = None
+
+
+@app.post("/api/integrations", status_code=status.HTTP_201_CREATED)
+async def create_integration(
+    integration_data: IntegrationCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    request: Request = None
+):
+    """Create a new integration."""
+    integration = create_user_integration(
+        db=db,
+        user_id=current_user.id,
+        connector_id=integration_data.connector_id,
+        name=integration_data.name,
+        config=integration_data.config,
+        organization_id=integration_data.organization_id
+    )
+    
+    log_audit(
+        db=db,
+        action="create",
+        resource_type="integration",
+        user_id=current_user.id,
+        organization_id=integration_data.organization_id,
+        resource_id=integration.id,
+        request=request
+    )
+    
+    return {"id": integration.id, "name": integration.name}
+
+
+# Audit log endpoints
+@app.get("/api/audit-logs")
+async def get_audit_logs(
+    organization_id: Optional[UUID] = None,
+    limit: int = 100,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get audit logs."""
+    from backend.audit import get_audit_logs as query_audit_logs
+    
+    # Only allow access if user is admin/owner
+    if organization_id:
+        membership = db.query(OrganizationMember).filter(
+            OrganizationMember.organization_id == organization_id,
+            OrganizationMember.user_id == current_user.id
+        ).first()
+        
+        if not membership or membership.role not in ["owner", "admin"]:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    logs = query_audit_logs(
+        db=db,
+        organization_id=organization_id,
+        user_id=current_user.id if not organization_id else None,
+        limit=limit,
+        offset=offset
+    )
+    
+    return logs
 
 
 @app.websocket("/ws")
