@@ -47,6 +47,7 @@ from database.models import (
     OrganizationMember, AuditLog, IntegrationConnector, UserIntegration,
     WorkflowVersion, WorkflowExecution
 )
+from sqlalchemy import text
 from backend.batch_processor import process_event_batch
 from backend.export import export_patterns_csv, export_patterns_json, export_events_csv, export_events_json
 from backend.audit import log_audit
@@ -138,6 +139,22 @@ app.add_middleware(
 
 # Compression middleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Security headers middleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:;"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Rate limiting
 app.state.limiter = limiter
@@ -315,6 +332,46 @@ async def get_current_user(
 @app.get("/")
 async def root():
     return {"message": "Floyo API", "version": "1.0.0", "api_version": "v1"}
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for load balancers and monitoring."""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }
+
+
+@app.get("/health/readiness")
+async def readiness_check(db: Session = Depends(get_db)):
+    """Readiness check - verifies database connectivity."""
+    try:
+        # Simple query to check DB connectivity
+        db.execute(text("SELECT 1"))
+        return {
+            "status": "ready",
+            "timestamp": datetime.utcnow().isoformat(),
+            "checks": {
+                "database": "ok"
+            }
+        }
+    except Exception as e:
+        logger.error(f"Readiness check failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Service not ready"
+        )
+
+
+@app.get("/health/liveness")
+async def liveness_check():
+    """Liveness check - verifies the service is running."""
+    return {
+        "status": "alive",
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 # Include versioned routes (we'll add these to api_v1_router)
 # For now, keep existing routes and add version prefix in the future
@@ -523,6 +580,103 @@ async def resend_verification(
     logger.info(f"Email verification token for {current_user.email}: {verification_token}")
     
     return {"message": "Verification email sent"}
+
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordReset(BaseModel):
+    token: str
+    new_password: str
+
+
+@app.post("/api/auth/forgot-password")
+@limiter.limit("5/hour")
+async def forgot_password(
+    request: Request,
+    reset_request: PasswordResetRequest,
+    db: Session = Depends(get_db)
+):
+    """Request password reset."""
+    user = db.query(User).filter(User.email == reset_request.email).first()
+    
+    # Don't reveal if email exists (security best practice)
+    if user:
+        # Generate reset token
+        reset_token = secrets.token_urlsafe(32)
+        user.password_reset_token = reset_token
+        user.password_reset_expires = datetime.utcnow() + timedelta(hours=1)
+        db.commit()
+        
+        # In production, send reset email here
+        logger.info(f"Password reset token for {user.email}: {reset_token}")
+    
+    return {"message": "If the email exists, a password reset link has been sent"}
+
+
+@app.post("/api/auth/reset-password")
+@limiter.limit("10/hour")
+async def reset_password(
+    request: Request,
+    reset_data: PasswordReset,
+    db: Session = Depends(get_db)
+):
+    """Reset password with token."""
+    # Validate password strength
+    if len(reset_data.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long"
+        )
+    
+    user = db.query(User).filter(
+        User.password_reset_token == reset_data.token,
+        User.password_reset_expires > datetime.utcnow()
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+    
+    # Update password
+    user.hashed_password = get_password_hash(reset_data.new_password)
+    user.password_reset_token = None
+    user.password_reset_expires = None
+    db.commit()
+    
+    logger.info(f"Password reset successful for user: {user.email}")
+    
+    return {"message": "Password reset successfully"}
+
+
+@app.post("/api/auth/change-password")
+async def change_password(
+    old_password: str,
+    new_password: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Change password (requires current password)."""
+    if not verify_password(old_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect current password"
+        )
+    
+    # Validate password strength
+    if len(new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long"
+        )
+    
+    current_user.hashed_password = get_password_hash(new_password)
+    db.commit()
+    
+    return {"message": "Password changed successfully"}
 
 
 @app.post("/api/events/upload")
@@ -1067,6 +1221,164 @@ async def export_events(
             media_type="application/json",
             headers={"Content-Disposition": "attachment; filename=events.json"}
         )
+
+
+@app.get("/api/data/export")
+async def export_all_data(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Export all user data for GDPR compliance (right to data portability)."""
+    import json
+    from io import BytesIO
+    import zipfile
+    
+    # Collect all user data
+    user_data = {
+        "user": {
+            "id": str(current_user.id),
+            "email": current_user.email,
+            "username": current_user.username,
+            "full_name": current_user.full_name,
+            "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+        },
+        "events": [
+            {
+                "id": str(e.id),
+                "event_type": e.event_type,
+                "file_path": e.file_path,
+                "tool": e.tool,
+                "operation": e.operation,
+                "timestamp": e.timestamp.isoformat() if e.timestamp else None,
+                "details": e.details
+            }
+            for e in db.query(Event).filter(Event.user_id == current_user.id).all()
+        ],
+        "patterns": [
+            {
+                "id": str(p.id),
+                "file_extension": p.file_extension,
+                "count": p.count,
+                "last_used": p.last_used.isoformat() if p.last_used else None,
+                "tools": p.tools
+            }
+            for p in db.query(Pattern).filter(Pattern.user_id == current_user.id).all()
+        ],
+        "suggestions": [
+            {
+                "id": str(s.id),
+                "trigger": s.trigger,
+                "suggested_integration": s.suggested_integration,
+                "confidence": s.confidence,
+                "created_at": s.created_at.isoformat() if s.created_at else None
+            }
+            for s in db.query(Suggestion).filter(Suggestion.user_id == current_user.id).all()
+        ],
+        "workflows": [
+            {
+                "id": str(w.id),
+                "name": w.name,
+                "description": w.description,
+                "is_active": w.is_active,
+                "created_at": w.created_at.isoformat() if w.created_at else None
+            }
+            for w in db.query(Workflow).filter(Workflow.user_id == current_user.id).all()
+        ]
+    }
+    
+    # Create ZIP file
+    zip_buffer = BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        zip_file.writestr("user_data.json", json.dumps(user_data, indent=2, default=str))
+    
+    zip_buffer.seek(0)
+    
+    return Response(
+        content=zip_buffer.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f"attachment; filename=floyo_data_export_{datetime.utcnow().strftime('%Y%m%d')}.zip"}
+    )
+
+
+@app.delete("/api/data/delete")
+@limiter.limit("1/hour")
+async def delete_all_data(
+    request: Request,
+    confirm: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Delete all user data for GDPR compliance (right to be forgotten)."""
+    if not confirm:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Must confirm deletion by setting confirm=true"
+        )
+    
+    # Delete all user-related data (cascade should handle most)
+    # Events, patterns, suggestions, workflows will be deleted via cascade
+    # But we'll explicitly delete to ensure everything is removed
+    
+    db.query(Event).filter(Event.user_id == current_user.id).delete()
+    db.query(Pattern).filter(Pattern.user_id == current_user.id).delete()
+    db.query(Suggestion).filter(Suggestion.user_id == current_user.id).delete()
+    db.query(Workflow).filter(Workflow.user_id == current_user.id).delete()
+    db.query(FileRelationship).filter(FileRelationship.user_id == current_user.id).delete()
+    db.query(TemporalPattern).filter(TemporalPattern.user_id == current_user.id).delete()
+    db.query(UserSession).filter(UserSession.user_id == current_user.id).delete()
+    db.query(UserConfig).filter(UserConfig.user_id == current_user.id).delete()
+    
+    # Soft delete user account
+    current_user.is_active = False
+    current_user.email = f"deleted_{current_user.id}@deleted.local"
+    current_user.hashed_password = ""
+    
+    db.commit()
+    
+    log_audit(
+        db=db,
+        action="delete",
+        resource_type="user_data",
+        user_id=current_user.id,
+        details={"reason": "GDPR data deletion request"},
+        request=request
+    )
+    
+    return {"message": "All user data has been deleted"}
+
+
+@app.post("/api/data/retention/cleanup")
+async def cleanup_old_data(
+    retention_days: int = 90,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Clean up old data for current user based on retention policy."""
+    cutoff_date = datetime.utcnow() - timedelta(days=retention_days)
+    deleted_count = 0
+    
+    # User-specific cleanup
+    deleted_events = db.query(Event).filter(
+        Event.user_id == current_user.id,
+        Event.timestamp < cutoff_date
+    ).delete(synchronize_session=False)
+    deleted_count += deleted_events
+    
+    deleted_patterns = db.query(Pattern).filter(
+        Pattern.user_id == current_user.id,
+        Pattern.updated_at < cutoff_date
+    ).delete(synchronize_session=False)
+    deleted_count += deleted_patterns
+    
+    db.commit()
+    
+    logger.info(f"Cleaned up {deleted_count} old records for user {current_user.id} (older than {retention_days} days)")
+    
+    return {
+        "message": f"Cleaned up {deleted_count} records older than {retention_days} days",
+        "deleted_count": deleted_count,
+        "cutoff_date": cutoff_date.isoformat()
+    }
 
 
 # Organization endpoints
