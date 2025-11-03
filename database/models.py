@@ -31,6 +31,8 @@ class User(Base):
     email_verified = Column(Boolean, default=False)
     email_verification_token = Column(String(255), nullable=True, index=True)
     email_verification_expires = Column(TIMESTAMP(timezone=True), nullable=True)
+    password_reset_token = Column(String(255), nullable=True, index=True)
+    password_reset_expires = Column(TIMESTAMP(timezone=True), nullable=True)
     created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
 
