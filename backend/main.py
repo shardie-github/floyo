@@ -4,10 +4,10 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 
-from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File
+from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File, APIRouter
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, or_, and_
 from sqlalchemy.orm import sessionmaker
@@ -28,6 +28,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from backend.database import SessionLocal, init_db, get_db
 from backend.logging_config import setup_logging, get_logger
 from backend.sentry_config import init_sentry
+from backend.rate_limit import limiter, get_rate_limit_exceeded_handler, RATE_LIMIT_PER_MINUTE, RATE_LIMIT_PER_HOUR
+from backend.cache import init_cache, cached, get, set, delete
+from fastapi.middleware.gzip import GZipMiddleware
 
 # Set up logging
 setup_logging()
@@ -35,10 +38,16 @@ logger = get_logger(__name__)
 
 # Initialize Sentry
 init_sentry()
+
+# Initialize cache
+init_cache()
 from database.models import (
     Base, User, Event, Pattern, FileRelationship, TemporalPattern,
     Suggestion, UserConfig, Workflow, UserSession
 )
+from backend.batch_processor import process_event_batch
+from backend.export import export_patterns_csv, export_patterns_json, export_events_csv, export_events_json
+from fastapi.responses import Response
 
 # Configuration
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -73,14 +82,20 @@ app = FastAPI(
     Authorization: Bearer <token>
     ```
     
+    ### API Versioning
+    
+    Current version: v1
+    - `/api/v1/*` - Versioned endpoints (recommended)
+    - `/api/*` - Legacy endpoints (deprecated, will be removed in v2)
+    
     ### Endpoints
     
-    - `/api/auth/*` - Authentication endpoints
-    - `/api/events/*` - Event tracking endpoints
-    - `/api/patterns` - Pattern analysis endpoints
-    - `/api/suggestions/*` - Integration suggestion endpoints
-    - `/api/stats` - Statistics endpoints
-    - `/api/config` - User configuration endpoints
+    - `/api/v1/auth/*` - Authentication endpoints
+    - `/api/v1/events/*` - Event tracking endpoints
+    - `/api/v1/patterns` - Pattern analysis endpoints
+    - `/api/v1/suggestions/*` - Integration suggestion endpoints
+    - `/api/v1/stats` - Statistics endpoints
+    - `/api/v1/config` - User configuration endpoints
     """,
     version="1.0.0",
     contact={
@@ -96,6 +111,10 @@ app = FastAPI(
     openapi_url="/openapi.json"
 )
 
+# API version router
+api_v1_router = APIRouter(prefix="/api/v1", tags=["v1"])
+api_router = APIRouter(prefix="/api", tags=["legacy"])
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -104,6 +123,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Compression middleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Rate limiting
+app.state.limiter = limiter
+from slowapi.errors import RateLimitExceeded
+app.add_exception_handler(RateLimitExceeded, get_rate_limit_exceeded_handler())
 
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -176,6 +203,15 @@ class EventResponse(BaseModel):
         from_attributes = True
 
 
+class PaginatedResponse(BaseModel):
+    """Paginated response model."""
+    items: List[Any]
+    total: int
+    skip: int
+    limit: int
+    has_more: bool
+
+
 class SuggestionResponse(BaseModel):
     id: UUID
     trigger: str
@@ -206,6 +242,14 @@ class Token(BaseModel):
     access_token: str
     token_type: str
     expires_in: int
+
+
+class PaginationParams(BaseModel):
+    """Pagination parameters."""
+    skip: int = Field(default=0, ge=0, description="Number of items to skip")
+    limit: int = Field(default=20, ge=1, le=100, description="Number of items to return")
+    sort_by: Optional[str] = Field(default=None, description="Field to sort by")
+    sort_order: str = Field(default="desc", pattern="^(asc|desc)$", description="Sort order")
 
 
 # Database dependency (already imported from backend.database)
@@ -258,11 +302,23 @@ async def get_current_user(
 # Routes
 @app.get("/")
 async def root():
-    return {"message": "Floyo API", "version": "1.0.0"}
+    return {"message": "Floyo API", "version": "1.0.0", "api_version": "v1"}
+
+# Include versioned routes (we'll add these to api_v1_router)
+# For now, keep existing routes and add version prefix in the future
+
+# Mount versioned router
+app.include_router(api_v1_router)
+app.include_router(api_router)
 
 
 @app.post("/api/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("10/hour")
+async def register(
+    request: Request,
+    user: UserCreate,
+    db: Session = Depends(get_db)
+):
     """Register a new user."""
     # Check if user exists
     existing_user = db.query(User).filter(User.email == user.email).first()
@@ -337,7 +393,12 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
 
 
 @app.post("/api/auth/login", response_model=Token)
-async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
+@limiter.limit(f"{RATE_LIMIT_PER_HOUR}/hour")
+async def login(
+    request: Request,
+    user_credentials: UserLogin,
+    db: Session = Depends(get_db)
+):
     """Login and get access token."""
     user = db.query(User).filter(User.email == user_credentials.email).first()
     if not user or not verify_password(user_credentials.password, user.hashed_password):
@@ -496,12 +557,17 @@ async def upload_event_file(
 
 
 @app.post("/api/events", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def create_event(
+    request: Request,
     event: EventCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Create a new event."""
+    # Clear cache
+    delete(f"events:{current_user.id}:*")
+    
     db_event = Event(
         user_id=current_user.id,
         event_type=event.event_type,
@@ -521,17 +587,59 @@ async def create_event(
     return db_event
 
 
-@app.get("/api/events", response_model=List[EventResponse])
-async def get_events(
-    skip: int = 0,
-    limit: int = 100,
-    event_type: TypingOptional[str] = None,
-    tool: TypingOptional[str] = None,
-    search: TypingOptional[str] = None,
+@app.post("/api/events/batch", response_model=List[EventResponse], status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
+async def create_events_batch(
+    request: Request,
+    events: List[EventCreate],
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get user events with filtering and search."""
+    """Create multiple events in a batch."""
+    # Clear cache
+    delete(f"events:{current_user.id}:*")
+    
+    event_dicts = [
+        {
+            "event_type": e.event_type,
+            "file_path": e.file_path,
+            "tool": e.tool,
+            "operation": e.operation,
+            "details": e.details
+        }
+        for e in events
+    ]
+    
+    created_events = process_event_batch(db, str(current_user.id), event_dicts)
+    
+    await manager.broadcast(f"Batch: {len(created_events)} events created")
+    
+    return created_events
+
+
+@app.get("/api/events", response_model=PaginatedResponse)
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
+async def get_events(
+    request: Request,
+    skip: int = 0,
+    limit: int = 20,
+    event_type: TypingOptional[str] = None,
+    tool: TypingOptional[str] = None,
+    search: TypingOptional[str] = None,
+    sort_by: TypingOptional[str] = None,
+    sort_order: str = "desc",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user events with filtering, search, and pagination."""
+    # Generate cache key
+    cache_key = f"events:{current_user.id}:{skip}:{limit}:{event_type}:{tool}:{search}:{sort_by}:{sort_order}"
+    
+    # Check cache
+    cached_result = get(cache_key)
+    if cached_result:
+        return cached_result
+    
     query = db.query(Event).filter(Event.user_id == current_user.id)
     
     # Apply filters
@@ -548,38 +656,113 @@ async def get_events(
             )
         )
     
-    events = query.order_by(Event.timestamp.desc()).offset(skip).limit(limit).all()
-    return events
+    # Get total count
+    total = query.count()
+    
+    # Apply sorting
+    if sort_by:
+        sort_column = getattr(Event, sort_by, None)
+        if sort_column:
+            if sort_order == "desc":
+                query = query.order_by(sort_column.desc())
+            else:
+                query = query.order_by(sort_column.asc())
+    else:
+        # Default sort by timestamp
+        if sort_order == "desc":
+            query = query.order_by(Event.timestamp.desc())
+        else:
+            query = query.order_by(Event.timestamp.asc())
+    
+    events = query.offset(skip).limit(limit).all()
+    
+    result = PaginatedResponse(
+        items=events,
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_more=(skip + limit) < total
+    )
+    
+    # Cache for 30 seconds
+    set(cache_key, result, ttl=30)
+    
+    return result
 
 
-@app.get("/api/suggestions", response_model=List[SuggestionResponse])
+@app.get("/api/suggestions", response_model=PaginatedResponse)
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_suggestions(
-    limit: int = 5,
+    request: Request,
+    skip: int = 0,
+    limit: int = 20,
+    confidence_min: TypingOptional[float] = None,
+    is_dismissed: TypingOptional[bool] = None,
+    is_applied: TypingOptional[bool] = None,
+    sort_by: TypingOptional[str] = None,
+    sort_order: str = "desc",
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get integration suggestions for the user."""
-    # Get recent events
-    recent_events = db.query(Event).filter(
-        Event.user_id == current_user.id
-    ).order_by(Event.timestamp.desc()).limit(50).all()
+    """Get integration suggestions with filtering and pagination."""
+    cache_key = f"suggestions:{current_user.id}:{skip}:{limit}:{confidence_min}:{is_dismissed}:{is_applied}:{sort_by}:{sort_order}"
     
-    # Convert to tracker format and generate suggestions
-    # This is a simplified version - you'd want to adapt the tracker to use DB
-    suggestions = db.query(Suggestion).filter(
-        Suggestion.user_id == current_user.id,
-        Suggestion.is_dismissed == False
-    ).order_by(Suggestion.created_at.desc()).limit(limit).all()
+    cached_result = get(cache_key)
+    if cached_result:
+        return cached_result
     
-    return suggestions
+    query = db.query(Suggestion).filter(Suggestion.user_id == current_user.id)
+    
+    if is_dismissed is not None:
+        query = query.filter(Suggestion.is_dismissed == is_dismissed)
+    if is_applied is not None:
+        query = query.filter(Suggestion.is_applied == is_applied)
+    if confidence_min is not None:
+        query = query.filter(Suggestion.confidence >= confidence_min)
+    
+    total = query.count()
+    
+    # Apply sorting
+    if sort_by:
+        sort_column = getattr(Suggestion, sort_by, None)
+        if sort_column:
+            if sort_order == "desc":
+                query = query.order_by(sort_column.desc())
+            else:
+                query = query.order_by(sort_column.asc())
+    else:
+        # Default sort by confidence and created_at
+        if sort_order == "desc":
+            query = query.order_by(Suggestion.confidence.desc(), Suggestion.created_at.desc())
+        else:
+            query = query.order_by(Suggestion.confidence.asc(), Suggestion.created_at.asc())
+    
+    suggestions = query.offset(skip).limit(limit).all()
+    
+    result = PaginatedResponse(
+        items=suggestions,
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_more=(skip + limit) < total
+    )
+    
+    set(cache_key, result, ttl=60)
+    return result
 
 
 @app.post("/api/suggestions/generate", response_model=List[SuggestionResponse])
+@limiter.limit("10/hour")
 async def generate_suggestions(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Generate new suggestions based on patterns."""
+    # Clear cache for suggestions
+    from backend.cache import clear_pattern
+    clear_pattern(f"suggestions:{current_user.id}:*")
+    
     # Get events and patterns from DB
     events = db.query(Event).filter(
         Event.user_id == current_user.id
@@ -609,16 +792,59 @@ async def generate_suggestions(
     return [new_suggestion]
 
 
-@app.get("/api/patterns", response_model=List[PatternResponse])
+@app.get("/api/patterns", response_model=PaginatedResponse)
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_patterns(
+    request: Request,
+    skip: int = 0,
+    limit: int = 20,
+    file_extension: TypingOptional[str] = None,
+    sort_by: TypingOptional[str] = None,
+    sort_order: str = "desc",
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get usage patterns."""
-    patterns = db.query(Pattern).filter(
-        Pattern.user_id == current_user.id
-    ).all()
-    return patterns
+    """Get usage patterns with filtering and pagination."""
+    cache_key = f"patterns:{current_user.id}:{skip}:{limit}:{file_extension}:{sort_by}:{sort_order}"
+    
+    cached_result = get(cache_key)
+    if cached_result:
+        return cached_result
+    
+    query = db.query(Pattern).filter(Pattern.user_id == current_user.id)
+    
+    if file_extension:
+        query = query.filter(Pattern.file_extension == file_extension)
+    
+    total = query.count()
+    
+    # Apply sorting
+    if sort_by:
+        sort_column = getattr(Pattern, sort_by, None)
+        if sort_column:
+            if sort_order == "desc":
+                query = query.order_by(sort_column.desc())
+            else:
+                query = query.order_by(sort_column.asc())
+    else:
+        # Default sort by count
+        if sort_order == "desc":
+            query = query.order_by(Pattern.count.desc())
+        else:
+            query = query.order_by(Pattern.count.asc())
+    
+    patterns = query.offset(skip).limit(limit).all()
+    
+    result = PaginatedResponse(
+        items=patterns,
+        total=total,
+        skip=skip,
+        limit=limit,
+        has_more=(skip + limit) < total
+    )
+    
+    set(cache_key, result, ttl=60)
+    return result
 
 
 @app.get("/api/stats")
@@ -686,6 +912,138 @@ async def update_config(
     db.commit()
     db.refresh(config)
     return config
+
+
+@app.post("/api/suggestions/{suggestion_id}/bookmark")
+async def bookmark_suggestion(
+    suggestion_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Bookmark/favorite a suggestion."""
+    suggestion = db.query(Suggestion).filter(
+        Suggestion.id == suggestion_id,
+        Suggestion.user_id == current_user.id
+    ).first()
+    
+    if not suggestion:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    
+    # Toggle bookmark (using a detail field or create a separate field)
+    # For now, we'll use a custom detail flag
+    if not suggestion.details:
+        suggestion.details = {}
+    suggestion.details["is_bookmarked"] = not suggestion.details.get("is_bookmarked", False)
+    
+    db.commit()
+    db.refresh(suggestion)
+    
+    # Clear cache
+    delete(f"suggestions:{current_user.id}:*")
+    
+    return {"message": "Suggestion bookmarked" if suggestion.details.get("is_bookmarked") else "Suggestion unbookmarked"}
+
+
+@app.post("/api/suggestions/{suggestion_id}/apply")
+async def apply_suggestion(
+    suggestion_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Mark a suggestion as applied."""
+    suggestion = db.query(Suggestion).filter(
+        Suggestion.id == suggestion_id,
+        Suggestion.user_id == current_user.id
+    ).first()
+    
+    if not suggestion:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    
+    suggestion.is_applied = True
+    db.commit()
+    
+    # Clear cache
+    delete(f"suggestions:{current_user.id}:*")
+    
+    return {"message": "Suggestion marked as applied"}
+
+
+@app.post("/api/suggestions/{suggestion_id}/dismiss")
+async def dismiss_suggestion(
+    suggestion_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Dismiss a suggestion."""
+    suggestion = db.query(Suggestion).filter(
+        Suggestion.id == suggestion_id,
+        Suggestion.user_id == current_user.id
+    ).first()
+    
+    if not suggestion:
+        raise HTTPException(status_code=404, detail="Suggestion not found")
+    
+    suggestion.is_dismissed = True
+    db.commit()
+    
+    # Clear cache
+    delete(f"suggestions:{current_user.id}:*")
+    
+    return {"message": "Suggestion dismissed"}
+
+
+@app.get("/api/patterns/export")
+async def export_patterns(
+    format: str = "json",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Export patterns in CSV or JSON format."""
+    patterns = db.query(Pattern).filter(
+        Pattern.user_id == current_user.id
+    ).all()
+    
+    if format.lower() == "csv":
+        content = export_patterns_csv(patterns)
+        return Response(
+            content=content,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=patterns.csv"}
+        )
+    else:
+        content = export_patterns_json(patterns)
+        return Response(
+            content=content,
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=patterns.json"}
+        )
+
+
+@app.get("/api/events/export")
+async def export_events(
+    format: str = "json",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Export events in CSV or JSON format."""
+    events = db.query(Event).filter(
+        Event.user_id == current_user.id
+    ).order_by(Event.timestamp.desc()).limit(1000).all()
+    
+    if format.lower() == "csv":
+        content = export_events_csv(events)
+        return Response(
+            content=content,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=events.csv"}
+        )
+    else:
+        content = export_events_json(events)
+        return Response(
+            content=content,
+            media_type="application/json",
+            headers={"Content-Disposition": "attachment; filename=events.json"}
+        )
 
 
 @app.websocket("/ws")
