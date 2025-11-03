@@ -6,16 +6,17 @@ import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
+from backend.config import settings
 
 def init_sentry() -> None:
     """Initialize Sentry error tracking."""
-    dsn = os.getenv("SENTRY_DSN")
+    dsn = settings.sentry_dsn
     
     if not dsn:
         # Sentry is optional - don't fail if not configured
         return
     
-    environment = os.getenv("ENVIRONMENT", "development")
+    environment = settings.environment
     release = os.getenv("RELEASE_VERSION", "unknown")
     
     sentry_sdk.init(

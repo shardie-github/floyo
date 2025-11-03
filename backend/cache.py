@@ -23,8 +23,10 @@ redis_client: Optional[redis.Redis] = None
 def init_cache():
     """Initialize Redis cache if available, otherwise use in-memory cache."""
     global redis_client
+    from backend.config import settings
+    
     if REDIS_AVAILABLE:
-        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        redis_url = settings.redis_url or "redis://localhost:6379/0"
         try:
             redis_client = redis.from_url(redis_url, decode_responses=True)
             # Test connection
@@ -33,8 +35,12 @@ def init_cache():
         except Exception as e:
             print(f"Redis connection failed, using in-memory cache: {e}")
             redis_client = None
+            if settings.environment == "production":
+                print("WARNING: Redis unavailable in production - using in-memory cache (not recommended)")
     else:
         print("Redis not available, using in-memory cache")
+        if settings.environment == "production":
+            print("WARNING: Redis not installed - using in-memory cache (not recommended)")
 
 
 def _get_cache_key(key: str) -> str:
