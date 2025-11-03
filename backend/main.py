@@ -4,12 +4,12 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 
-from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, or_, and_
 from sqlalchemy.orm import sessionmaker
 import jwt
 from passlib.context import CryptContext
@@ -17,12 +17,24 @@ from passlib.hash import bcrypt
 
 import os
 import sys
+import secrets
 from pathlib import Path
+from typing import Optional as TypingOptional
+from datetime import timedelta
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from backend.database import SessionLocal, init_db, get_db
+from backend.logging_config import setup_logging, get_logger
+from backend.sentry_config import init_sentry
+
+# Set up logging
+setup_logging()
+logger = get_logger(__name__)
+
+# Initialize Sentry
+init_sentry()
 from database.models import (
     Base, User, Event, Pattern, FileRelationship, TemporalPattern,
     Suggestion, UserConfig, Workflow, UserSession
@@ -39,8 +51,49 @@ init_db()
 # FastAPI app
 app = FastAPI(
     title="Floyo API",
-    description="API for Floyo - File usage pattern tracking and integration suggestions",
-    version="1.0.0"
+    description="""
+    ## Floyo API Documentation
+    
+    Floyo is a file usage pattern tracking system that suggests concrete, niche API integrations 
+    based on actual user routines.
+    
+    ### Features
+    
+    * **User Authentication**: JWT-based authentication with email verification
+    * **Event Tracking**: Track file operations and tool usage
+    * **Pattern Analysis**: Discover usage patterns from tracked events
+    * **Integration Suggestions**: Get intelligent suggestions for API integrations
+    * **File Upload**: Upload files and track them as events
+    
+    ### Authentication
+    
+    Most endpoints require authentication. Include the JWT token in the Authorization header:
+    
+    ```
+    Authorization: Bearer <token>
+    ```
+    
+    ### Endpoints
+    
+    - `/api/auth/*` - Authentication endpoints
+    - `/api/events/*` - Event tracking endpoints
+    - `/api/patterns` - Pattern analysis endpoints
+    - `/api/suggestions/*` - Integration suggestion endpoints
+    - `/api/stats` - Statistics endpoints
+    - `/api/config` - User configuration endpoints
+    """,
+    version="1.0.0",
+    contact={
+        "name": "Floyo Support",
+        "email": "support@floyo.dev",
+    },
+    license_info={
+        "name": "Apache 2.0",
+        "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
+    },
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
 )
 
 # CORS middleware
@@ -227,16 +280,28 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
                 detail="Username already taken"
             )
     
+    # Generate email verification token
+    verification_token = secrets.token_urlsafe(32)
+    
     # Create user
     hashed_password = get_password_hash(user.password)
     db_user = User(
         email=user.email,
         username=user.username,
         hashed_password=hashed_password,
-        full_name=user.full_name
+        full_name=user.full_name,
+        email_verified=False,
+        email_verification_token=verification_token,
+        email_verification_expires=datetime.utcnow() + timedelta(days=1)
     )
     db.add(db_user)
     db.commit()
+    db.refresh(db_user)
+    
+    # In production, send verification email here
+    # For now, log the token (in dev only)
+    logger.info(f"Email verification token for {user.email}: {verification_token}")
+    
     db.refresh(db_user)
     
     # Create default config
@@ -316,6 +381,120 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return current_user
 
 
+@app.put("/api/auth/profile", response_model=UserResponse)
+async def update_profile(
+    full_name: TypingOptional[str] = None,
+    username: TypingOptional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Update user profile."""
+    if username and username != current_user.username:
+        existing = db.query(User).filter(User.username == username).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already taken"
+            )
+        current_user.username = username
+    
+    if full_name is not None:
+        current_user.full_name = full_name
+    
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@app.get("/api/auth/verify-email/{token}")
+async def verify_email(token: str, db: Session = Depends(get_db)):
+    """Verify user email with token."""
+    user = db.query(User).filter(
+        User.email_verification_token == token,
+        User.email_verification_expires > datetime.utcnow()
+    ).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired verification token"
+        )
+    
+    user.email_verified = True
+    user.email_verification_token = None
+    user.email_verification_expires = None
+    db.commit()
+    
+    return {"message": "Email verified successfully"}
+
+
+@app.post("/api/auth/resend-verification")
+async def resend_verification(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Resend email verification."""
+    if current_user.email_verified:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already verified"
+        )
+    
+    # Generate new token
+    verification_token = secrets.token_urlsafe(32)
+    current_user.email_verification_token = verification_token
+    current_user.email_verification_expires = datetime.utcnow() + timedelta(days=1)
+    db.commit()
+    
+    # In production, send verification email here
+    logger.info(f"Email verification token for {current_user.email}: {verification_token}")
+    
+    return {"message": "Verification email sent"}
+
+
+@app.post("/api/events/upload")
+async def upload_event_file(
+    file: UploadFile = File(...),
+    event_type: str = "file_upload",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Upload a file and create an event."""
+    # Create uploads directory if it doesn't exist
+    upload_dir = Path("uploads") / str(current_user.id)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Save file
+    file_path = upload_dir / file.filename
+    with open(file_path, "wb") as f:
+        content = await file.read()
+        f.write(content)
+    
+    # Create event
+    db_event = Event(
+        user_id=current_user.id,
+        event_type=event_type,
+        file_path=str(file_path),
+        tool="upload",
+        operation="upload",
+        details={
+            "filename": file.filename,
+            "content_type": file.content_type,
+            "size": len(content)
+        },
+        timestamp=datetime.utcnow()
+    )
+    db.add(db_event)
+    db.commit()
+    db.refresh(db_event)
+    
+    return {
+        "message": "File uploaded successfully",
+        "event_id": str(db_event.id),
+        "file_path": str(file_path)
+    }
+
+
 @app.post("/api/events", response_model=EventResponse, status_code=status.HTTP_201_CREATED)
 async def create_event(
     event: EventCreate,
@@ -346,13 +525,30 @@ async def create_event(
 async def get_events(
     skip: int = 0,
     limit: int = 100,
+    event_type: TypingOptional[str] = None,
+    tool: TypingOptional[str] = None,
+    search: TypingOptional[str] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get user events."""
-    events = db.query(Event).filter(
-        Event.user_id == current_user.id
-    ).order_by(Event.timestamp.desc()).offset(skip).limit(limit).all()
+    """Get user events with filtering and search."""
+    query = db.query(Event).filter(Event.user_id == current_user.id)
+    
+    # Apply filters
+    if event_type:
+        query = query.filter(Event.event_type == event_type)
+    if tool:
+        query = query.filter(Event.tool == tool)
+    if search:
+        query = query.filter(
+            or_(
+                Event.file_path.ilike(f"%{search}%"),
+                Event.operation.ilike(f"%{search}%"),
+                Event.event_type.ilike(f"%{search}%")
+            )
+        )
+    
+    events = query.order_by(Event.timestamp.desc()).offset(skip).limit(limit).all()
     return events
 
 

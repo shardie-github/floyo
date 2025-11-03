@@ -8,33 +8,33 @@ This roadmap outlines development tasks and milestones for the next 6 months, or
 ## Month 1: Foundation & Core Features (Weeks 1-4)
 
 ### Week 1-2: Setup & Core Infrastructure
-- [ ] Set up development and staging environments
-- [ ] Configure CI/CD pipeline (GitHub Actions / GitLab CI)
-- [ ] Set up automated testing infrastructure
-- [ ] Configure error tracking (Sentry integration)
-- [ ] Set up logging infrastructure (structured logging)
-- [ ] Create database seeding scripts for development
-- [ ] Set up development documentation workflow
-- [ ] Configure pre-commit hooks (black, flake8, eslint)
+- [x] Set up development and staging environments
+- [x] Configure CI/CD pipeline (GitHub Actions / GitLab CI)
+- [x] Set up automated testing infrastructure
+- [x] Configure error tracking (Sentry integration)
+- [x] Set up logging infrastructure (structured logging)
+- [x] Create database seeding scripts for development
+- [x] Set up development documentation workflow
+- [x] Configure pre-commit hooks (black, flake8, eslint)
 - [ ] Set up code quality checks (SonarQube / CodeClimate)
 
 ### Week 3-4: Core Features & Testing
-- [ ] Write comprehensive backend API tests (pytest)
-- [ ] Write frontend component tests (Jest + React Testing Library)
-- [ ] Implement integration tests for API endpoints
-- [ ] Add end-to-end tests (Playwright / Cypress)
-- [ ] Fix critical bugs from initial testing
-- [ ] Implement file upload functionality for events
-- [ ] Add event filtering and search capabilities
+- [x] Write comprehensive backend API tests (pytest)
+- [x] Write frontend component tests (Jest + React Testing Library)
+- [x] Implement integration tests for API endpoints
+- [x] Add end-to-end tests (Playwright / Cypress)
+- [ ] Fix critical bugs from initial testing (ongoing)
+- [x] Implement file upload functionality for events
+- [x] Add event filtering and search capabilities
 - [ ] Create admin dashboard (if needed)
-- [ ] Implement user profile management
-- [ ] Add email verification for new users
+- [x] Implement user profile management
+- [x] Add email verification for new users
 
 ### Documentation
-- [ ] Complete API documentation (OpenAPI/Swagger)
-- [ ] Write developer onboarding guide
-- [ ] Create architecture decision records (ADRs)
-- [ ] Document deployment procedures
+- [x] Complete API documentation (OpenAPI/Swagger)
+- [x] Write developer onboarding guide
+- [x] Create architecture decision records (ADRs)
+- [x] Document deployment procedures
 
 ---
 

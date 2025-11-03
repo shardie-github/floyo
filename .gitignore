@@ -19,39 +19,10 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 venv/
-ENV/
 env/
+ENV/
 .venv
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-.next/
-out/
-build/
-dist/
 
 # Testing
 .pytest_cache/
@@ -60,19 +31,51 @@ htmlcov/
 .tox/
 .hypothesis/
 
-# OS
-.DS_Store
-Thumbs.db
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
 
 # Logs
 *.log
 logs/
 
-# Docker
-.dockerignore
+# Uploads
+uploads/
 
-# Alembic
-alembic/versions/*.pyc
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
 
-# Floyo data
-.floyo/
+# Next.js
+.next/
+out/
+dist/
+
+# Playwright
+playwright-report/
+test-results/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
