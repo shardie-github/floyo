@@ -1,0 +1,13 @@
+{
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "version": "1.0.0",
+  "checks": [],
+  "summary": {
+    "total": 0,
+    "pass": 0,
+    "fail": 0,
+    "degraded": 0,
+    "skip": 0
+  },
+  "message": "Run 'pnpm wiring:run' to generate connectivity report"
+}

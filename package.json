@@ -1,0 +1,16 @@
+{
+  "name": "nomad-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nomad Monorepo - Full-stack application",
+  "scripts": {
+    "wiring:run": "tsx tools/wiring/harness.ts",
+    "wiring:doctor": "tsx tools/wiring/wire_doctor.ts",
+    "wiring:report": "node -e \"console.log(JSON.stringify(require('./reports/connectivity/connectivity.json'), null, 2))\""
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
+    "@types/node": "^20.10.5"
+  }
+}

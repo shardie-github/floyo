@@ -1,0 +1,126 @@
+name: Wiring Check
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  wiring-check:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: floyo
+          POSTGRES_PASSWORD: floyo
+          POSTGRES_DB: floyo
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        working-directory: .
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest pytest-asyncio httpx
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install TypeScript/tsx globally
+        run: npm install -g tsx typescript
+
+      - name: Initialize database
+        env:
+          DATABASE_URL: postgresql://floyo:floyo@localhost:5432/floyo
+        run: |
+          cd backend
+          python -c "from database.models import Base; from backend.database import engine; Base.metadata.create_all(engine)"
+
+      - name: Start backend server
+        env:
+          DATABASE_URL: postgresql://floyo:floyo@localhost:5432/floyo
+          SECRET_KEY: test-secret-key-for-ci
+          REDIS_URL: redis://localhost:6379
+        run: |
+          cd backend
+          uvicorn main:app --host 0.0.0.0 --port 8000 &
+          sleep 5
+        continue-on-error: true
+
+      - name: Run wiring harness
+        env:
+          API_BASE_URL: http://localhost:8000
+          DATABASE_URL: postgresql://floyo:floyo@localhost:5432/floyo
+        run: |
+          tsx tools/wiring/harness.ts || true
+          # Don't fail immediately - we want to see the report
+
+      - name: Run wire doctor
+        run: |
+          tsx tools/wiring/wire_doctor.ts || true
+
+      - name: Run E2E wiring tests
+        working-directory: frontend
+        env:
+          API_BASE_URL: http://localhost:8000
+        run: |
+          npx playwright test e2e/wiring.web.spec.ts --reporter=list || true
+
+      - name: Upload connectivity reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: connectivity-reports
+          path: |
+            reports/connectivity/**
+            tools/wiring/fixes/**
+
+      - name: Check connectivity status
+        run: |
+          if [ -f reports/connectivity/connectivity.json ]; then
+            FAIL_COUNT=$(node -e "const r=require('./reports/connectivity/connectivity.json'); console.log(r.summary.fail)")
+            if [ "$FAIL_COUNT" -gt 0 ]; then
+              echo "? $FAIL_COUNT connectivity checks failed"
+              exit 1
+            else
+              echo "? All connectivity checks passed"
+            fi
+          else
+            echo "?? Connectivity report not generated"
+            exit 1
+          fi
