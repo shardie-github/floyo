@@ -1,2 +1,6 @@
 # floyo dependencies
-# Currently no external dependencies - uses only Python standard library
+watchdog>=2.1.0
+pyyaml>=6.0
+toml>=0.10.2
+pytest>=7.0.0
+pytest-cov>=4.0.0
