@@ -73,16 +73,18 @@ class Settings(BaseSettings):
         if self.environment != "production":
             return
         
-        # SECRET_KEY validation
-        if self.secret_key == "your-secret-key-change-in-production":
-            raise ValueError(
-                "SECRET_KEY must be set in production. "
-                "Set the SECRET_KEY environment variable to a strong, random value."
+        errors = []
+        
+        # SECRET_KEY validation - CRITICAL: Fail if default
+        if self.secret_key == "your-secret-key-change-in-production" or len(self.secret_key) < 32:
+            errors.append(
+                "SECRET_KEY must be set in production to a strong, random value (minimum 32 characters). "
+                "Set the SECRET_KEY environment variable."
             )
         
-        # CORS validation
+        # CORS validation - CRITICAL: Fail if permissive
         if "*" in self.cors_origins:
-            raise ValueError(
+            errors.append(
                 "CORS origins cannot be '*' in production. "
                 "Set CORS_ORIGINS environment variable to a comma-separated list of allowed origins."
             )
@@ -93,15 +95,20 @@ class Settings(BaseSettings):
                 "REDIS_URL is not set in production. "
                 "Cache and rate limiting will use in-memory storage (not recommended for production)."
             )
+        
+        # Raise all errors at once
+        if errors:
+            raise ValueError("Production configuration validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
 
 # Create global settings instance
 settings = Settings()
 
-# Validate production settings
+# Validate production settings - CRITICAL: Fail fast in production
 try:
     settings.validate_production()
 except ValueError as e:
     if settings.environment == "production":
+        logger.error(f"CRITICAL: Production configuration validation failed: {e}")
         raise
     # In non-production, just log warning
     logger.warning(f"Configuration validation warning: {e}")

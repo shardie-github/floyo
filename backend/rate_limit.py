@@ -6,10 +6,32 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import os
+import logging
 from backend.config import settings
 
-# Initialize limiter
-limiter = Limiter(key_func=get_remote_address)
+logger = logging.getLogger(__name__)
+
+# Try to use Redis for rate limiting if available, fallback to memory
+_storage_uri = None
+if settings.redis_url:
+    try:
+        # Test Redis connection
+        import redis
+        redis_test = redis.from_url(settings.redis_url)
+        redis_test.ping()
+        _storage_uri = settings.redis_url
+        logger.info(f"Using Redis-backed rate limiting: {settings.redis_url}")
+    except Exception as e:
+        logger.warning(f"Redis unavailable for rate limiting, using in-memory storage: {e}")
+        _storage_uri = None
+else:
+    logger.info("Redis URL not configured, using in-memory rate limiting (not recommended for production)")
+
+# Initialize limiter with Redis storage if available, otherwise in-memory
+if _storage_uri:
+    limiter = Limiter(key_func=get_remote_address, storage_uri=_storage_uri)
+else:
+    limiter = Limiter(key_func=get_remote_address)
 
 # Rate limit configuration
 RATE_LIMIT_PER_MINUTE = settings.rate_limit_per_minute

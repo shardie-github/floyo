@@ -1,5 +1,16 @@
 -- Floyo Database Schema
 -- PostgreSQL schema for the full-stack application
+--
+-- NOTE: This file is INCOMPLETE and maintained for reference only.
+-- The actual database schema is managed through Alembic migrations (see migrations/).
+-- This file contains only a subset of tables (8/17 tables present).
+--
+-- To view the complete schema:
+--   1. Check database/models.py for all models
+--   2. Run migrations: alembic upgrade head
+--   3. Use pg_dump or database introspection tools
+--
+-- This file may be archived or removed in the future.
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
