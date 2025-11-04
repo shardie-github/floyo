@@ -5,33 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import crypto from 'crypto';
+import { getUserId, checkMfaElevation } from '@/lib/auth-utils';
 
 const prisma = new PrismaClient();
-
-async function getUserId(request: NextRequest): Promise<string | null> {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.substring(7);
-  // TODO: Verify JWT token
-  return null;
-}
-
-async function checkMfaElevation(request: NextRequest): Promise<boolean> {
-  const userId = await getUserId(request);
-  if (!userId) return false;
-  const sessionToken = request.headers.get('x-mfa-session-token');
-  if (!sessionToken) return false;
-  const session = await prisma.mfaEnforcedSession.findUnique({
-    where: { sessionToken },
-  });
-  if (!session || session.userId !== userId || session.expiresAt < new Date()) {
-    return false;
-  }
-  return true;
-}
 
 async function logTransparencyAction(
   userId: string,
@@ -59,7 +35,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!(await checkMfaElevation(request))) {
+    const sessionToken = request.headers.get('x-mfa-session-token');
+    if (!userId || !(await checkMfaElevation(userId, sessionToken))) {
       return NextResponse.json(
         { error: 'MFA required to delete data' },
         { status: 403 }

@@ -7,41 +7,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { PrismaClient } from '@prisma/client';
 import crypto from 'crypto';
+import { getUserId, checkMfaElevation } from '@/lib/auth-utils';
 
 const prisma = new PrismaClient();
-
-// Auth helper (replace with your actual auth implementation)
-async function getUserId(request: NextRequest): Promise<string | null> {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  
-  const token = authHeader.substring(7);
-  // TODO: Verify JWT token and extract user ID
-  // For now, return null if not authenticated
-  // In production, use proper JWT verification
-  return null;
-}
-
-// MFA check helper
-async function checkMfaElevation(request: NextRequest): Promise<boolean> {
-  const userId = await getUserId(request);
-  if (!userId) return false;
-
-  const sessionToken = request.headers.get('x-mfa-session-token');
-  if (!sessionToken) return false;
-
-  const session = await prisma.mfaEnforcedSession.findUnique({
-    where: { sessionToken },
-  });
-
-  if (!session || session.userId !== userId || session.expiresAt < new Date()) {
-    return false;
-  }
-
-  return true;
-}
 
 // Hash helper for transparency log
 function hashValue(value: any): string {
@@ -80,7 +48,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check MFA elevation
-    if (!(await checkMfaElevation(request))) {
+    const sessionToken = request.headers.get('x-mfa-session-token');
+    if (!userId || !(await checkMfaElevation(userId, sessionToken))) {
       return NextResponse.json(
         { error: 'MFA required to update consent' },
         { status: 403 }

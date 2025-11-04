@@ -6,21 +6,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { PrismaClient } from '@prisma/client';
+import { getUserId } from '@/lib/auth-utils';
 
 const prisma = new PrismaClient();
 
 // Check kill-switch
 const PRIVACY_KILL_SWITCH = process.env.PRIVACY_KILL_SWITCH === 'true';
-
-async function getUserId(request: NextRequest): Promise<string | null> {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.substring(7);
-  // TODO: Verify JWT token
-  return null;
-}
 
 // Redact sensitive fields
 function redactMetadata(metadata: any): any {

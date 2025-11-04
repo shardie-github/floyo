@@ -5,18 +5,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { getUserId } from '@/lib/auth-utils';
 
 const prisma = new PrismaClient();
-
-async function getUserId(request: NextRequest): Promise<string | null> {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.substring(7);
-  // TODO: Verify JWT token
-  return null;
-}
 
 // GET /api/privacy/log
 export async function GET(request: NextRequest) {

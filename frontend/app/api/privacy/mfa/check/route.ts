@@ -4,18 +4,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { getUserId, checkMfaElevation } from '@/lib/auth-utils';
 
 const prisma = new PrismaClient();
-
-async function getUserId(request: NextRequest): Promise<string | null> {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.substring(7);
-  // TODO: Verify JWT token
-  return null;
-}
 
 // GET /api/privacy/mfa/check
 export async function GET(request: NextRequest) {
@@ -26,21 +17,20 @@ export async function GET(request: NextRequest) {
     }
 
     const sessionToken = request.headers.get('x-mfa-session-token');
-    if (!sessionToken) {
+    const elevated = await checkMfaElevation(userId, sessionToken);
+
+    if (!elevated) {
       return NextResponse.json({ elevated: false });
     }
 
+    // Get session details
     const session = await prisma.mfaEnforcedSession.findUnique({
-      where: { sessionToken },
+      where: { sessionToken: sessionToken! },
     });
-
-    if (!session || session.userId !== userId || session.expiresAt < new Date()) {
-      return NextResponse.json({ elevated: false });
-    }
 
     return NextResponse.json({
       elevated: true,
-      expiresAt: session.expiresAt.toISOString(),
+      expiresAt: session?.expiresAt.toISOString(),
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
