@@ -1,0 +1,57 @@
+name: Project Governance Orchestrator
+on:
+  workflow_dispatch:
+  pull_request: { types: [opened, synchronize, reopened, ready_for_review] }
+  schedule: [ { cron: "0 2 * * *" } ]
+permissions: { contents: read, pull-requests: write }
+concurrency: { group: governance-${{ github.ref }}, cancel-in-progress: false }
+env:
+  NODE_VERSION: "20"
+  PY_VERSION: "3.11"
+  AUDIT_DIR: docs/audit
+  GOV_DIR: docs/governance
+  SELFCHECK_DIR: infra/selfcheck
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: ${{ env.NODE_VERSION }}, cache: "npm" }
+      - uses: actions/setup-python@v5
+        with: { python-version: ${{ env.PY_VERSION }}, cache: "pip" }
+      - name: Install optional toolchain
+        run: |
+          set -e
+          sudo apt-get update -y && sudo apt-get install -y jq moreutils
+          npm i -g madge@6 @apidevtools/swagger-cli@4 graphql-schema-linter@3 @axe-core/cli@4 @lhci/cli@0 || true
+          python -m venv .venv && . .venv/bin/activate && pip install -U pip cyclonedx-bom==4.1.6 || true
+      - name: Install repo deps (if any)
+        run: |
+          set -e
+          if [ -f package.json ]; then corepack enable; npm ci --ignore-scripts || true; fi
+          if [ -f requirements.txt ]; then . .venv/bin/activate; pip install -r requirements.txt || true; fi
+          mkdir -p "$AUDIT_DIR" "$GOV_DIR" "$SELFCHECK_DIR"
+      - name: Run selfchecks
+        run: |
+          set -e
+          if ls infra/selfcheck/* 1>/dev/null 2>&1; then
+            chmod +x infra/selfcheck/* || true
+            for f in infra/selfcheck/*; do [ -x "$f" ] && "$f" || true; done
+          else
+            echo "No selfcheck scripts present."
+          fi
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: governance-artifacts
+          path: docs/**
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Comment PR summary
+        if: github.event_name == 'pull_request'
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          filePath: docs/audit/CI_SUMMARY.md
+          comment_tag: governance_orchestrator_summary
