@@ -31,6 +31,14 @@ from backend.sentry_config import init_sentry
 from backend.rate_limit import limiter, get_rate_limit_exceeded_handler, RATE_LIMIT_PER_MINUTE, RATE_LIMIT_PER_HOUR
 from backend.cache import init_cache, cached, get, set, delete
 from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+
+# Import security modules
+from backend.security import (
+    SecurityHeadersMiddleware, TwoFactorAuthManager, DataEncryption,
+    SecurityAuditor, InputSanitizer
+)
 
 # Set up logging
 setup_logging()
@@ -45,7 +53,10 @@ from database.models import (
     Base, User, Event, Pattern, FileRelationship, TemporalPattern,
     Suggestion, UserConfig, Workflow, UserSession, Organization,
     OrganizationMember, AuditLog, IntegrationConnector, UserIntegration,
-    WorkflowVersion, WorkflowExecution
+    WorkflowVersion, WorkflowExecution, Referral, ReferralReward,
+    RetentionCampaign, WorkflowShare, SubscriptionPlan, Subscription,
+    UsageMetric, BillingEvent, SSOProvider, SSOConnection,
+    ComplianceReport, EnterpriseSettings, TwoFactorAuth, SecurityAudit
 )
 from sqlalchemy import text
 from backend.batch_processor import process_event_batch
@@ -118,6 +129,15 @@ from backend.database import SessionLocal as DB
 db_init = DB()
 initialize_connectors(db_init)
 db_init.close()
+
+# Security Headers Middleware
+class SecurityHeadersMiddlewareClass(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        headers = SecurityHeadersMiddleware.get_security_headers()
+        for key, value in headers.items():
+            response.headers[key] = value
+        return response
 
 # FastAPI app
 app = FastAPI(
@@ -203,7 +223,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:;"
         return response
 
-app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(SecurityHeadersMiddlewareClass)
 
 # Rate limiting
 app.state.limiter = limiter
@@ -2677,6 +2697,491 @@ async def get_audit_logs(
     
     return logs
 
+
+# Import growth, monetization, and enterprise modules
+from backend.growth import RetentionEngine, ViralGrowthEngine, GrowthAnalytics
+from backend.monetization import SubscriptionManager, UsageTracker, BillingManager, PricingCalculator
+from backend.enterprise import SSOManager, EnterpriseAdmin, ComplianceManager, EcosystemManager
+
+# Growth Engine Endpoints (Weeks 5-8)
+
+@app.get("/api/growth/retention/cohort")
+async def get_retention_cohort(
+    days: int = 7,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get retention cohort data for current user."""
+    cohort = RetentionEngine.get_user_retention_cohort(db, current_user.id, days)
+    return cohort
+
+@app.get("/api/growth/retention/at-risk")
+async def get_at_risk_users(
+    days_inactive: int = 7,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get users at risk of churning (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    at_risk = RetentionEngine.get_at_risk_users(db, days_inactive)
+    return {"at_risk_users": at_risk, "count": len(at_risk)}
+
+@app.post("/api/growth/retention/digest")
+async def send_retention_digest(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Generate and send weekly retention digest."""
+    digest = RetentionEngine.send_retention_digest(db, current_user.id)
+    return digest
+
+@app.post("/api/growth/referral/create")
+async def create_referral_code(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a referral code for current user."""
+    referral = ViralGrowthEngine.create_referral_code(db, current_user.id)
+    return {
+        "referral_code": referral.code,
+        "referral_url": f"/signup?ref={referral.code}",
+        "usage_count": referral.usage_count
+    }
+
+@app.get("/api/growth/referral/stats")
+async def get_referral_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get referral statistics for current user."""
+    stats = ViralGrowthEngine.calculate_viral_coefficient(db, current_user.id)
+    return stats
+
+@app.get("/api/growth/viral-coefficient")
+async def get_viral_coefficient(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get platform viral coefficient (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    viral = ViralGrowthEngine.calculate_viral_coefficient(db)
+    return viral
+
+@app.post("/api/growth/workflows/{workflow_id}/share")
+async def share_workflow(
+    workflow_id: UUID,
+    share_type: str = "public",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Share a workflow publicly or via link."""
+    share = ViralGrowthEngine.share_workflow(db, current_user.id, workflow_id, share_type)
+    return share
+
+@app.get("/api/growth/metrics")
+async def get_growth_metrics(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get growth metrics for platform (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    metrics = GrowthAnalytics.get_growth_metrics(db, days)
+    return metrics
+
+# Monetization Endpoints (Weeks 9-12)
+@app.get("/api/billing/plans")
+async def get_subscription_plans(
+    db: Session = Depends(get_db)
+):
+    """Get available subscription plans."""
+    from database.models import SubscriptionPlan
+    plans = db.query(SubscriptionPlan).filter(SubscriptionPlan.is_active == True).all()
+    return [
+        {
+            "id": str(plan.id),
+            "name": plan.name,
+            "tier": plan.tier,
+            "description": plan.description,
+            "price_monthly": plan.price_monthly,
+            "price_yearly": plan.price_yearly,
+            "features": plan.features
+        }
+        for plan in plans
+    ]
+
+@app.get("/api/billing/subscription")
+async def get_subscription(
+    organization_id: Optional[UUID] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get current user/organization subscription."""
+    from database.models import Subscription
+    if organization_id:
+        subscription = db.query(Subscription).filter(
+            Subscription.organization_id == organization_id,
+            Subscription.status == "active"
+        ).first()
+    else:
+        subscription = db.query(Subscription).filter(
+            Subscription.user_id == current_user.id,
+            Subscription.status == "active"
+        ).first()
+    
+    if not subscription:
+        return {"status": "no_subscription", "tier": "free"}
+    
+    return {
+        "id": str(subscription.id),
+        "plan": subscription.plan.name,
+        "tier": subscription.plan.tier,
+        "billing_cycle": subscription.billing_cycle,
+        "status": subscription.status,
+        "price": subscription.price,
+        "current_period_end": subscription.current_period_end.isoformat()
+    }
+
+@app.post("/api/billing/subscribe")
+async def create_subscription(
+    plan_id: UUID,
+    billing_cycle: str = "monthly",
+    organization_id: Optional[UUID] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a subscription."""
+    subscription = SubscriptionManager.create_subscription(
+        db, current_user.id, organization_id, plan_id, billing_cycle
+    )
+    return {
+        "id": str(subscription.id),
+        "status": subscription.status,
+        "plan": subscription.plan.name
+    }
+
+@app.post("/api/billing/subscription/{subscription_id}/cancel")
+async def cancel_subscription(
+    subscription_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Cancel a subscription."""
+    subscription = SubscriptionManager.cancel_subscription(db, subscription_id, current_user.id)
+    return {"message": "Subscription canceled", "status": subscription.status}
+
+@app.get("/api/billing/usage")
+async def get_usage(
+    metric_type: str = "events",
+    organization_id: Optional[UUID] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get usage metrics for current user/organization."""
+    # Get subscription tier
+    from database.models import Subscription
+    if organization_id:
+        subscription = db.query(Subscription).filter(
+            Subscription.organization_id == organization_id,
+            Subscription.status == "active"
+        ).first()
+    else:
+        subscription = db.query(Subscription).filter(
+            Subscription.user_id == current_user.id,
+            Subscription.status == "active"
+        ).first()
+    
+    tier = subscription.plan.tier if subscription else "free"
+    
+    usage = UsageTracker.get_usage(db, current_user.id, organization_id, metric_type)
+    limit_check = UsageTracker.check_limit(db, current_user.id, organization_id, metric_type, tier)
+    
+    return {
+        "metric_type": metric_type,
+        "current_usage": usage,
+        "tier": tier,
+        **limit_check
+    }
+
+@app.get("/api/billing/ltv-cac")
+async def get_ltv_cac(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get LTV:CAC ratio (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    ltv_cac = PricingCalculator.calculate_ltv_cac(db)
+    return ltv_cac
+
+# Enterprise Endpoints (Weeks 13-16)
+@app.get("/api/enterprise/organizations/{org_id}/stats")
+async def get_organization_stats(
+    org_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get organization statistics (admin/owner only)."""
+    # Check permissions
+    membership = db.query(OrganizationMember).filter(
+        OrganizationMember.organization_id == org_id,
+        OrganizationMember.user_id == current_user.id
+    ).first()
+    
+    if not membership or membership.role not in ["owner", "admin"]:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    stats = EnterpriseAdmin.get_organization_stats(db, org_id)
+    return stats
+
+@app.get("/api/enterprise/organizations/{org_id}/activity")
+async def get_user_activity_report(
+    org_id: UUID,
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user activity report (admin/owner only)."""
+    membership = db.query(OrganizationMember).filter(
+        OrganizationMember.organization_id == org_id,
+        OrganizationMember.user_id == current_user.id
+    ).first()
+    
+    if not membership or membership.role not in ["owner", "admin"]:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    activity = EnterpriseAdmin.get_user_activity_report(db, org_id, days)
+    return {"activity_report": activity, "period_days": days}
+
+@app.post("/api/enterprise/sso/providers")
+async def create_sso_provider(
+    name: str,
+    provider_type: str,
+    config: Dict[str, Any],
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create SSO provider (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    provider = SSOManager.create_sso_provider(db, name, provider_type, config)
+    return {
+        "id": str(provider.id),
+        "name": provider.name,
+        "provider_type": provider.provider_type
+    }
+
+@app.post("/api/enterprise/organizations/{org_id}/sso")
+async def create_sso_connection(
+    org_id: UUID,
+    provider_id: UUID,
+    connection_config: Dict[str, Any],
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create SSO connection for organization (admin/owner only)."""
+    membership = db.query(OrganizationMember).filter(
+        OrganizationMember.organization_id == org_id,
+        OrganizationMember.user_id == current_user.id
+    ).first()
+    
+    if not membership or membership.role not in ["owner", "admin"]:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    connection = SSOManager.create_sso_connection(db, org_id, provider_id, connection_config)
+    return {
+        "id": str(connection.id),
+        "organization_id": str(org_id),
+        "is_active": connection.is_active
+    }
+
+@app.post("/api/enterprise/compliance/reports")
+async def generate_compliance_report(
+    organization_id: UUID,
+    report_type: str = "gdpr",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Generate compliance report (admin/owner only)."""
+    membership = db.query(OrganizationMember).filter(
+        OrganizationMember.organization_id == organization_id,
+        OrganizationMember.user_id == current_user.id
+    ).first()
+    
+    if not membership or membership.role not in ["owner", "admin"]:
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    report = ComplianceManager.generate_compliance_report(db, organization_id, report_type)
+    return {
+        "id": str(report.id),
+        "report_type": report.report_type,
+        "status": report.status,
+        "generated_at": report.generated_at.isoformat()
+    }
+
+@app.get("/api/enterprise/compliance/audit-trail")
+async def get_audit_trail(
+    organization_id: Optional[UUID] = None,
+    resource_type: Optional[str] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get audit trail with filters."""
+    trail = ComplianceManager.get_audit_trail(
+        db, organization_id, current_user.id, resource_type, limit
+    )
+    return {"audit_trail": trail, "count": len(trail)}
+
+@app.get("/api/ecosystem/workflows/featured")
+async def get_featured_workflows(
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    """Get featured workflows from marketplace."""
+    workflows = EcosystemManager.get_featured_workflows(db, limit)
+    return {"featured_workflows": workflows}
+
+@app.post("/api/ecosystem/workflows/fork/{share_code}")
+async def fork_workflow(
+    share_code: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Fork a shared workflow."""
+    result = EcosystemManager.fork_workflow(db, current_user.id, share_code)
+    return result
+
+# Security Endpoints (P0 - Critical)
+@app.post("/api/security/2fa/setup")
+async def setup_2fa(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Set up 2FA for current user."""
+    try:
+        result = TwoFactorAuthManager.setup_2fa(db, current_user.id)
+        
+        # Log security event
+        SecurityAuditor.log_security_event(
+            db=db,
+            user_id=current_user.id,
+            event_type="2fa_setup_initiated",
+            severity="medium",
+            details={"user_id": str(current_user.id)}
+        )
+        
+        return result
+    except Exception as e:
+        logger.error(f"2FA setup error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/security/2fa/verify")
+async def verify_and_enable_2fa(
+    token: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Verify 2FA token and enable 2FA."""
+    success = TwoFactorAuthManager.verify_and_enable_2fa(db, current_user.id, token)
+    
+    if success:
+        SecurityAuditor.log_security_event(
+            db=db,
+            user_id=current_user.id,
+            event_type="2fa_enabled",
+            severity="high",
+            details={"user_id": str(current_user.id)}
+        )
+        return {"message": "2FA enabled successfully", "enabled": True}
+    else:
+        SecurityAuditor.log_security_event(
+            db=db,
+            user_id=current_user.id,
+            event_type="2fa_verification_failed",
+            severity="medium",
+            details={"user_id": str(current_user.id)}
+        )
+        raise HTTPException(status_code=400, detail="Invalid 2FA token")
+
+@app.post("/api/security/2fa/disable")
+async def disable_2fa(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Disable 2FA for current user."""
+    success = TwoFactorAuthManager.disable_2fa(db, current_user.id)
+    
+    if success:
+        SecurityAuditor.log_security_event(
+            db=db,
+            user_id=current_user.id,
+            event_type="2fa_disabled",
+            severity="high",
+            details={"user_id": str(current_user.id)}
+        )
+        return {"message": "2FA disabled successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="2FA not enabled")
+
+@app.get("/api/security/2fa/status")
+async def get_2fa_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get 2FA status for current user."""
+    two_fa = db.query(TwoFactorAuth).filter(TwoFactorAuth.user_id == current_user.id).first()
+    
+    if not two_fa:
+        return {"enabled": False, "setup": False}
+    
+    return {
+        "enabled": two_fa.is_enabled,
+        "setup": True,
+        "has_backup_codes": len(two_fa.backup_codes) > 0 if two_fa.backup_codes else False
+    }
+
+@app.get("/api/security/audit")
+async def get_security_audit(
+    severity: Optional[str] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get security audit events (admin only or own events)."""
+    if current_user.is_superuser:
+        # Admin can see all events
+        events = SecurityAuditor.get_security_events(db, None, severity, limit)
+    else:
+        # Users can only see their own events
+        events = SecurityAuditor.get_security_events(db, current_user.id, severity, limit)
+    
+    return {"security_events": events, "count": len(events)}
+
+@app.get("/api/security/suspicious-activity")
+async def check_suspicious_activity(
+    time_window_minutes: int = 15,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Check for suspicious activity on current user account."""
+    activity = SecurityAuditor.detect_suspicious_activity(
+        db, current_user.id, time_window_minutes
+    )
+    return activity
+
+@app.post("/api/security/validate-password")
+async def validate_password_strength(
+    password: str,
+    db: Session = Depends(get_db)
+):
+    """Validate password strength."""
+    validation = InputSanitizer.validate_password_strength(password)
+    return validation
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
