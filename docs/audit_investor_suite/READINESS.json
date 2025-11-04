@@ -1,0 +1,42 @@
+{
+  "score": 100,
+  "threshold": 90,
+  "max_score": 100,
+  "domains": {
+    "tech": 20,
+    "product": 20,
+    "gtm": 20,
+    "finance": 20,
+    "governance": 20
+  },
+  "critical_blockers": 4,
+  "has_blockers": true,
+  "blocker_ids": [
+    "ISSUE-259A405C",
+    "ISSUE-D18C22C6",
+    "ISSUE-E3FA37E5",
+    "ISSUE-D39DC5D9"
+  ],
+  "gated": false,
+  "notes": [
+    "\u2713 Validation report exists",
+    "\u2713 Executive summary exists",
+    "\u2713 Required CI workflows present",
+    "Tech domain: 20/20",
+    "\u2713 Product audit exists",
+    "Product domain: 20/20",
+    "\u2713 GTM audit exists",
+    "GTM domain: 20/20",
+    "\u2713 Financial forecast exists",
+    "Finance domain: 20/20",
+    "\u2713 SECURITY.md exists",
+    "\u2713 CODEOWNERS exists",
+    "\u2713 SUPPORT.md exists",
+    "\u2713 LICENSE exists",
+    "\u2713 CONTRIBUTING.md exists",
+    "Governance domain: 20/20",
+    "\u26a0 BLOCKER: 4 CRITICAL open issue(s) found",
+    "  Issues: ISSUE-259A405C, ISSUE-D18C22C6, ISSUE-E3FA37E5"
+  ],
+  "timestamp": "2025-11-04T03:02:10.981264"
+}
