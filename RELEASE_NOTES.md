@@ -2,6 +2,23 @@
 
 ## All Changes
 
+* Merge pull request #23 from shardie-github/cursor/complete-development-phases-1-4-6bc6 (adc0ef6)
+* feat: Implement comprehensive performance monitoring (adf5b0e)
+* Refactor: Implement core optimizations and security enhancements (811f609)
+* feat: Implement monitoring and notifications (75bbc2c)
+* Merge pull request #22 from shardie-github/cursor/complete-outstanding-roadmap-items-bcd0 (970e92f)
+* feat: Add sample data generation and enhance export/delete (84ea630)
+* feat: Implement data retention and email services (204bf63)
+* Merge pull request #21 from shardie-github/cursor/complete-and-connect-roadmap-and-next-steps-9b01 (e7da05a)
+* feat: Implement security features and improve frontend (4e39886)
+* Add roadmap document with remaining tasks and estimates (743a5c0)
+* feat: Implement growth, monetization, and enterprise features (3c20c27)
+* Merge pull request #20 from shardie-github/cursor/fix-critical-security-vulnerabilities-35f0 (0aad094)
+* feat: Implement analytics, onboarding, and workflow builder (2b2cab7)
+* feat: Add investor suite docs and market fit scoring (e9b5769)
+* Refactor: Improve security and configuration handling (641a0ce)
+* Merge pull request #19 from shardie-github/cursor/final-assurance-and-gated-release-6f9c (893a42e)
+* feat: Add release workflow and governance files (74f37d8)
 * feat: Add investor remediation workflow and audits (93078e3)
 * Merge pull request #17 from shardie-github/cursor/automated-project-governance-and-self-checks-c6d4 (0c13c1c)
 * feat: Add feature flag kill-switch and API deprecation docs (124f65a)
