@@ -805,6 +805,7 @@ async def system_selfcheck():
 # Mount versioned router
 app.include_router(api_v1_router)
 app.include_router(api_router)
+app.include_router(monitoring_router)
 
 
 @app.post("/api/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)

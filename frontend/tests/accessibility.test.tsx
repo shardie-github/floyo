@@ -1,62 +1,67 @@
 /**
- * Accessibility tests using Axe Core.
+ * Accessibility tests using axe-core.
+ * Run with: npm test -- accessibility.test.tsx
  */
 
-import React from 'react';
-import { render } from '@testing-library/react';
-import { axe, toHaveNoViolations } from 'jest-axe';
-import Dashboard from '../components/Dashboard';
-import LoginForm from '../components/LoginForm';
-import EventsList from '../components/EventsList';
+import { render } from '@testing-library/react'
+import { axe, toHaveNoViolations } from 'jest-axe'
+import { Dashboard } from '../components/Dashboard'
+import { LoginForm } from '../components/LoginForm'
+import { EmptyState } from '../components/EmptyState'
+import { WorkflowBuilder } from '../components/WorkflowBuilder'
+import { NotificationProvider } from '../components/NotificationProvider'
 
-expect.extend(toHaveNoViolations);
+expect.extend(toHaveNoViolations)
+
+// Mock React Query
+jest.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({ data: null, isLoading: false }),
+  useMutation: () => ({ mutate: jest.fn(), isPending: false }),
+  useQueryClient: () => ({ invalidateQueries: jest.fn() }),
+}))
+
+// Mock auth hook
+jest.mock('../hooks/useAuth', () => ({
+  useAuth: () => ({
+    user: null,
+    loading: false,
+    checkAuth: jest.fn(),
+    logout: jest.fn(),
+  }),
+}))
 
 describe('Accessibility Tests', () => {
   it('Dashboard should have no accessibility violations', async () => {
-    const { container } = render(<Dashboard />);
-    const results = await axe(container);
-    expect(results).toHaveNoViolations();
-  });
+    const { container } = render(
+      <NotificationProvider>
+        <Dashboard />
+      </NotificationProvider>
+    )
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
+  })
 
   it('LoginForm should have no accessibility violations', async () => {
-    const { container } = render(<LoginForm />);
-    const results = await axe(container);
-    expect(results).toHaveNoViolations();
-  });
+    const { container } = render(<LoginForm />)
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
+  })
 
-  it('EventsList should have no accessibility violations', async () => {
-    const { container } = render(<EventsList events={[]} />);
-    const results = await axe(container);
-    expect(results).toHaveNoViolations();
-  });
+  it('EmptyState should have no accessibility violations', async () => {
+    const { container } = render(
+      <EmptyState
+        title="Test Title"
+        description="Test description"
+        action={{ label: 'Test Action', onClick: jest.fn() }}
+      />
+    )
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
+  })
 
-  it('All interactive elements should be keyboard accessible', async () => {
-    const { container } = render(<Dashboard />);
-    const results = await axe(container, {
-      rules: {
-        'keyboard-navigation': { enabled: true },
-      },
-    });
-    expect(results).toHaveNoViolations();
-  });
-
-  it('Images should have alt text', async () => {
-    const { container } = render(<Dashboard />);
-    const results = await axe(container, {
-      rules: {
-        'image-alt': { enabled: true },
-      },
-    });
-    expect(results).toHaveNoViolations();
-  });
-
-  it('Form inputs should have labels', async () => {
-    const { container } = render(<LoginForm />);
-    const results = await axe(container, {
-      rules: {
-        'label': { enabled: true },
-      },
-    });
-    expect(results).toHaveNoViolations();
-  });
-});
+  it('WorkflowBuilder should have no accessibility violations', async () => {
+    const { container } = render(<WorkflowBuilder />)
+    const results = await axe(container)
+    expect(results).toHaveNoViolations()
+  })
+})
