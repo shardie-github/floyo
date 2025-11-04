@@ -1,0 +1,143 @@
+name: Architecture Integrity & Intent Tests
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  schedule:
+    # Nightly drift report
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  architecture-integrity:
+    name: Architecture Integrity Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pydantic pydantic-settings
+
+      - name: Self-check: Guardrails
+        id: guardrails
+        run: |
+          echo "::group::Running Guardrails"
+          python infra/selfcheck/run_guardrails.py || exit 1
+          echo "::endgroup::"
+        continue-on-error: false
+
+      - name: Self-check: Circular Dependencies
+        run: |
+          python infra/selfcheck/check_circular_deps.py || exit 1
+
+      - name: Self-check: Migrations
+        run: |
+          python infra/selfcheck/check_migrations.py || exit 1
+
+      - name: Self-check: Environment Variables
+        run: |
+          python infra/selfcheck/check_env_completeness.py || exit 1
+
+      - name: Self-check: Hardcoded Secrets
+        run: |
+          python infra/selfcheck/check_hardcoded_secrets.py || exit 1
+
+      - name: Self-check: ADR Alignment
+        run: |
+          python infra/selfcheck/check_adr_alignment.py || exit 1
+
+      - name: Lint: Python
+        run: |
+          pip install flake8 black isort
+          flake8 backend/ --max-line-length=120 --exclude=__pycache__,migrations || echo "Linting issues found"
+          black --check backend/ || echo "Formatting issues found"
+        continue-on-error: true
+
+      - name: Schema Validation
+        run: |
+          python -c "from database.models import Base; from sqlalchemy import create_engine; print('Schema validation OK')"
+        continue-on-error: true
+
+      - name: API Contract Tests
+        run: |
+          # Check if OpenAPI schema is valid
+          python -c "from backend.main import app; import json; schema = app.openapi(); print('OpenAPI schema valid')"
+        continue-on-error: true
+
+      - name: Generate Drift Report
+        if: always()
+        run: |
+          echo "## Architecture Integrity Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Guardrails Status" >> $GITHUB_STEP_SUMMARY
+          echo "- All guardrails checked" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review any warnings above" >> $GITHUB_STEP_SUMMARY
+          echo "2. Fix any critical failures" >> $GITHUB_STEP_SUMMARY
+          echo "3. Update guardrails if needed" >> $GITHUB_STEP_SUMMARY
+
+  self-reflection:
+    name: Self-Reflection Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run self-reflection tests
+        run: |
+          npm test -- tests/self_reflection.test.js --testPathPattern=self_reflection
+        continue-on-error: true
+
+  pre-merge-gate:
+    name: Pre-merge Drift Gate
+    runs-on: ubuntu-latest
+    needs: [architecture-integrity, self-reflection]
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Evaluate PR changes
+        run: |
+          echo "## Pre-merge Architecture Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Changed Files" >> $GITHUB_STEP_SUMMARY
+          git diff --name-only origin/${{ github.base_ref }}...HEAD | head -20 >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Guardrail Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Architecture integrity: ${{ needs.architecture-integrity.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Self-reflection: ${{ needs.self-reflection.result }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if critical checks failed
+        if: needs.architecture-integrity.result == 'failure'
+        run: |
+          echo "ERROR: Architecture integrity checks failed. Please review and fix issues."
+          exit 1

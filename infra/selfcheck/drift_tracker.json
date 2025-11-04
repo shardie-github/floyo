@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "description": "Tracks recurring drift types across audit runs to suggest rule updates",
+  "last_updated": "2024-12-19",
+  "drift_history": [],
+  "recurring_findings": {},
+  "suggested_rules": [],
+  "metadata": {
+    "total_runs": 0,
+    "total_findings": 0,
+    "most_common_category": null,
+    "trend": "stable"
+  },
+  "usage": {
+    "how_to_update": "Run guardrails and record findings here to track patterns",
+    "how_to_use": "Review recurring_findings to identify patterns and update guardrails",
+    "automation": "Can be updated by CI/CD or manual runs"
+  }
+}

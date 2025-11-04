@@ -1,0 +1,432 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2024-12-19",
+  "source": "docs/audit/*.md",
+  "purpose": "System intelligence map linking modules to business goals and resilience dependencies",
+  
+  "modules": {
+    "backend/main.py": {
+      "purpose": "FastAPI application entry point with all API routes",
+      "business_goals": [
+        "User authentication and authorization",
+        "Event tracking and pattern analysis",
+        "Workflow execution",
+        "Real-time updates via WebSocket",
+        "Multi-tenant organization management"
+      ],
+      "resilience_dependencies": [
+        "database.py: Connection pool management",
+        "circuit_breaker.py: Failure protection",
+        "rate_limit.py: DDoS protection",
+        "cache.py: Performance optimization"
+      ],
+      "architectural_concerns": [
+        "Monolithic file (2,298 lines) - should be split into route modules",
+        "All 50+ routes in single file - reduces maintainability",
+        "WebSocket manager in-memory - needs Redis pub/sub for scaling"
+      ],
+      "audit_references": [
+        "ROOT_CAUSE_AND_DRIFT_MAP.md - Monolithic main.py",
+        "RESILIENCE_TABLE.md - Health checks",
+        "OPS_SLO_RUNBOOK_SEEDS.md - API endpoints"
+      ],
+      "slo_impacts": [
+        "API availability: All endpoints depend on this module",
+        "API latency: All request routing handled here"
+      ]
+    },
+    
+    "backend/config.py": {
+      "purpose": "Centralized configuration management with Pydantic settings",
+      "business_goals": [
+        "Environment-specific configuration",
+        "Security validation (SECRET_KEY, CORS)",
+        "Configuration consistency across environments"
+      ],
+      "resilience_dependencies": [
+        "Production validation prevents misconfiguration",
+        "Fail-fast on critical security issues"
+      ],
+      "architectural_concerns": [
+        "SECRET_KEY validation should fail in production (currently warns)",
+        "CORS validation should fail in production (currently warns)",
+        "Single source of truth for configuration"
+      ],
+      "audit_references": [
+        "EXEC_SUMMARY.md #1 - SECRET_KEY hardcoded default",
+        "EXEC_SUMMARY.md #2 - CORS permissive configuration",
+        "CONFIG_ENTROPY_REPORT.md - Configuration validation gaps"
+      ],
+      "slo_impacts": [
+        "Security: Prevents token forgery and CSRF attacks"
+      ]
+    },
+    
+    "backend/database.py": {
+      "purpose": "Database connection pool management and session handling",
+      "business_goals": [
+        "Efficient database connection management",
+        "Prevent connection pool exhaustion",
+        "Circuit breaker protection for database failures"
+      ],
+      "resilience_dependencies": [
+        "circuit_breaker.py: Failure protection",
+        "config.py: Pool size configuration"
+      ],
+      "architectural_concerns": [
+        "Pool exhaustion risk (pool_size=10, max_overflow=20)",
+        "Circuit breaker exists but needs proper wiring",
+        "Pool monitoring available but not exposed in health checks"
+      ],
+      "audit_references": [
+        "EXEC_SUMMARY.md #3 - Database connection pool exhaustion",
+        "RESILIENCE_TABLE.md - Connection pool monitoring",
+        "ROOT_CAUSE_AND_DRIFT_MAP.md - SPOF #1"
+      ],
+      "slo_impacts": [
+        "Database pool health: Critical for all database operations",
+        "API availability: Pool exhaustion causes all endpoints to fail"
+      ]
+    },
+    
+    "backend/rate_limit.py": {
+      "purpose": "Rate limiting to prevent abuse and DDoS",
+      "business_goals": [
+        "Protect API from abuse",
+        "Prevent DDoS attacks",
+        "Fair resource allocation"
+      ],
+      "resilience_dependencies": [
+        "cache.py or Redis: Shared rate limit storage",
+        "config.py: Rate limit configuration"
+      ],
+      "architectural_concerns": [
+        "Per-instance rate limiting (not global)",
+        "DDoS protection ineffective across load balancer",
+        "Should use Redis-backed storage when available"
+      ],
+      "audit_references": [
+        "EXEC_SUMMARY.md #6 - Rate limiting per-instance",
+        "RESILIENCE_TABLE.md - Rate limit bypass",
+        "ROOT_CAUSE_AND_DRIFT_MAP.md - SPOF #4"
+      ],
+      "slo_impacts": [
+        "API availability: DDoS can cause outages",
+        "Security: Rate limit bypass allows abuse"
+      ]
+    },
+    
+    "backend/cache.py": {
+      "purpose": "Caching layer for performance optimization",
+      "business_goals": [
+        "Reduce database load",
+        "Improve response times",
+        "Handle cache misses gracefully"
+      ],
+      "resilience_dependencies": [
+        "Redis (optional): Persistent cache",
+        "config.py: Redis URL configuration"
+      ],
+      "architectural_concerns": [
+        "In-memory fallback loses data on restart",
+        "No persistence across instances",
+        "Cache stampede not protected"
+      ],
+      "audit_references": [
+        "ROOT_CAUSE_AND_DRIFT_MAP.md - Cache persistence",
+        "RESILIENCE_TABLE.md - Redis unavailable"
+      ],
+      "slo_impacts": [
+        "API latency: Cache misses increase response time"
+      ]
+    },
+    
+    "backend/circuit_breaker.py": {
+      "purpose": "Circuit breaker pattern for failure protection",
+      "business_goals": [
+        "Prevent cascade failures",
+        "Fast failure detection",
+        "Automatic recovery"
+      ],
+      "resilience_dependencies": [
+        "database.py: Should be wired to database operations"
+      ],
+      "architectural_concerns": [
+        "Exists but not wired into database operations",
+        "Should protect all external service calls"
+      ],
+      "audit_references": [
+        "ROOT_CAUSE_AND_DRIFT_MAP.md - Circuit breaker not wired",
+        "RESILIENCE_TABLE.md - Circuit breaker integration"
+      ],
+      "slo_impacts": [
+        "API availability: Prevents cascade failures"
+      ]
+    },
+    
+    "backend/workflow_scheduler.py": {
+      "purpose": "Workflow scheduling and execution",
+      "business_goals": [
+        "Automated workflow execution",
+        "Scheduled task management",
+        "Workflow versioning"
+      ],
+      "resilience_dependencies": [
+        "Celery worker (missing): Needs executor process",
+        "database.py: Workflow state storage"
+      ],
+      "architectural_concerns": [
+        "Cron logic exists but no executor process",
+        "Workflows never auto-execute",
+        "Needs Celery worker or manual execution documented"
+      ],
+      "audit_references": [
+        "EXEC_SUMMARY.md #5 - Workflow scheduler not running",
+        "ROOT_CAUSE_AND_DRIFT_MAP.md - Background jobs stub"
+      ],
+      "slo_impacts": [
+        "Functionality: Workflow feature non-functional"
+      ]
+    },
+    
+    "backend/connectors.py": {
+      "purpose": "External integration management",
+      "business_goals": [
+        "Third-party service integration",
+        "API key management",
+        "Integration credential storage"
+      ],
+      "resilience_dependencies": [
+        "database/models.py: UserIntegration model",
+        "Encryption layer (missing): Should encrypt credentials"
+      ],
+      "architectural_concerns": [
+        "Integration credentials stored unencrypted",
+        "Database compromise exposes all API keys",
+        "No automatic credential refresh"
+      ],
+      "audit_references": [
+        "EXEC_SUMMARY.md #4 - Unencrypted integration credentials",
+        "ROOT_CAUSE_AND_DRIFT_MAP.md - SPOF #7"
+      ],
+      "slo_impacts": [
+        "Security: Unencrypted credentials pose data breach risk"
+      ]
+    },
+    
+    "backend/batch_processor.py": {
+      "purpose": "Batch event processing",
+      "business_goals": [
+        "Efficient event ingestion",
+        "Bulk data processing",
+        "Transaction management"
+      ],
+      "resilience_dependencies": [
+        "database.py: Transaction support",
+        "Dead letter queue (missing): Failed batch retry"
+      ],
+      "architectural_concerns": [
+        "No retry mechanism for failed batches",
+        "Failed batches lost",
+        "No dead letter queue"
+      ],
+      "audit_references": [
+        "RESILIENCE_TABLE.md - Batch processing no DLQ",
+        "ROOT_CAUSE_AND_DRIFT_MAP.md - SPOF #10"
+      ],
+      "slo_impacts": [
+        "Data consistency: Failed batches result in data loss"
+      ]
+    },
+    
+    "database/models.py": {
+      "purpose": "SQLAlchemy ORM models for database schema",
+      "business_goals": [
+        "Data persistence",
+        "Type safety",
+        "Relationship management"
+      ],
+      "resilience_dependencies": [
+        "Alembic: Migration management",
+        "database.py: Connection pool"
+      ],
+      "architectural_concerns": [
+        "17 models defined",
+        "schema.sql incomplete (8/17 tables)",
+        "FeatureFlag models exist but not integrated"
+      ],
+      "audit_references": [
+        "EXEC_SUMMARY.md #7 - Schema.sql incomplete",
+        "ROOT_CAUSE_AND_DRIFT_MAP.md - Schema drift"
+      ],
+      "slo_impacts": [
+        "Data consistency: Schema drift causes errors"
+      ]
+    },
+    
+    "backend/api_v1.py": {
+      "purpose": "API versioning router (currently empty stub)",
+      "business_goals": [
+        "API versioning for backward compatibility",
+        "Versioned route management"
+      ],
+      "resilience_dependencies": [],
+      "architectural_concerns": [
+        "Empty stub (8 lines)",
+        "Versioning promised but not implemented",
+        "Routes still in main.py under /api/*"
+      ],
+      "audit_references": [
+        "EXEC_SUMMARY.md #8 - API versioning not implemented",
+        "ROOT_CAUSE_AND_DRIFT_MAP.md - API versioning drift"
+      ],
+      "slo_impacts": [
+        "API evolution: No versioning strategy"
+      ]
+    }
+  },
+  
+  "business_goals": {
+    "user_authentication": {
+      "modules": ["backend/main.py", "backend/config.py"],
+      "critical_paths": ["POST /api/auth/register", "POST /api/auth/login"],
+      "resilience_requirements": [
+        "SECRET_KEY validation",
+        "JWT token security",
+        "Password hashing"
+      ],
+      "slo_targets": [
+        "API availability: 99.9%",
+        "API latency: P95 < 200ms"
+      ]
+    },
+    
+    "event_tracking": {
+      "modules": ["backend/main.py", "backend/batch_processor.py", "database/models.py"],
+      "critical_paths": ["POST /api/events", "POST /api/events/batch"],
+      "resilience_requirements": [
+        "Database connection pool",
+        "Batch processing retry",
+        "Dead letter queue"
+      ],
+      "slo_targets": [
+        "API latency: P95 < 200ms",
+        "Data consistency: 99.99%"
+      ]
+    },
+    
+    "workflow_execution": {
+      "modules": ["backend/main.py", "backend/workflow_scheduler.py"],
+      "critical_paths": ["POST /api/workflows/{id}/execute"],
+      "resilience_requirements": [
+        "Workflow executor process",
+        "Step-level rollback",
+        "Timeout handling"
+      ],
+      "slo_targets": [
+        "Functionality: Workflow execution must be automated"
+      ]
+    },
+    
+    "pattern_analysis": {
+      "modules": ["backend/main.py", "database/models.py"],
+      "critical_paths": ["GET /api/patterns", "POST /api/events"],
+      "resilience_requirements": [
+        "Database connectivity",
+        "Async processing (future)"
+      ],
+      "slo_targets": [
+        "API latency: P95 < 500ms for analysis"
+      ]
+    }
+  },
+  
+  "resilience_dependencies": {
+    "database_connection_pool": {
+      "modules_dependent": ["backend/main.py", "backend/database.py", "database/models.py"],
+      "failure_modes": ["Pool exhaustion", "Connection timeout"],
+      "mitigations": [
+        "Circuit breaker",
+        "Pool monitoring",
+        "Graceful degradation"
+      ],
+      "guardrails": [
+        "Pool utilization < 90%",
+        "Health check endpoint",
+        "Alert on high utilization"
+      ]
+    },
+    
+    "rate_limiting": {
+      "modules_dependent": ["backend/main.py", "backend/rate_limit.py"],
+      "failure_modes": ["Per-instance storage", "Redis unavailable"],
+      "mitigations": [
+        "Redis-backed global rate limiting",
+        "Fallback to in-memory",
+        "Health check for Redis"
+      ],
+      "guardrails": [
+        "Redis health check",
+        "Global rate limit tracking"
+      ]
+    },
+    
+    "cache_persistence": {
+      "modules_dependent": ["backend/cache.py", "backend/rate_limit.py"],
+      "failure_modes": ["Redis unavailable", "Cache lost on restart"],
+      "mitigations": [
+        "Redis persistence",
+        "Cache warming",
+        "TTL jitter"
+      ],
+      "guardrails": [
+        "Redis health check",
+        "Cache hit rate monitoring"
+      ]
+    }
+  },
+  
+  "architectural_truths": {
+    "no_circular_dependencies": {
+      "description": "Backend modules must not have circular import dependencies",
+      "validation": "infra/selfcheck/check_circular_deps.py",
+      "rationale": "Circular dependencies make code hard to maintain and test"
+    },
+    
+    "production_security": {
+      "description": "Production environment must have secure configuration",
+      "validation": "SECRET_KEY != default, CORS != '*'",
+      "rationale": "Prevents token forgery and CSRF attacks"
+    },
+    
+    "migration_consistency": {
+      "description": "Database migrations must be up to date",
+      "validation": "alembic check",
+      "rationale": "Schema drift causes runtime errors"
+    },
+    
+    "health_check_availability": {
+      "description": "Health check endpoints must exist for observability",
+      "validation": "/health, /health/readiness, /health/liveness exist",
+      "rationale": "Required for load balancer and monitoring"
+    }
+  },
+  
+  "evolution_path": {
+    "immediate": [
+      "Fix SECRET_KEY and CORS validation (fail in production)",
+      "Add connection pool monitoring to health checks",
+      "Wire circuit breaker to database operations"
+    ],
+    "short_term": [
+      "Split main.py into route modules",
+      "Implement Redis-backed rate limiting",
+      "Add dead letter queue for batch processing"
+    ],
+    "long_term": [
+      "Encrypt integration credentials",
+      "Add Celery worker for workflow execution",
+      "Implement Redis pub/sub for WebSocket scaling"
+    ]
+  }
+}

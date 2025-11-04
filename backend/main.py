@@ -598,6 +598,95 @@ async def detailed_health_check(db: Session = Depends(get_db)):
         "checks": checks
     }
 
+
+@app.get("/system/selfcheck")
+async def system_selfcheck():
+    """
+    System self-check endpoint that validates architectural guardrails.
+    Returns JSON status of all guardrails defined in infra/selfcheck/guardrails.yaml.
+    """
+    import subprocess
+    import json
+    from pathlib import Path
+    
+    repo_root = Path(__file__).parent.parent
+    guardrails_script = repo_root / "infra" / "selfcheck" / "run_guardrails.py"
+    
+    results = {
+        "status": "unknown",
+        "timestamp": datetime.utcnow().isoformat(),
+        "guardrails": {},
+        "errors": []
+    }
+    
+    # Check if guardrails script exists
+    if not guardrails_script.exists():
+        results["status"] = "error"
+        results["errors"].append("Guardrails script not found")
+        return results
+    
+    try:
+        # Run guardrails (non-blocking, just check status)
+        process = subprocess.run(
+            [str(guardrails_script)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=str(repo_root)
+        )
+        
+        # Parse output (basic parsing)
+        output_lines = process.stdout.split('\n')
+        passed = sum(1 for line in output_lines if '✓ PASS' in line)
+        failed = sum(1 for line in output_lines if '✗ FAIL' in line)
+        warnings = sum(1 for line in output_lines if '⚠ WARN' in line)
+        
+        results["guardrails"] = {
+            "passed": passed,
+            "failed": failed,
+            "warnings": warnings,
+            "total": passed + failed + warnings
+        }
+        
+        if process.returncode == 0:
+            results["status"] = "ok"
+        elif failed > 0:
+            results["status"] = "error"
+        else:
+            results["status"] = "warning"
+        
+        # Add system intelligence map status
+        intelligence_map_path = repo_root / "src" / "observability" / "system_intelligence_map.json"
+        if intelligence_map_path.exists():
+            try:
+                with open(intelligence_map_path, 'r') as f:
+                    intelligence_map = json.load(f)
+                    results["intelligence_map"] = {
+                        "exists": True,
+                        "version": intelligence_map.get("version", "unknown"),
+                        "last_updated": intelligence_map.get("last_updated", "unknown"),
+                        "modules_tracked": len(intelligence_map.get("modules", {}))
+                    }
+            except Exception as e:
+                results["intelligence_map"] = {"exists": True, "error": str(e)}
+        else:
+            results["intelligence_map"] = {"exists": False}
+        
+        # Add SLO monitors status
+        slo_monitors_path = repo_root / "infra" / "selfcheck" / "slo-monitors.yml"
+        results["slo_monitors"] = {
+            "exists": slo_monitors_path.exists()
+        }
+        
+    except subprocess.TimeoutExpired:
+        results["status"] = "error"
+        results["errors"].append("Guardrails check timed out")
+    except Exception as e:
+        results["status"] = "error"
+        results["errors"].append(f"Error running guardrails: {str(e)}")
+    
+    return results
+
 # Include versioned routes (we'll add these to api_v1_router)
 # For now, keep existing routes and add version prefix in the future
 
