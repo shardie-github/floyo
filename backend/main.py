@@ -873,6 +873,18 @@ async def register(
     db.add(default_config)
     db.commit()
     
+    # Track signup event
+    track_event(
+        db=db,
+        user_id=str(db_user.id),
+        event_type="user_signed_up",
+        properties={
+            "email": db_user.email,
+            "signup_method": "email",
+            "username": db_user.username
+        }
+    )
+    
     return db_user
 
 
@@ -913,6 +925,20 @@ async def login(
     )
     db.add(session)
     db.commit()
+    
+    # Track login event
+    track_event(
+        db=db,
+        user_id=str(user.id),
+        event_type="user_logged_in",
+        properties={
+            "email": user.email
+        }
+    )
+    
+    # Check if user just activated
+    if check_user_activation(db, str(user.id)):
+        mark_user_activated(db, str(user.id), "login")
     
     return {
         "access_token": access_token,
@@ -1592,6 +1618,38 @@ async def get_stats(
     }
 
 
+@app.get("/api/analytics/activation")
+async def get_activation_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user activation status."""
+    is_activated = check_user_activation(db, str(current_user.id))
+    retention_metrics = get_user_retention_metrics(db, str(current_user.id))
+    
+    return {
+        "is_activated": is_activated,
+        "retention": retention_metrics
+    }
+
+
+@app.get("/api/analytics/funnel")
+async def get_funnel_metrics_endpoint(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get funnel metrics (admin only or for own data)."""
+    # For now, return user-specific metrics
+    # In production, this would be admin-only for full funnel
+    retention_metrics = get_user_retention_metrics(db, str(current_user.id))
+    
+    return {
+        "user_retention": retention_metrics,
+        "period_days": days
+    }
+
+
 @app.get("/api/config")
 async def get_config(
     current_user: User = Depends(get_current_user),
@@ -1683,6 +1741,29 @@ async def apply_suggestion(
     
     suggestion.is_applied = True
     db.commit()
+    
+    # Track suggestion applied event
+    track_event(
+        db=db,
+        user_id=str(current_user.id),
+        event_type="suggestion_applied",
+        properties={
+            "suggestion_id": str(suggestion_id),
+            "suggestion_type": suggestion.trigger,
+            "confidence": suggestion.confidence
+        }
+    )
+    
+    # Check if this is user's first applied suggestion (activation)
+    applied_count = db.query(Suggestion).filter(
+        and_(
+            Suggestion.user_id == current_user.id,
+            Suggestion.is_applied == True
+        )
+    ).count()
+    
+    if applied_count == 1:
+        mark_user_activated(db, str(current_user.id), "suggestion_applied")
     
     # Clear cache
     delete(f"suggestions:{current_user.id}:*")
@@ -2095,6 +2176,26 @@ async def create_workflow(
         created_by=current_user.id,
         change_summary="Initial version"
     )
+    
+    # Track workflow creation event
+    track_event(
+        db=db,
+        user_id=str(current_user.id),
+        event_type="workflow_created",
+        properties={
+            "workflow_id": str(workflow.id),
+            "workflow_name": workflow.name,
+            "has_schedule": workflow_data.schedule_config is not None
+        }
+    )
+    
+    # Check if this is user's first workflow (activation)
+    workflow_count = db.query(Workflow).filter(
+        Workflow.user_id == current_user.id
+    ).count()
+    
+    if workflow_count == 1:
+        mark_user_activated(db, str(current_user.id), "workflow_created")
     
     log_audit(
         db=db,
