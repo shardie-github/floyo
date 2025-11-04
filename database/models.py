@@ -361,3 +361,257 @@ class Workflow(Base):
     organization = relationship("Organization", back_populates="workflows_org")
     versions = relationship("WorkflowVersion", back_populates="workflow", cascade="all, delete-orphan")
     executions = relationship("WorkflowExecution", back_populates="workflow", cascade="all, delete-orphan")
+    shares = relationship("WorkflowShare", back_populates="workflow", cascade="all, delete-orphan")
+
+
+class Referral(Base):
+    """Referral code model for viral growth."""
+    __tablename__ = "referrals"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    referrer_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    code = Column(String(50), unique=True, nullable=False, index=True)
+    usage_count = Column(Integer, default=0)
+    reward_count = Column(Integer, default=0)
+    last_used_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    referrer = relationship("User", foreign_keys=[referrer_id])
+    rewards = relationship("ReferralReward", back_populates="referral", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index('idx_referrals_code', 'code', unique=True),
+    )
+
+
+class ReferralReward(Base):
+    """Referral reward tracking."""
+    __tablename__ = "referral_rewards"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    referral_id = Column(PGUUID(as_uuid=True), ForeignKey("referrals.id", ondelete="CASCADE"), nullable=False, index=True)
+    referrer_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    referred_user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    reward_type = Column(String(50), nullable=False)  # signup, signup_bonus, activation, etc.
+    reward_value = Column(Integer, default=1)
+    status = Column(String(50), default="pending")  # pending, granted, expired
+    granted_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    
+    referral = relationship("Referral", back_populates="rewards")
+    referrer = relationship("User", foreign_keys=[referrer_id])
+    referred_user = relationship("User", foreign_keys=[referred_user_id])
+    
+    __table_args__ = (
+        Index('idx_referral_rewards_status', 'referral_id', 'status'),
+    )
+
+
+class RetentionCampaign(Base):
+    """Retention campaign tracking."""
+    __tablename__ = "retention_campaigns"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    campaign_type = Column(String(50), nullable=False)  # weekly_digest, activation, re_engagement, etc.
+    content = Column(JSONB, nullable=False)
+    status = Column(String(50), default="pending")  # pending, sent, opened, clicked
+    scheduled_at = Column(TIMESTAMP(timezone=True), nullable=False)
+    sent_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    opened_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    clicked_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    
+    user = relationship("User")
+    
+    __table_args__ = (
+        Index('idx_retention_campaigns_user_status', 'user_id', 'status', 'scheduled_at'),
+    )
+
+
+class WorkflowShare(Base):
+    """Workflow sharing for marketplace/ecosystem."""
+    __tablename__ = "workflow_shares"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    workflow_id = Column(PGUUID(as_uuid=True), ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False, index=True)
+    share_code = Column(String(100), unique=True, nullable=False, index=True)
+    share_type = Column(String(50), default="public")  # public, unlisted, private
+    created_by_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    view_count = Column(Integer, default=0)
+    fork_count = Column(Integer, default=0)
+    is_featured = Column(Boolean, default=False)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    workflow = relationship("Workflow", back_populates="shares")
+    creator = relationship("User", foreign_keys=[created_by_id])
+    
+    __table_args__ = (
+        Index('idx_workflow_shares_code', 'share_code', unique=True),
+    )
+
+
+class SubscriptionPlan(Base):
+    """Subscription plan definitions."""
+    __tablename__ = "subscription_plans"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    name = Column(String(255), nullable=False)
+    tier = Column(String(50), nullable=False, index=True)  # free, pro, enterprise
+    description = Column(Text, nullable=True)
+    price_monthly = Column(Float, nullable=False)
+    price_yearly = Column(Float, nullable=False)
+    features = Column(JSONB, nullable=False)  # Feature flags
+    is_active = Column(Boolean, default=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    subscriptions = relationship("Subscription", back_populates="plan")
+
+
+class Subscription(Base):
+    """User/organization subscription."""
+    __tablename__ = "subscriptions"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    organization_id = Column(PGUUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True)
+    plan_id = Column(PGUUID(as_uuid=True), ForeignKey("subscription_plans.id", ondelete="RESTRICT"), nullable=False, index=True)
+    billing_cycle = Column(String(20), nullable=False)  # monthly, yearly
+    status = Column(String(50), nullable=False, default="active")  # active, canceled, past_due, expired
+    price = Column(Float, nullable=False)
+    current_period_start = Column(TIMESTAMP(timezone=True), nullable=False)
+    current_period_end = Column(TIMESTAMP(timezone=True), nullable=False)
+    canceled_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    stripe_subscription_id = Column(String(255), nullable=True, index=True)  # External billing system
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    plan = relationship("SubscriptionPlan", back_populates="subscriptions")
+    billing_events = relationship("BillingEvent", back_populates="subscription", cascade="all, delete-orphan")
+    usage_metrics = relationship("UsageMetric", back_populates="subscription", cascade="all, delete-orphan")
+    
+    __table_args__ = (
+        Index('idx_subscriptions_status', 'status', 'current_period_end'),
+    )
+
+
+class UsageMetric(Base):
+    """Usage metrics for billing and limits."""
+    __tablename__ = "usage_metrics"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    subscription_id = Column(PGUUID(as_uuid=True), ForeignKey("subscriptions.id", ondelete="CASCADE"), nullable=True, index=True)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    organization_id = Column(PGUUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=True, index=True)
+    metric_type = Column(String(50), nullable=False)  # events, workflows, api_calls, storage, etc.
+    amount = Column(Integer, default=0)
+    period_start = Column(TIMESTAMP(timezone=True), nullable=False, index=True)
+    period_end = Column(TIMESTAMP(timezone=True), nullable=False)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    subscription = relationship("Subscription", back_populates="usage_metrics")
+    
+    __table_args__ = (
+        Index('idx_usage_metrics_period', 'user_id', 'metric_type', 'period_start'),
+        Index('idx_usage_metrics_org_period', 'organization_id', 'metric_type', 'period_start'),
+    )
+
+
+class BillingEvent(Base):
+    """Billing events (invoices, payments, refunds)."""
+    __tablename__ = "billing_events"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    subscription_id = Column(PGUUID(as_uuid=True), ForeignKey("subscriptions.id", ondelete="CASCADE"), nullable=False, index=True)
+    event_type = Column(String(50), nullable=False)  # invoice, payment, refund, charge_failed, etc.
+    amount = Column(Float, nullable=False)
+    currency = Column(String(10), default="USD")
+    status = Column(String(50), default="pending")  # pending, completed, failed, refunded
+    metadata = Column(JSONB, nullable=True)  # Additional event data
+    external_id = Column(String(255), nullable=True, index=True)  # Stripe invoice ID, etc.
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
+    processed_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    
+    subscription = relationship("Subscription", back_populates="billing_events")
+    
+    __table_args__ = (
+        Index('idx_billing_events_subscription', 'subscription_id', 'created_at'),
+    )
+
+
+class SSOProvider(Base):
+    """SSO provider configuration (SAML, OIDC)."""
+    __tablename__ = "sso_providers"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    name = Column(String(255), nullable=False)
+    provider_type = Column(String(50), nullable=False)  # saml, oidc
+    config = Column(JSONB, nullable=False)  # Provider-specific configuration
+    is_active = Column(Boolean, default=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    connections = relationship("SSOConnection", back_populates="provider")
+
+
+class SSOConnection(Base):
+    """SSO connection for organizations."""
+    __tablename__ = "sso_connections"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    organization_id = Column(PGUUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    provider_id = Column(PGUUID(as_uuid=True), ForeignKey("sso_providers.id", ondelete="CASCADE"), nullable=False, index=True)
+    config = Column(JSONB, nullable=False)  # Connection-specific config
+    is_active = Column(Boolean, default=True)
+    last_sync_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    organization = relationship("Organization")
+    provider = relationship("SSOProvider", back_populates="connections")
+    
+    __table_args__ = (
+        Index('idx_sso_connections_org', 'organization_id', unique=True),
+    )
+
+
+class ComplianceReport(Base):
+    """Compliance reports (GDPR, SOC2, etc.)."""
+    __tablename__ = "compliance_reports"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    organization_id = Column(PGUUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+    report_type = Column(String(50), nullable=False)  # gdpr, soc2, hipaa, etc.
+    report_data = Column(JSONB, nullable=False)
+    status = Column(String(50), default="pending")  # pending, completed, failed
+    generated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    
+    organization = relationship("Organization")
+    
+    __table_args__ = (
+        Index('idx_compliance_reports_org_type', 'organization_id', 'report_type', 'generated_at'),
+    )
+
+
+class EnterpriseSettings(Base):
+    """Enterprise organization settings."""
+    __tablename__ = "enterprise_settings"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    organization_id = Column(PGUUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    settings = Column(JSONB, nullable=False)  # Enterprise-specific settings
+    compliance_config = Column(JSONB, nullable=True)  # Compliance requirements
+    security_config = Column(JSONB, nullable=True)  # Security settings
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    organization = relationship("Organization")
+    
+    __table_args__ = (
+        Index('idx_enterprise_settings_org', 'organization_id', unique=True),
+    )
