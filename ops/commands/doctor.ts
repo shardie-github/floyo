@@ -55,6 +55,10 @@ export async function doctor(options: { fix?: boolean }) {
   // Check 12: Build artifacts
   results.push(await checkBuildArtifacts());
 
+  // Check 13: Privacy checks
+  results.push(await checkPrivacyLint());
+  results.push(await checkPrivacyPolicy());
+
   // Print results
   console.log('\n📊 Health Check Results:\n');
   results.forEach((result) => {
@@ -342,9 +346,57 @@ async function checkBuildArtifacts(): Promise<CheckResult> {
     };
   }
 
+async function checkPrivacyLint(): Promise<CheckResult> {
+  try {
+    const { execSync } = await import('child_process');
+    execSync('tsx ops/commands/privacy-lint.ts', { stdio: 'pipe' });
+    return {
+      name: 'Privacy Lint',
+      status: 'pass',
+      message: 'No privacy violations detected'
+    };
+  } catch (error) {
+    return {
+      name: 'Privacy Lint',
+      status: 'fail',
+      message: 'Privacy violations detected - check logs'
+    };
+  }
+}
+
+async function checkPrivacyPolicy(): Promise<CheckResult> {
+  const policyPath = path.join(process.cwd(), 'docs', 'privacy', 'monitoring-policy.md');
+  if (!fs.existsSync(policyPath)) {
+    return {
+      name: 'Privacy Policy',
+      status: 'fail',
+      message: 'Privacy policy file missing'
+    };
+  }
+
+  const content = fs.readFileSync(policyPath, 'utf-8');
+  const requiredSections = [
+    'Purpose',
+    'What We Collect',
+    'Control & Transparency',
+    'Security',
+    'Data Retention',
+    'Your Rights',
+  ];
+
+  const missingSections = requiredSections.filter(section => !content.includes(section));
+
+  if (missingSections.length > 0) {
+    return {
+      name: 'Privacy Policy',
+      status: 'fail',
+      message: `Missing sections: ${missingSections.join(', ')}`
+    };
+  }
+
   return {
-    name: 'Build Artifacts',
+    name: 'Privacy Policy',
     status: 'pass',
-    message: 'Build artifacts present'
+    message: 'Policy file present and complete'
   };
 }

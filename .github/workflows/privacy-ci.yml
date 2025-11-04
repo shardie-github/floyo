@@ -1,0 +1,66 @@
+name: Privacy CI Checks
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/app/api/privacy/**'
+      - 'supabase/migrations/**privacy*.sql'
+      - 'prisma/schema.prisma'
+      - 'ops/commands/privacy-lint.ts'
+      - 'tests/privacy-*.test.ts'
+  push:
+    branches: [main]
+
+jobs:
+  privacy-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: Privacy Lint Check
+        run: tsx ops/commands/privacy-lint.ts
+        env:
+          PRIVACY_KILL_SWITCH: 'false'
+
+  rls-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: RLS Guard Check
+        run: npm run ops:sb-guard
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+  privacy-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: Run Privacy Tests
+        run: npm test -- tests/privacy-*.test.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          PRIVACY_KILL_SWITCH: 'false'
+
+  policy-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Verify Policy File Exists
+        run: |
+          if [ ! -f "docs/privacy/monitoring-policy.md" ]; then
+            echo "❌ Privacy policy file missing"
+            exit 1
+          fi
+          echo "✅ Privacy policy file found"

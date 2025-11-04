@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Providers } from './providers'
 import { AnalyticsProvider } from './analytics-provider'
+import { PrivacyHUD } from '@/components/PrivacyHUD'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -64,7 +65,10 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <Providers>
-          <AnalyticsProvider>{children}</AnalyticsProvider>
+          <AnalyticsProvider>
+            {children}
+            <PrivacyHUD />
+          </AnalyticsProvider>
         </Providers>
       </body>
     </html>

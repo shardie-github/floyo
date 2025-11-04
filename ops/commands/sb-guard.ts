@@ -38,8 +38,20 @@ export async function sbGuard(options: {
 
     // For now, we'll check common tables
     const commonTables = ['users', 'events', 'patterns', 'relationships'];
+    
+    // Privacy tables that MUST have RLS
+    const privacyTables = [
+      'privacy_prefs',
+      'app_allowlist',
+      'signal_toggles',
+      'telemetry_events',
+      'privacy_transparency_log',
+      'mfa_enforced_sessions',
+    ];
+    
+    const allTables = [...commonTables, ...privacyTables];
 
-    for (const tableName of commonTables) {
+    for (const tableName of allTables) {
       // Check if RLS is enabled
       const { data: rlsStatus } = await supabase
         .rpc('check_rls_enabled', { table_name: tableName })
