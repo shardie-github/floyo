@@ -2,15 +2,50 @@
   "name": "nomad-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "Nomad Monorepo - Full-stack application",
+  "description": "Self-operating production framework",
+  "type": "module",
   "scripts": {
+    "ops": "tsx ops/cli.ts",
+    "ops:doctor": "npm run ops doctor",
+    "ops:init": "npm run ops init",
+    "ops:check": "npm run ops check",
+    "ops:release": "npm run ops release",
+    "ops:snapshot": "npm run ops snapshot",
+    "ops:restore": "npm run ops restore",
+    "ops:rotate-secrets": "npm run ops rotate-secrets",
+    "ops:sb-guard": "npm run ops sb-guard",
+    "ops:test:e2e": "npm run ops test:e2e",
+    "ops:benchmark": "npm run ops benchmark",
+    "ops:lintfix": "npm run ops lintfix",
+    "ops:docs": "npm run ops docs",
+    "ops:changelog": "npm run ops changelog",
     "wiring:run": "tsx tools/wiring/harness.ts",
     "wiring:doctor": "tsx tools/wiring/wire_doctor.ts",
-    "wiring:report": "node -e \"console.log(JSON.stringify(require('./reports/connectivity/connectivity.json'), null, 2))\""
+    "wiring:report": "node -e \"console.log(JSON.stringify(require('./reports/connectivity/connectivity.json'), null, 2))\"",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx",
+    "test": "jest",
+    "test:e2e": "playwright test",
+    "build": "npm run build --workspace=frontend",
+    "lighthouse": "lhci autorun"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.0",
+    "@supabase/supabase-js": "^2.38.4",
+    "commander": "^11.1.0",
+    "dotenv": "^16.3.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@lhci/cli": "^0.12.0",
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.10.5",
+    "prisma": "^5.7.0",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.3",
-    "@types/node": "^20.10.5"
+    "typescript": "^5.3.3"
   }
 }

@@ -1,0 +1,71 @@
+{
+  "info": {
+    "name": "Production Framework API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Stripe Webhook",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "stripe-signature",
+            "value": "{{stripe_signature}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/webhooks/stripe",
+          "host": ["{{base_url}}"],
+          "path": ["api", "webhooks", "stripe"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"customer.subscription.created\",\n  \"data\": {\n    \"object\": {}\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "TikTok Webhook",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/webhooks/tiktok",
+          "host": ["{{base_url}}"],
+          "path": ["api", "webhooks", "tiktok"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event\": \"test\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Meta Webhook",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/webhooks/meta",
+          "host": ["{{base_url}}"],
+          "path": ["api", "webhooks", "meta"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event\": \"test\"\n}"
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://your-app.vercel.app"
+    },
+    {
+      "key": "stripe_signature",
+      "value": ""
+    }
+  ]
+}
