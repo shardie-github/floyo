@@ -33,6 +33,14 @@ jobs:
           if [ -f package.json ]; then corepack enable; npm ci --ignore-scripts || true; fi
           if [ -f requirements.txt ]; then . .venv/bin/activate; pip install -r requirements.txt || true; fi
           mkdir -p "$AUDIT_DIR" "$GOV_DIR" "$SELFCHECK_DIR"
+      - name: Build frontend (for A11y/Lighthouse)
+        if: exists(frontend/package.json)
+        working-directory: frontend
+        run: |
+          set -e
+          npm ci || true
+          npm run build || echo "Frontend build failed, skipping A11y/Lighthouse checks"
+        continue-on-error: true
       - name: Run selfchecks
         run: |
           set -e
