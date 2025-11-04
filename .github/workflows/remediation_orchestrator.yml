@@ -1,0 +1,70 @@
+name: Investor & Growth Remediation (Auto-PRs)
+
+on:
+  workflow_dispatch:
+  pull_request:
+  schedule:
+    - cron: "0 4 * * *"  # Daily at 4 AM UTC
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node & Python
+        uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+
+      - name: Install CLI helpers
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq moreutils
+          sudo apt-get install -y gh
+          gh --version
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt || true
+          cd frontend && npm install || true
+
+      - name: Ensure helper scripts exist
+        run: |
+          mkdir -p infra/fixes docs/audit_investor_suite/PR_PLANS
+          chmod +x infra/fixes/_apply_and_stage.sh infra/fixes/_open_prs.sh || true
+
+      - name: Run Diagnosis & Generate Fix Scripts/Plans
+        run: |
+          echo "Running full audit & generating PR plans/fix scripts..."
+          cd docs/audit_investor_suite
+          python3 run_all_audits.py
+          python3 classify_issues.py
+          python3 generate_fixes.py
+          cd ../..
+
+      - name: Open PRs per unresolved issue
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          bash infra/fixes/_open_prs.sh .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: remediation-artifacts
+          path: |
+            docs/audit_investor_suite/**
+            infra/fixes/**
+          if-no-files-found: warn
+          retention-days: 30

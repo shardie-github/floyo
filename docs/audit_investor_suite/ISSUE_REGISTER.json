@@ -1,0 +1,275 @@
+{
+  "timestamp": "2025-11-04T02:55:08.805886",
+  "version": "1.0",
+  "issues": [
+    {
+      "id": "ISSUE-259A405C",
+      "slug": "hardcoded-password",
+      "title": "Hardcoded password",
+      "description": "Potential hardcoded credential in backup_database.py",
+      "severity": "Critical",
+      "domain": "technical",
+      "file": "scripts/backup_database.py",
+      "status": "open",
+      "impact_score": 10,
+      "likelihood_score": 9,
+      "risk_score": 90,
+      "created_at": "2025-11-04T02:55:08.805942",
+      "suggested_owner": "data-team",
+      "tags": [
+        "technical",
+        "critical",
+        "database"
+      ]
+    },
+    {
+      "id": "ISSUE-D18C22C6",
+      "slug": "hardcoded-password",
+      "title": "Hardcoded password",
+      "description": "Potential hardcoded credential in main.py",
+      "severity": "Critical",
+      "domain": "technical",
+      "file": "backend/main.py",
+      "status": "open",
+      "impact_score": 10,
+      "likelihood_score": 9,
+      "risk_score": 90,
+      "created_at": "2025-11-04T02:55:08.805958",
+      "suggested_owner": "backend-team",
+      "tags": [
+        "technical",
+        "critical"
+      ]
+    },
+    {
+      "id": "ISSUE-E3FA37E5",
+      "slug": "hardcoded-secret-key",
+      "title": "Hardcoded secret key",
+      "description": "Potential hardcoded credential in generate_fixes.py",
+      "severity": "Critical",
+      "domain": "technical",
+      "file": "docs/audit_investor_suite/generate_fixes.py",
+      "status": "open",
+      "impact_score": 10,
+      "likelihood_score": 9,
+      "risk_score": 90,
+      "created_at": "2025-11-04T02:55:08.805968",
+      "suggested_owner": "engineering-team",
+      "tags": [
+        "technical",
+        "critical"
+      ]
+    },
+    {
+      "id": "ISSUE-D39DC5D9",
+      "slug": "default-secret-key-in-envexample",
+      "title": "Default SECRET_KEY in .env.example",
+      "description": "Default secret key should not be in example file",
+      "severity": "Critical",
+      "domain": "technical",
+      "file": ".env.example",
+      "status": "open",
+      "impact_score": 10,
+      "likelihood_score": 9,
+      "risk_score": 90,
+      "created_at": "2025-11-04T02:55:08.805976",
+      "suggested_owner": "engineering-team",
+      "tags": [
+        "technical",
+        "critical"
+      ]
+    },
+    {
+      "id": "ISSUE-863F7290",
+      "slug": "potential-n1-query-pattern",
+      "title": "Potential N+1 query pattern",
+      "description": "Review for N+1 query patterns in loops",
+      "severity": "Minor",
+      "domain": "technical",
+      "file": "backend/main.py",
+      "status": "open",
+      "impact_score": 4,
+      "likelihood_score": 5,
+      "risk_score": 20,
+      "created_at": "2025-11-04T02:55:08.805985",
+      "suggested_owner": "backend-team",
+      "tags": [
+        "technical",
+        "medium"
+      ]
+    },
+    {
+      "id": "ISSUE-D7AB2E13",
+      "slug": "unpinned-dependencies-in-requirementstxt",
+      "title": "Unpinned dependencies in requirements.txt",
+      "description": "25 dependencies without exact version pins",
+      "severity": "Minor",
+      "domain": "technical",
+      "file": "backend/requirements.txt",
+      "status": "open",
+      "impact_score": 4,
+      "likelihood_score": 5,
+      "risk_score": 20,
+      "created_at": "2025-11-04T02:55:08.805993",
+      "suggested_owner": "backend-team",
+      "tags": [
+        "technical",
+        "medium"
+      ]
+    },
+    {
+      "id": "ISSUE-79C054B3",
+      "slug": "unpinned-node-dependencies",
+      "title": "Unpinned Node dependencies",
+      "description": "16 dependencies with version ranges",
+      "severity": "Minor",
+      "domain": "technical",
+      "file": "frontend/package.json",
+      "status": "open",
+      "impact_score": 4,
+      "likelihood_score": 5,
+      "risk_score": 20,
+      "created_at": "2025-11-04T02:55:08.806000",
+      "suggested_owner": "frontend-team",
+      "tags": [
+        "technical",
+        "medium"
+      ]
+    },
+    {
+      "id": "ISSUE-6002C0A6",
+      "slug": "missing-privacyterms-documentation",
+      "title": "Missing privacy/terms documentation",
+      "description": "No privacy policy or terms of service found",
+      "severity": "Minor",
+      "domain": "governance",
+      "file": "docs",
+      "status": "open",
+      "impact_score": 4,
+      "likelihood_score": 5,
+      "risk_score": 20,
+      "created_at": "2025-11-04T02:55:08.806040",
+      "suggested_owner": "engineering-team",
+      "tags": [
+        "governance",
+        "medium"
+      ]
+    },
+    {
+      "id": "ISSUE-35AEFCCF",
+      "slug": "missing-architecture-documentation",
+      "title": "Missing architecture documentation",
+      "description": "No system architecture documentation",
+      "severity": "Minor",
+      "domain": "governance",
+      "file": "docs",
+      "status": "open",
+      "impact_score": 4,
+      "likelihood_score": 5,
+      "risk_score": 20,
+      "created_at": "2025-11-04T02:55:08.806052",
+      "suggested_owner": "engineering-team",
+      "tags": [
+        "governance",
+        "medium"
+      ]
+    },
+    {
+      "id": "ISSUE-EE84278C",
+      "slug": "sentry-not-fully-configured",
+      "title": "Sentry not fully configured",
+      "description": "Sentry DSN may be optional/missing",
+      "severity": "Enhancement",
+      "domain": "product",
+      "file": "backend/sentry_config.py",
+      "status": "open",
+      "impact_score": 3,
+      "likelihood_score": 5,
+      "risk_score": 15,
+      "created_at": "2025-11-04T02:55:08.806007",
+      "suggested_owner": "backend-team",
+      "tags": [
+        "product",
+        "medium",
+        "configuration"
+      ]
+    },
+    {
+      "id": "ISSUE-42DB18F1",
+      "slug": "missing-signup-conversion-tracking",
+      "title": "Missing signup conversion tracking",
+      "description": "Registration endpoint not tracked for funnel analysis",
+      "severity": "Enhancement",
+      "domain": "gtm",
+      "file": "backend/main.py",
+      "status": "open",
+      "impact_score": 3,
+      "likelihood_score": 5,
+      "risk_score": 15,
+      "created_at": "2025-11-04T02:55:08.806013",
+      "suggested_owner": "backend-team",
+      "tags": [
+        "gtm",
+        "medium"
+      ]
+    },
+    {
+      "id": "ISSUE-C6949F6B",
+      "slug": "missing-resource-limits-in-docker",
+      "title": "Missing resource limits in Docker",
+      "description": "No CPU/memory limits defined",
+      "severity": "Enhancement",
+      "domain": "financial",
+      "file": "docker-compose.yml",
+      "status": "open",
+      "impact_score": 2,
+      "likelihood_score": 3,
+      "risk_score": 6,
+      "created_at": "2025-11-04T02:55:08.806025",
+      "suggested_owner": "finance-team",
+      "tags": [
+        "financial",
+        "low"
+      ]
+    },
+    {
+      "id": "ISSUE-94153248",
+      "slug": "dependency-license-audit-recommended",
+      "title": "Dependency license audit recommended",
+      "description": "Run license scanner (e.g., pip-licenses) to verify compliance",
+      "severity": "Enhancement",
+      "domain": "governance",
+      "file": "requirements.txt",
+      "status": "open",
+      "impact_score": 2,
+      "likelihood_score": 3,
+      "risk_score": 6,
+      "created_at": "2025-11-04T02:55:08.806046",
+      "suggested_owner": "engineering-team",
+      "tags": [
+        "governance",
+        "low"
+      ]
+    },
+    {
+      "id": "ISSUE-90BEDD2B",
+      "slug": "missing-referral-tracking",
+      "title": "Missing referral tracking",
+      "description": "No referral/invite system in data model",
+      "severity": "Enhancement",
+      "domain": "gtm",
+      "file": "database/models.py",
+      "status": "open",
+      "impact_score": 1,
+      "likelihood_score": 3,
+      "risk_score": 3,
+      "created_at": "2025-11-04T02:55:08.806019",
+      "suggested_owner": "data-team",
+      "tags": [
+        "gtm",
+        "low",
+        "database"
+      ]
+    }
+  ]
+}

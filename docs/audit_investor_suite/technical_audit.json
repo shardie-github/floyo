@@ -1,0 +1,56 @@
+{
+  "timestamp": "2025-11-04T02:55:05.841884",
+  "domain": "technical",
+  "issues": [
+    {
+      "severity": "critical",
+      "title": "Hardcoded password",
+      "file": "scripts/backup_database.py",
+      "description": "Potential hardcoded credential in backup_database.py"
+    },
+    {
+      "severity": "critical",
+      "title": "Hardcoded password",
+      "file": "backend/main.py",
+      "description": "Potential hardcoded credential in main.py"
+    },
+    {
+      "severity": "critical",
+      "title": "Hardcoded secret key",
+      "file": "docs/audit_investor_suite/generate_fixes.py",
+      "description": "Potential hardcoded credential in generate_fixes.py"
+    },
+    {
+      "severity": "critical",
+      "title": "Default SECRET_KEY in .env.example",
+      "file": ".env.example",
+      "description": "Default secret key should not be in example file"
+    },
+    {
+      "severity": "medium",
+      "title": "Potential N+1 query pattern",
+      "file": "backend/main.py",
+      "description": "Review for N+1 query patterns in loops"
+    },
+    {
+      "severity": "medium",
+      "title": "Unpinned dependencies in requirements.txt",
+      "file": "backend/requirements.txt",
+      "description": "25 dependencies without exact version pins"
+    },
+    {
+      "severity": "medium",
+      "title": "Unpinned Node dependencies",
+      "file": "frontend/package.json",
+      "description": "16 dependencies with version ranges"
+    }
+  ],
+  "guardrail_results": {},
+  "summary": {
+    "total_issues": 7,
+    "critical": 4,
+    "high": 0,
+    "medium": 3,
+    "low": 0
+  }
+}

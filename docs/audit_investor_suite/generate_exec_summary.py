@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""
+Generate Executive Summary
+Investor-ready before/after summary with next-step roadmap
+"""
+import json
+import sys
+from pathlib import Path
+from datetime import datetime
+from typing import Dict, List, Any
+
+def generate_exec_summary() -> str:
+    """Generate executive summary."""
+    register_file = Path(__file__).parent / 'ISSUE_REGISTER.json'
+    
+    if not register_file.exists():
+        return "# Executive Summary\n\nNo ISSUE_REGISTER.json found."
+    
+    register = json.loads(register_file.read_text())
+    
+    summary_by_domain = {}
+    for issue in register['issues']:
+        domain = issue['domain']
+        if domain not in summary_by_domain:
+            summary_by_domain[domain] = {'total': 0, 'by_severity': {}}
+        summary_by_domain[domain]['total'] += 1
+        severity = issue['severity']
+        summary_by_domain[domain]['by_severity'][severity] = \
+            summary_by_domain[domain]['by_severity'].get(severity, 0) + 1
+    
+    resolved = [i for i in register['issues'] if i.get('status') == 'resolved']
+    critical = [i for i in register['issues'] if i['severity'] == 'Critical']
+    major = [i for i in register['issues'] if i['severity'] == 'Major']
+    
+    report = f"""# Executive Summary: Investor & Growth Remediation
+
+**Date**: {datetime.utcnow().strftime('%Y-%m-%d')}  
+**Audit Version**: 1.0
+
+## Overview
+
+This report summarizes the comprehensive technical, product, GTM, financial, and governance audit conducted to identify and remediate issues affecting investor readiness and growth potential.
+
+## Key Metrics
+
+### Issue Summary
+- **Total Issues Identified**: {len(register['issues'])}
+- **Critical Issues**: {len(critical)}
+- **Major Issues**: {len(major)}
+- **Issues Resolved**: {len(resolved)}
+- **Remaining Work**: {len(register['issues']) - len(resolved)}
+
+### By Domain
+
+"""
+    
+    for domain, stats in sorted(summary_by_domain.items()):
+        report += f"#### {domain.capitalize()}\n"
+        report += f"- Total Issues: {stats['total']}\n"
+        for severity, count in sorted(stats['by_severity'].items(), reverse=True):
+            report += f"  - {severity}: {count}\n"
+        report += "\n"
+    
+    report += """## Critical Findings
+
+### Technical Domain
+- **Security**: Review for hardcoded secrets and CORS configuration
+- **Performance**: Database connection pool sizing and N+1 query patterns
+- **CI/CD**: Ensure comprehensive test coverage and automation
+- **Scalability**: Rate limiting, caching, and migration infrastructure
+
+### Product Domain
+- **Roadmap**: Ensure roadmap is current and accessible
+- **UX**: Component library and accessibility compliance
+- **Telemetry**: Error tracking and analytics implementation
+- **Adoption**: Feature flags and onboarding metrics
+
+### GTM Domain
+- **Funnel**: Conversion tracking for signup/login flows
+- **Growth**: Experimentation framework and referral tracking
+- **Attribution**: Channel/UTM tracking for marketing campaigns
+
+### Financial Domain
+- **Cost Optimization**: Resource limits and cost monitoring
+- **Revenue**: Subscription/billing infrastructure
+- **Runway**: Financial forecasting and burn rate tracking
+
+### Governance Domain
+- **Compliance**: GDPR endpoints and audit logging
+- **IP**: License clarity and dependency compliance
+- **Documentation**: Onboarding and architecture docs
+- **RBAC**: Role-based access control implementation
+
+## Remediation Status
+
+### Issues Resolved
+"""
+    
+    if resolved:
+        for issue in resolved[:5]:
+            report += f"- ✅ {issue['title']} ({issue['severity']})\n"
+    else:
+        report += "- No issues resolved yet\n"
+    
+    report += "\n### Top Priority Issues\n\n"
+    
+    top_issues = sorted(register['issues'], key=lambda x: x['risk_score'], reverse=True)[:5]
+    for idx, issue in enumerate(top_issues, 1):
+        report += f"{idx}. **{issue['title']}** ({issue['severity']})\n"
+        report += f"   - Risk Score: {issue['risk_score']}\n"
+        report += f"   - Domain: {issue['domain']}\n"
+        report += f"   - File: {issue['file']}\n\n"
+    
+    report += """## Next Steps & Roadmap
+
+### Immediate Actions (Week 1)
+1. Address all Critical severity issues
+2. Review and merge security-related PRs
+3. Implement missing CI/CD workflows
+4. Set up monitoring and alerting
+
+### Short-term (Month 1)
+1. Resolve all Major severity issues
+2. Complete documentation gaps
+3. Implement telemetry and analytics
+4. Set up cost monitoring
+
+### Medium-term (Quarter 1)
+1. Complete all Minor issues
+2. Implement growth infrastructure
+3. Optimize performance bottlenecks
+4. Enhance governance and compliance
+
+## PR Status
+
+Automated PRs have been generated for issues with fix scripts. Review and merge:
+- Critical issues: Priority 1
+- Major issues: Priority 2
+- Minor issues: Priority 3
+
+## Validation
+
+Run validation checks:
+```bash
+python3 docs/audit_investor_suite/generate_validation.py
+```
+
+Review the validation report to confirm fixes are working correctly.
+
+---
+
+**Generated by**: Remediation Orchestrator  
+**Contact**: Engineering Team  
+**Next Review**: {datetime.now().strftime('%Y-%m-%d')} (30 days)
+"""
+    
+    return report
+
+if __name__ == '__main__':
+    report = generate_exec_summary()
+    output_file = Path(__file__).parent / 'EXEC_SUMMARY_FIXED.md'
+    output_file.write_text(report)
+    print(f"✅ Executive summary generated: {output_file}")

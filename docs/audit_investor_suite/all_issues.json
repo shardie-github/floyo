@@ -1,0 +1,100 @@
+[
+  {
+    "severity": "critical",
+    "title": "Hardcoded password",
+    "file": "scripts/backup_database.py",
+    "description": "Potential hardcoded credential in backup_database.py",
+    "source_audit": "audit_technical.py"
+  },
+  {
+    "severity": "critical",
+    "title": "Hardcoded password",
+    "file": "backend/main.py",
+    "description": "Potential hardcoded credential in main.py",
+    "source_audit": "audit_technical.py"
+  },
+  {
+    "severity": "critical",
+    "title": "Hardcoded secret key",
+    "file": "docs/audit_investor_suite/generate_fixes.py",
+    "description": "Potential hardcoded credential in generate_fixes.py",
+    "source_audit": "audit_technical.py"
+  },
+  {
+    "severity": "critical",
+    "title": "Default SECRET_KEY in .env.example",
+    "file": ".env.example",
+    "description": "Default secret key should not be in example file",
+    "source_audit": "audit_technical.py"
+  },
+  {
+    "severity": "medium",
+    "title": "Potential N+1 query pattern",
+    "file": "backend/main.py",
+    "description": "Review for N+1 query patterns in loops",
+    "source_audit": "audit_technical.py"
+  },
+  {
+    "severity": "medium",
+    "title": "Unpinned dependencies in requirements.txt",
+    "file": "backend/requirements.txt",
+    "description": "25 dependencies without exact version pins",
+    "source_audit": "audit_technical.py"
+  },
+  {
+    "severity": "medium",
+    "title": "Unpinned Node dependencies",
+    "file": "frontend/package.json",
+    "description": "16 dependencies with version ranges",
+    "source_audit": "audit_technical.py"
+  },
+  {
+    "severity": "medium",
+    "title": "Sentry not fully configured",
+    "file": "backend/sentry_config.py",
+    "description": "Sentry DSN may be optional/missing",
+    "source_audit": "audit_product.py"
+  },
+  {
+    "severity": "medium",
+    "title": "Missing signup conversion tracking",
+    "file": "backend/main.py",
+    "description": "Registration endpoint not tracked for funnel analysis",
+    "source_audit": "audit_gtm.py"
+  },
+  {
+    "severity": "low",
+    "title": "Missing referral tracking",
+    "file": "database/models.py",
+    "description": "No referral/invite system in data model",
+    "source_audit": "audit_gtm.py"
+  },
+  {
+    "severity": "low",
+    "title": "Missing resource limits in Docker",
+    "file": "docker-compose.yml",
+    "description": "No CPU/memory limits defined",
+    "source_audit": "audit_financial.py"
+  },
+  {
+    "severity": "medium",
+    "title": "Missing privacy/terms documentation",
+    "file": "docs",
+    "description": "No privacy policy or terms of service found",
+    "source_audit": "audit_governance.py"
+  },
+  {
+    "severity": "low",
+    "title": "Dependency license audit recommended",
+    "file": "requirements.txt",
+    "description": "Run license scanner (e.g., pip-licenses) to verify compliance",
+    "source_audit": "audit_governance.py"
+  },
+  {
+    "severity": "medium",
+    "title": "Missing architecture documentation",
+    "file": "docs",
+    "description": "No system architecture documentation",
+    "source_audit": "audit_governance.py"
+  }
+]

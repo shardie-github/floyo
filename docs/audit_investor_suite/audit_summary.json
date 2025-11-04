@@ -1,0 +1,48 @@
+{
+  "timestamp": "2025-11-04T02:55:05.940848",
+  "audits_run": 5,
+  "total_issues": 14,
+  "by_severity": {
+    "critical": 4,
+    "high": 0,
+    "medium": 7,
+    "low": 3
+  },
+  "by_domain": {
+    "technical": {
+      "total_issues": 7,
+      "critical": 4,
+      "high": 0,
+      "medium": 3,
+      "low": 0
+    },
+    "product": {
+      "total_issues": 1,
+      "critical": 0,
+      "high": 0,
+      "medium": 1,
+      "low": 0
+    },
+    "gtm": {
+      "total_issues": 2,
+      "critical": 0,
+      "high": 0,
+      "medium": 1,
+      "low": 1
+    },
+    "financial": {
+      "total_issues": 1,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 1
+    },
+    "governance": {
+      "total_issues": 3,
+      "critical": 0,
+      "high": 0,
+      "medium": 2,
+      "low": 1
+    }
+  }
+}
