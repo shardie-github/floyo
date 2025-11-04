@@ -1,0 +1,38 @@
+{
+  "common": {
+    "welcome": "به Floyo خوش آمدید",
+    "loading": "در حال بارگذاری...",
+    "error": "خطایی رخ داد",
+    "save": "ذخیره",
+    "cancel": "لغو",
+    "delete": "حذف",
+    "edit": "ویرایش",
+    "create": "ایجاد",
+    "search": "جستجو",
+    "filter": "فیلتر",
+    "export": "صدور",
+    "import": "واردات"
+  },
+  "auth": {
+    "login": "ورود",
+    "logout": "خروج",
+    "register": "ثبت نام",
+    "email": "ایمیل",
+    "password": "رمز عبور",
+    "forgotPassword": "رمز عبور را فراموش کرده‌اید؟",
+    "rememberMe": "مرا به خاطر بسپار"
+  },
+  "dashboard": {
+    "title": "داشبورد",
+    "events": "رویدادها",
+    "patterns": "الگوها",
+    "suggestions": "پیشنهادات",
+    "stats": "آمار"
+  },
+  "accessibility": {
+    "skipToContent": "پرش به محتوای اصلی",
+    "close": "بستن",
+    "menu": "منو",
+    "navigation": "ناوبری"
+  }
+}

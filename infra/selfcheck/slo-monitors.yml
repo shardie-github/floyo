@@ -1,0 +1,145 @@
+# SLO Monitors: Auto-created from OPS_SLO_RUNBOOK_SEEDS.md
+# These monitors validate top 3 SLOs from the audit
+# Generated: 2024-12-19
+
+# SLO 1: API Availability
+# Target: 99.9% uptime (8.76 hours downtime/year)
+# Measurement: GET /health returns 200
+# Error Budget: 0.1% (52.56 minutes/year)
+slo_api_availability:
+  name: "API Availability"
+  target: 0.999  # 99.9%
+  measurement:
+    type: "http_check"
+    endpoint: "/health"
+    method: "GET"
+    expected_status: 200
+    timeout_seconds: 5
+  error_budget: 0.001  # 0.1%
+  window_hours: 24
+  alert_threshold: 0.99  # Alert if below 99%
+  
+  # Synthetic monitor (can be implemented as health check)
+  synthetic_check:
+    script: |
+      curl -f http://localhost:8000/health || exit 1
+    schedule: "*/1 * * * *"  # Every minute
+    timeout: 5
+
+# SLO 2: API Latency
+# Target: P95 < 200ms, P99 < 500ms
+# Measurement: Endpoint response time
+# Error Budget: 5% of requests exceed thresholds
+slo_api_latency:
+  name: "API Latency"
+  targets:
+    p95_ms: 200
+    p99_ms: 500
+  measurement:
+    type: "latency"
+    endpoints:
+      - "/api/events"
+      - "/api/auth/login"
+      - "/api/workflows"
+    aggregation: "percentile"
+  error_budget: 0.05  # 5%
+  window_hours: 24
+  alert_threshold: 0.90  # Alert if P95 > 220ms
+  
+  # Synthetic monitor (can be implemented as performance test)
+  synthetic_check:
+    script: |
+      # Simple latency check
+      time curl -w '%{time_total}' -o /dev/null -s http://localhost:8000/health
+    schedule: "*/5 * * * *"  # Every 5 minutes
+
+# SLO 3: Database Connection Pool Health
+# Target: Pool utilization < 90%
+# Measurement: Connection pool status from /health/readiness
+# Error Budget: 10% of time above 90%
+slo_database_pool:
+  name: "Database Connection Pool Health"
+  target: 0.90  # Pool utilization < 90%
+  measurement:
+    type: "health_check"
+    endpoint: "/health/readiness"
+    extract_path: "database_pool.utilization"
+    comparison: "lt"  # Less than
+  error_budget: 0.10  # 10% of time
+  window_hours: 24
+  alert_threshold: 0.85  # Alert if > 85%
+  
+  # Synthetic monitor
+  synthetic_check:
+    script: |
+      # Check pool status from health endpoint
+      POOL_UTIL=$(curl -s http://localhost:8000/health/readiness | jq -r '.database_pool.utilization // 0')
+      if (( $(echo "$POOL_UTIL > 0.90" | bc -l) )); then
+        echo "Pool utilization too high: $POOL_UTIL"
+        exit 1
+      fi
+    schedule: "*/1 * * * *"  # Every minute
+
+# Health Endpoint Expectations
+health_endpoints:
+  required:
+    - path: "/health"
+      status: 200
+      response_time_ms: 100
+    - path: "/health/readiness"
+      status: 200
+      response_time_ms: 500
+    - path: "/health/liveness"
+      status: 200
+      response_time_ms: 100
+    - path: "/health/migrations"
+      status: 200
+      response_time_ms: 1000
+  
+  checks:
+    - name: "Database connectivity"
+      endpoint: "/health/readiness"
+      extract: "database"
+      expected: "ok"
+    - name: "Migration status"
+      endpoint: "/health/migrations"
+      extract: "status"
+      expected: "up_to_date"
+
+# Uptime Expectations
+uptime:
+  target_availability: 0.999  # 99.9%
+  monitoring_interval_minutes: 1
+  alert_channels:
+    - type: "slack"
+      webhook: "${SLACK_WEBHOOK_URL}"
+    - type: "email"
+      recipients: "${ALERT_EMAIL}"
+  
+  # Synthetic monitors (stub implementations)
+  synthetic_monitors:
+    - name: "API Health Check"
+      type: "http"
+      url: "http://localhost:8000/health"
+      interval: "1m"
+      timeout: "5s"
+    
+    - name: "Database Readiness"
+      type: "http"
+      url: "http://localhost:8000/health/readiness"
+      interval: "1m"
+      timeout: "10s"
+    
+    - name: "Migration Status"
+      type: "http"
+      url: "http://localhost:8000/health/migrations"
+      interval: "5m"
+      timeout: "10s"
+
+# Metadata
+metadata:
+  version: "1.0.0"
+  last_updated: "2024-12-19"
+  source: "docs/audit/OPS_SLO_RUNBOOK_SEEDS.md"
+  implementation_status: "stub"
+  notes: "These are template monitors. Implement actual monitoring in production using your preferred tooling (Prometheus, DataDog, New Relic, etc.)"

@@ -1,0 +1,63 @@
+{
+  "name": "Floyo - File Usage Pattern Tracker",
+  "short_name": "Floyo",
+  "description": "Track your file usage patterns and discover integration opportunities",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["productivity", "developer"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/",
+      "description": "View your dashboard",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "url": "/?tab=events",
+      "description": "View recent events",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ]
+}

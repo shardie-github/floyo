@@ -1,0 +1,187 @@
+# Guardrails: Invariant Conditions Derived from Audit
+# These conditions are evaluated in CI and runtime to prevent architectural drift
+# Generated from: docs/audit/EXEC_SUMMARY.md, ROOT_CAUSE_AND_DRIFT_MAP.md, RESILIENCE_TABLE.md
+
+# Security Guardrails
+security:
+  # SECRET_KEY must not be default in production
+  secret_key_default:
+    description: "SECRET_KEY must be set to a strong, random value in production (minimum 32 characters)"
+    check: "python -c \"from backend.config import settings; assert settings.secret_key != 'your-secret-key-change-in-production' and len(settings.secret_key) >= 32 if settings.environment == 'production' else True\""
+    severity: critical
+    file: "backend/config.py"
+    audit_ref: "EXEC_SUMMARY.md #1"
+  
+  # CORS must not be permissive in production
+  cors_permissive:
+    description: "CORS origins cannot be '*' in production"
+    check: "python -c \"from backend.config import settings; assert '*' not in settings.cors_origins if settings.environment == 'production' else True\""
+    severity: critical
+    file: "backend/config.py"
+    audit_ref: "EXEC_SUMMARY.md #2"
+  
+  # Integration credentials must be encrypted (future check)
+  credentials_encrypted:
+    description: "Integration credentials should be encrypted before storage"
+    check: "grep -r 'encrypt_config' backend/connectors.py || echo 'WARNING: Encryption not implemented'"
+    severity: high
+    file: "backend/connectors.py"
+    audit_ref: "EXEC_SUMMARY.md #4"
+    status: "pending_implementation"
+
+# Architecture Guardrails
+architecture:
+  # No circular dependencies in backend modules
+  circular_dependencies:
+    description: "No circular import dependencies detected"
+    check: "python infra/selfcheck/check_circular_deps.py"
+    severity: medium
+    audit_ref: "ROOT_CAUSE_AND_DRIFT_MAP.md"
+  
+  # main.py should not exceed reasonable size (target: split into modules)
+  main_py_size:
+    description: "main.py should not exceed 2500 lines (target: split into route modules)"
+    check: "test $(wc -l < backend/main.py) -le 2500"
+    severity: medium
+    file: "backend/main.py"
+    audit_ref: "ROOT_CAUSE_AND_DRIFT_MAP.md - Monolithic main.py"
+  
+  # API versioning should be implemented or removed
+  api_versioning:
+    description: "api_v1.py should not be empty if API versioning is promised"
+    check: "test $(wc -l < backend/api_v1.py) -gt 10 || grep -q '# API versioning removed' backend/api_v1.py"
+    severity: low
+    file: "backend/api_v1.py"
+    audit_ref: "ROOT_CAUSE_AND_DRIFT_MAP.md - API versioning drift"
+  
+  # Circuit breaker should be wired if it exists
+  circuit_breaker_wired:
+    description: "circuit_breaker.py should be imported and used if it exists"
+    check: "grep -r 'from backend.circuit_breaker' backend/ || (test ! -f backend/circuit_breaker.py && echo 'OK: circuit_breaker.py does not exist')"
+    severity: medium
+    file: "backend/circuit_breaker.py"
+    audit_ref: "ROOT_CAUSE_AND_DRIFT_MAP.md - Circuit breaker not wired"
+
+# Database Guardrails
+database:
+  # Migrations must be up to date
+  migrations_current:
+    description: "Database migrations must be up to date (no pending migrations)"
+    check: "python infra/selfcheck/check_migrations.py"
+    severity: critical
+    audit_ref: "RESILIENCE_TABLE.md - Migration drift"
+  
+  # Schema.sql completeness (if maintained)
+  schema_completeness:
+    description: "If schema.sql exists, it should match models.py (or be archived)"
+    check: "python infra/selfcheck/check_schema_completeness.py"
+    severity: low
+    file: "database/schema.sql"
+    audit_ref: "EXEC_SUMMARY.md #7"
+  
+  # Connection pool should have monitoring
+  pool_monitoring:
+    description: "Database connection pool status should be available in health checks"
+    check: "grep -q 'database_pool' backend/main.py || grep -q 'get_pool_status' backend/main.py"
+    severity: high
+    file: "backend/main.py"
+    audit_ref: "RESILIENCE_TABLE.md - Connection pool monitoring"
+
+# Resilience Guardrails
+resilience:
+  # Rate limiting should use Redis if available
+  rate_limit_redis:
+    description: "Rate limiting should use Redis backend if REDIS_URL is set"
+    check: "python infra/selfcheck/check_rate_limit_redis.py"
+    severity: high
+    file: "backend/rate_limit.py"
+    audit_ref: "RESILIENCE_TABLE.md - Per-instance rate limiting"
+  
+  # Health checks must exist
+  health_checks:
+    description: "Health check endpoints must exist (/health, /health/readiness, /health/liveness)"
+    check: "grep -q '@app.get.*health' backend/main.py && grep -q '@app.get.*readiness' backend/main.py && grep -q '@app.get.*liveness' backend/main.py"
+    severity: critical
+    file: "backend/main.py"
+    audit_ref: "OPS_SLO_RUNBOOK_SEEDS.md - Health checks"
+  
+  # Workflow scheduler should have executor documented
+  workflow_executor:
+    description: "Workflow scheduler should have executor process or manual execution documented"
+    check: "grep -q 'Celery\|worker\|manual execution\|executor' backend/workflow_scheduler.py docs/ || echo 'WARNING: Workflow execution not documented'"
+    severity: medium
+    file: "backend/workflow_scheduler.py"
+    audit_ref: "EXEC_SUMMARY.md #5"
+
+# Configuration Guardrails
+configuration:
+  # Environment variables completeness
+  env_completeness:
+    description: ".env.example should include all required variables"
+    check: "python infra/selfcheck/check_env_completeness.py"
+    severity: medium
+    file: ".env.example"
+    audit_ref: "CONFIG_ENTROPY_REPORT.md"
+  
+  # No hardcoded tokens or secrets
+  no_hardcoded_secrets:
+    description: "No hardcoded secrets, tokens, or API keys in code"
+    check: "python infra/selfcheck/check_hardcoded_secrets.py"
+    severity: critical
+    audit_ref: "EXEC_SUMMARY.md #1"
+  
+  # Config validation in production
+  config_validation:
+    description: "Production config validation must be enforced"
+    check: "grep -q 'validate_production' backend/config.py && grep -q 'raise ValueError' backend/config.py"
+    severity: critical
+    file: "backend/config.py"
+    audit_ref: "CONFIG_ENTROPY_REPORT.md - Validation gaps"
+
+# Documentation Guardrails
+documentation:
+  # Architecture documentation should exist
+  architecture_docs:
+    description: "Architecture documentation should exist (docs/ARCHITECTURE.md or equivalent)"
+    check: "test -f docs/ARCHITECTURE.md || test -f docs/LIVING_ARCHITECTURE_GUIDE.md"
+    severity: medium
+    audit_ref: "NARRATIVE_COHERENCE_SCORE.md - Architecture overview missing"
+  
+  # ADRs should be referenced if they exist
+  adr_alignment:
+    description: "If ADRs exist, code should align with them"
+    check: "python infra/selfcheck/check_adr_alignment.py"
+    severity: low
+    audit_ref: "ROOT_CAUSE_AND_DRIFT_MAP.md - ADR alignment"
+
+# Testing Guardrails
+testing:
+  # Test coverage should exist for critical paths
+  critical_path_tests:
+    description: "Tests should exist for critical user journeys (auth, events, workflows)"
+    check: "test -f tests/test_api.py && grep -q 'test.*auth\|test.*event\|test.*workflow' tests/test_api.py"
+    severity: medium
+    audit_ref: "RESILIENCE_TABLE.md - Critical paths"
+
+# Monitoring Guardrails
+monitoring:
+  # SLO monitoring should be configured
+  slo_monitoring:
+    description: "SLO monitors should be configured (see infra/selfcheck/slo-monitors.yml)"
+    check: "test -f infra/selfcheck/slo-monitors.yml"
+    severity: medium
+    audit_ref: "OPS_SLO_RUNBOOK_SEEDS.md - SLOs"
+  
+  # System intelligence map should exist
+  intelligence_map:
+    description: "System intelligence map should exist and be updated"
+    check: "test -f src/observability/system_intelligence_map.json"
+    severity: low
+    audit_ref: "Living system requirements"
+
+# Metadata
+metadata:
+  version: "1.0.0"
+  last_updated: "2024-12-19"
+  source: "docs/audit/*.md"
+  maintenance: "Auto-updated from audit findings"
