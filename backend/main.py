@@ -491,6 +491,103 @@ async def migration_status():
         }
 
 
+@app.get("/system/selfcheck")
+async def system_selfcheck():
+    """
+    System self-check endpoint - validates architectural guardrails at runtime.
+    Returns JSON status of all guardrails.
+    """
+    import subprocess
+    from pathlib import Path
+    import json
+    
+    results = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "status": "unknown",
+        "checks": {},
+        "violations": []
+    }
+    
+    # Check if guardrails validation script exists
+    guardrails_script = Path("infra/selfcheck/validate_guardrails.py")
+    if not guardrails_script.exists():
+        results["status"] = "error"
+        results["error"] = "Guardrails validation script not found"
+        return results
+    
+    try:
+        # Run guardrails validation (non-blocking, for observability)
+        result = subprocess.run(
+            ["python", str(guardrails_script), "--json"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd=Path(__file__).parent.parent.parent
+        )
+        
+        if result.returncode == 0:
+            # Parse JSON output
+            try:
+                validation_results = json.loads(result.stdout)
+                results["checks"] = validation_results
+                results["status"] = "healthy" if validation_results.get("failed", 0) == 0 else "degraded"
+                results["violations"] = validation_results.get("violations", [])
+            except json.JSONDecodeError:
+                results["status"] = "error"
+                results["error"] = "Could not parse validation results"
+        else:
+            results["status"] = "error"
+            results["error"] = result.stderr or "Validation script failed"
+            
+    except subprocess.TimeoutExpired:
+        results["status"] = "error"
+        results["error"] = "Validation timeout"
+    except Exception as e:
+        results["status"] = "error"
+        results["error"] = str(e)
+    
+    # Add runtime checks
+    runtime_checks = {}
+    
+    # Check config validation
+    try:
+        settings.validate_production()
+        runtime_checks["config_validation"] = "ok"
+    except Exception as e:
+        runtime_checks["config_validation"] = f"error: {str(e)}"
+        results["violations"].append({
+            "name": "config_validation",
+            "severity": "critical",
+            "error": str(e)
+        })
+        results["status"] = "degraded"
+    
+    # Check database pool
+    try:
+        from backend.database import get_pool_status
+        pool_status = get_pool_status()
+        utilization = pool_status["checked_out"] / pool_status["size"] if pool_status["size"] > 0 else 0
+        runtime_checks["database_pool"] = {
+            "status": "ok" if utilization < 0.9 else "warning",
+            "utilization": f"{utilization:.2%}",
+            "checked_out": pool_status["checked_out"],
+            "size": pool_status["size"]
+        }
+        if utilization >= 0.9:
+            results["violations"].append({
+                "name": "database_pool_high_utilization",
+                "severity": "high",
+                "error": f"Pool utilization at {utilization:.2%}"
+            })
+            results["status"] = "degraded"
+    except Exception as e:
+        runtime_checks["database_pool"] = f"error: {str(e)}"
+    
+    results["checks"]["runtime"] = runtime_checks
+    
+    return results
+
+
 @app.get("/health/detailed")
 async def detailed_health_check(db: Session = Depends(get_db)):
     """Detailed health check with all component status."""
