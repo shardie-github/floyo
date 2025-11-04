@@ -1,0 +1,34 @@
+{
+  "bundle_id": "com.yourcompany.floyo",
+  "version": "1.0.0",
+  "build": 1,
+  "privacy_labels": {
+    "data_types": [
+      {
+        "type": "User Content",
+        "purposes": ["App Functionality"],
+        "linked_to_user": true,
+        "used_for_tracking": false
+      },
+      {
+        "type": "Usage Data",
+        "purposes": ["App Functionality", "Analytics"],
+        "linked_to_user": false,
+        "used_for_tracking": false
+      },
+      {
+        "type": "Diagnostics",
+        "purposes": ["App Functionality"],
+        "linked_to_user": false,
+        "used_for_tracking": false
+      }
+    ]
+  },
+  "age_rating": "4+",
+  "content_rating": {
+    "violence": false,
+    "sexual_content": false,
+    "profanity": false,
+    "gambling": false
+  }
+}

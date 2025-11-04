@@ -151,6 +151,45 @@ See [DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md) for development documentation.
 
 See [ROADMAP.md](ROADMAP.md) and [REMAINING_ROADMAP_ITEMS.md](REMAINING_ROADMAP_ITEMS.md) for complete roadmap details.
 
+## 🏭 Production Framework
+
+This repository includes a **self-operating production framework** with comprehensive operations tooling. See [OPS_README.md](./OPS_README.md) for full documentation.
+
+**Quick Start:**
+```bash
+npm run ops init
+npm run ops doctor
+npm run ops release
+```
+
+**Key Features:**
+- 🔍 Master Orchestrator CLI (`ops doctor | init | check | release | ...`)
+- 🧪 Reality Suite (Playwright E2E + synthetic monitors)
+- 🔐 Secrets Regimen (auto-rotation, 20-day alerts)
+- 🛡️ RLS Enforcer (Supabase security scanning)
+- 📸 Migration Safety (shadow migrations, encrypted snapshots)
+- 📊 Observability Suite (OpenTelemetry, dashboards)
+- ⚡ Performance Budgets (Lighthouse CI, bundle analyzer)
+- 🚀 Release Train (semantic-release, Vercel deploys)
+- 🔄 DR Playbook (quarterly automated rehearsals)
+- 📈 Growth Engine (UTM tracking, cohort analysis, LTV)
+- ✅ Compliance Guard (DSAR, cookie consent, data inventory)
+- 🤖 AI Agent Guardrails (schema validation, circuit breaker)
+- 💰 Offers & Paywalls (feature-flagged pricing, admin UI)
+- 🌍 Internationalization (auto-extraction, CI validation)
+- 📚 Auto-Generated Docs (Mermaid diagrams, endpoint examples)
+- 🔴 Red-Team Tests (auth breaches, rate limits, RLS regression)
+- 💳 Billing Stub (Stripe webhooks, feature flag)
+- 📱 Store Pack (app store manifests, privacy labels)
+- 🔇 Quiet Mode (incident degradation toggle)
+- 💵 Cost Caps (quota enforcement, throttling)
+- 🤝 Partner Hooks (integration contracts, Postman collection)
+
+**Operations Schedule:**
+- **Daily**: `ops doctor` → check reports → fix → release if green
+- **Weekly**: `ops release` + growth report + rotate secrets
+- **Monthly**: DR rehearsal + deps update + red-team sweep
+
 ## License
 
 Apache-2.0

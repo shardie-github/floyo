@@ -1,0 +1,47 @@
+{
+  "package_name": "com.yourcompany.floyo",
+  "version_code": 1,
+  "version_name": "1.0.0",
+  "min_sdk": 21,
+  "target_sdk": 34,
+  "permissions": [
+    "android.permission.INTERNET",
+    "android.permission.READ_EXTERNAL_STORAGE"
+  ],
+  "features": [
+    "android.hardware.camera"
+  ],
+  "privacy_labels": {
+    "data_collected": [
+      {
+        "type": "User IDs",
+        "optional": false,
+        "linked_to_user": true,
+        "used_for_tracking": false
+      },
+      {
+        "type": "File paths",
+        "optional": false,
+        "linked_to_user": true,
+        "used_for_tracking": false
+      },
+      {
+        "type": "Usage analytics",
+        "optional": true,
+        "linked_to_user": false,
+        "used_for_tracking": false
+      }
+    ],
+    "data_shared": [
+      {
+        "type": "Analytics",
+        "optional": true,
+        "linked_to_user": false
+      }
+    ],
+    "security_practices": [
+      "Encryption in transit",
+      "Data encryption"
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "ci": {
+    "collect": {
+      "numberOfRuns": 3,
+      "startServerCommand": "npm run start",
+      "url": ["http://localhost:3000"]
+    },
+    "assert": {
+      "preset": "lighthouse:recommended",
+      "assertions": {
+        "largest-contentful-paint": ["error", {"maxNumericValue": 2500}],
+        "cumulative-layout-shift": ["error", {"maxNumericValue": 0.1}],
+        "total-blocking-time": ["error", {"maxNumericValue": 300}],
+        "uses-optimized-images": ["warn"],
+        "uses-webp-images": ["warn"],
+        "uses-text-compression": ["error"],
+        "uses-long-cache-ttl": ["warn"],
+        "dom-size": ["warn", {"maxNumericValue": 1500}],
+        "no-console-logs": ["warn"],
+        "legacy-javascript": ["warn"]
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}
