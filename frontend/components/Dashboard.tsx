@@ -12,11 +12,8 @@ import { EventFilters } from './EventFilters'
 import { Pagination } from './Pagination'
 import { PatternChart } from './PatternChart'
 import { EventTimeline } from './EventTimeline'
-import { LoadingSkeleton } from './LoadingSkeleton'
-import { InstallPrompt } from './InstallPrompt'
-import { OfflineIndicator } from './OfflineIndicator'
-import { ServiceWorkerUpdate } from './ServiceWorkerUpdate'
-import { useEffect, useState } from 'react'
+import { EmptyState } from './EmptyState'
+import { ProductTour, defaultTourSteps } from './ProductTour'
 
 export function Dashboard() {
   const { user, logout } = useAuth()
@@ -161,7 +158,7 @@ export function Dashboard() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" data-tour="dashboard">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Dashboard</h2>
           <p className="text-gray-600 dark:text-gray-400">
@@ -202,35 +199,33 @@ export function Dashboard() {
           ) : suggestions.length > 0 ? (
             <SuggestionsList suggestions={suggestions} />
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No suggestions yet</h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Start tracking your file usage to get personalized integration suggestions.
-              </p>
-              <div className="mt-6">
-                <button
-                  onClick={() => generateSuggestionsMutation.mutate()}
-                  disabled={generateSuggestionsMutation.isPending}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-                >
-                  Generate Suggestions
-                </button>
-              </div>
-            </div>
+            <EmptyState
+              variant="suggestions"
+              title="No suggestions yet"
+              description="Start tracking your file usage to get personalized integration suggestions."
+              action={{
+                label: "Generate Suggestions",
+                onClick: () => generateSuggestionsMutation.mutate()
+              }}
+              secondaryAction={{
+                label: "Try Sample Data",
+                onClick: async () => {
+                  try {
+                    const response = await fetch('/api/data/sample', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                    });
+                    if (response.ok) {
+                      queryClient.invalidateQueries({ queryKey: ['suggestions'] });
+                      queryClient.invalidateQueries({ queryKey: ['events'] });
+                      queryClient.invalidateQueries({ queryKey: ['patterns'] });
+                    }
+                  } catch (error) {
+                    console.error('Failed to generate sample data:', error);
+                  }
+                }
+              }}
+            />
           )}
         </div>
 
@@ -255,26 +250,28 @@ export function Dashboard() {
               )}
             </>
           ) : (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No patterns detected</h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Patterns will appear here as you use files and tools.
-              </p>
-            </div>
+            <EmptyState
+              variant="workflows"
+              title="No patterns detected"
+              description="Patterns will appear here as you use files and tools."
+              action={{
+                label: "Try Sample Data",
+                onClick: async () => {
+                  try {
+                    const response = await fetch('/api/data/sample', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                    });
+                    if (response.ok) {
+                      queryClient.invalidateQueries({ queryKey: ['patterns'] });
+                      queryClient.invalidateQueries({ queryKey: ['events'] });
+                    }
+                  } catch (error) {
+                    console.error('Failed to generate sample data:', error);
+                  }
+                }
+              }}
+            />
           )}
         </div>
 
@@ -301,30 +298,35 @@ export function Dashboard() {
                 )}
               </>
             ) : (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-center">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No events recorded</h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  Events will appear here as you work with files.
-                </p>
-              </div>
+              <EmptyState
+                variant="events"
+                title="No events yet"
+                description="Events will appear here as you track file operations."
+                action={{
+                  label: "Try Sample Data",
+                  onClick: async () => {
+                    try {
+                      const response = await fetch('/api/data/sample', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                      });
+                      if (response.ok) {
+                        queryClient.invalidateQueries({ queryKey: ['events'] });
+                        queryClient.invalidateQueries({ queryKey: ['patterns'] });
+                      }
+                    } catch (error) {
+                      console.error('Failed to generate sample data:', error);
+                    }
+                  }
+                }}
+              />
             )}
           </div>
         </div>
       </main>
+      
+      {/* Product Tour */}
+      <ProductTour steps={defaultTourSteps} run={!localStorage.getItem('has_completed_product_tour')} />
       <InstallPrompt />
       <ServiceWorkerUpdate />
     </div>

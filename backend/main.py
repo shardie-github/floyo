@@ -67,6 +67,7 @@ from backend.workflow_scheduler import WorkflowScheduler
 from backend.connectors import initialize_connectors, get_available_connectors, create_user_integration
 from backend.email_service import email_service
 from backend.data_retention import get_retention_policy
+from backend.sample_data import SampleDataGenerator
 from fastapi.responses import Response
 
 # Configuration
@@ -1945,22 +1946,29 @@ async def export_events(
 
 @app.get("/api/data/export")
 async def export_all_data(
+    format: str = "zip",  # zip or json
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Export all user data for GDPR compliance (right to data portability)."""
+    """Export all user data for GDPR compliance (right to data portability).
+    
+    Args:
+        format: Export format - 'zip' (default) or 'json'
+    """
     import json
     from io import BytesIO
     import zipfile
     
     # Collect all user data
     user_data = {
+        "export_date": datetime.utcnow().isoformat(),
         "user": {
             "id": str(current_user.id),
             "email": current_user.email,
             "username": current_user.username,
             "full_name": current_user.full_name,
             "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+            "email_verified": current_user.email_verified,
         },
         "events": [
             {
@@ -1972,7 +1980,7 @@ async def export_all_data(
                 "timestamp": e.timestamp.isoformat() if e.timestamp else None,
                 "details": e.details
             }
-            for e in db.query(Event).filter(Event.user_id == current_user.id).all()
+            for e in db.query(Event).filter(Event.user_id == current_user.id).order_by(Event.timestamp.desc()).all()
         ],
         "patterns": [
             {
@@ -1980,7 +1988,8 @@ async def export_all_data(
                 "file_extension": p.file_extension,
                 "count": p.count,
                 "last_used": p.last_used.isoformat() if p.last_used else None,
-                "tools": p.tools
+                "tools": p.tools,
+                "metadata": p.metadata
             }
             for p in db.query(Pattern).filter(Pattern.user_id == current_user.id).all()
         ],
@@ -1988,8 +1997,11 @@ async def export_all_data(
             {
                 "id": str(s.id),
                 "trigger": s.trigger,
+                "tools_involved": s.tools_involved,
                 "suggested_integration": s.suggested_integration,
                 "confidence": s.confidence,
+                "is_dismissed": s.is_dismissed,
+                "is_applied": s.is_applied,
                 "created_at": s.created_at.isoformat() if s.created_at else None
             }
             for s in db.query(Suggestion).filter(Suggestion.user_id == current_user.id).all()
@@ -1999,25 +2011,86 @@ async def export_all_data(
                 "id": str(w.id),
                 "name": w.name,
                 "description": w.description,
+                "trigger_config": w.trigger_config,
+                "steps": w.steps,
                 "is_active": w.is_active,
                 "created_at": w.created_at.isoformat() if w.created_at else None
             }
             for w in db.query(Workflow).filter(Workflow.user_id == current_user.id).all()
+        ],
+        "sessions": [
+            {
+                "id": str(s.id),
+                "device_info": s.device_info,
+                "ip_address": s.ip_address,
+                "created_at": s.created_at.isoformat() if s.created_at else None,
+                "last_used_at": s.last_used_at.isoformat() if s.last_used_at else None,
+                "expires_at": s.expires_at.isoformat() if s.expires_at else None
+            }
+            for s in db.query(UserSession).filter(UserSession.user_id == current_user.id).all()
         ]
     }
     
-    # Create ZIP file
-    zip_buffer = BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-        zip_file.writestr("user_data.json", json.dumps(user_data, indent=2, default=str))
-    
-    zip_buffer.seek(0)
-    
-    return Response(
-        content=zip_buffer.getvalue(),
-        media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename=floyo_data_export_{datetime.utcnow().strftime('%Y%m%d')}.zip"}
+    # Log export
+    log_audit(
+        db=db,
+        action="data_export",
+        resource_type="data",
+        user_id=current_user.id,
+        details={"format": format, "event_count": len(user_data["events"])}
     )
+    
+    if format == "json":
+        # Return JSON directly
+        return Response(
+            content=json.dumps(user_data, indent=2, default=str),
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename=floyo_data_export_{datetime.utcnow().strftime('%Y%m%d')}.json"}
+        )
+    else:
+        # Create ZIP file
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.writestr("user_data.json", json.dumps(user_data, indent=2, default=str))
+            # Add separate files for easier reading
+            zip_file.writestr("events.json", json.dumps(user_data["events"], indent=2, default=str))
+            zip_file.writestr("patterns.json", json.dumps(user_data["patterns"], indent=2, default=str))
+            zip_file.writestr("suggestions.json", json.dumps(user_data["suggestions"], indent=2, default=str))
+            zip_file.writestr("workflows.json", json.dumps(user_data["workflows"], indent=2, default=str))
+        
+        zip_buffer.seek(0)
+        
+        return Response(
+            content=zip_buffer.getvalue(),
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename=floyo_data_export_{datetime.utcnow().strftime('%Y%m%d')}.zip"}
+        )
+
+
+@app.post("/api/data/sample")
+async def generate_sample_data(
+    events_count: int = 20,
+    suggestions_count: int = 5,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Generate sample data for testing/demo purposes."""
+    result = SampleDataGenerator.generate_all_sample_data(
+        db=db,
+        user_id=current_user.id,
+        events_count=events_count,
+        suggestions_count=suggestions_count
+    )
+    
+    log_audit(
+        db=db,
+        action="sample_data_generated",
+        resource_type="data",
+        user_id=current_user.id,
+        details={"events_count": events_count, "suggestions_count": suggestions_count}
+    )
+    
+    return result
 
 
 @app.delete("/api/data/delete")
@@ -2025,46 +2098,71 @@ async def export_all_data(
 async def delete_all_data(
     request: Request,
     confirm: bool = False,
+    hard_delete: bool = False,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Delete all user data for GDPR compliance (right to be forgotten)."""
+    """Delete all user data for GDPR compliance (right to be forgotten).
+    
+    Args:
+        confirm: Must be True to proceed with deletion
+        hard_delete: If True, permanently delete user record (default: False for soft delete)
+    """
     if not confirm:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Must confirm deletion by setting confirm=true"
         )
     
+    user_id = current_user.id
+    user_email = current_user.email
+    
     # Delete all user-related data (cascade should handle most)
-    # Events, patterns, suggestions, workflows will be deleted via cascade
     # But we'll explicitly delete to ensure everything is removed
+    db.query(Event).filter(Event.user_id == current_user.id).delete(synchronize_session=False)
+    db.query(Pattern).filter(Pattern.user_id == current_user.id).delete(synchronize_session=False)
+    db.query(Suggestion).filter(Suggestion.user_id == current_user.id).delete(synchronize_session=False)
+    db.query(Workflow).filter(Workflow.user_id == current_user.id).delete(synchronize_session=False)
+    db.query(FileRelationship).filter(FileRelationship.user_id == current_user.id).delete(synchronize_session=False)
+    db.query(TemporalPattern).filter(TemporalPattern.user_id == current_user.id).delete(synchronize_session=False)
+    db.query(UserSession).filter(UserSession.user_id == current_user.id).delete(synchronize_session=False)
+    db.query(UserConfig).filter(UserConfig.user_id == current_user.id).delete(synchronize_session=False)
     
-    db.query(Event).filter(Event.user_id == current_user.id).delete()
-    db.query(Pattern).filter(Pattern.user_id == current_user.id).delete()
-    db.query(Suggestion).filter(Suggestion.user_id == current_user.id).delete()
-    db.query(Workflow).filter(Workflow.user_id == current_user.id).delete()
-    db.query(FileRelationship).filter(FileRelationship.user_id == current_user.id).delete()
-    db.query(TemporalPattern).filter(TemporalPattern.user_id == current_user.id).delete()
-    db.query(UserSession).filter(UserSession.user_id == current_user.id).delete()
-    db.query(UserConfig).filter(UserConfig.user_id == current_user.id).delete()
-    
-    # Soft delete user account
-    current_user.is_active = False
-    current_user.email = f"deleted_{current_user.id}@deleted.local"
-    current_user.hashed_password = ""
-    
-    db.commit()
-    
-    log_audit(
-        db=db,
-        action="delete",
-        resource_type="user_data",
-        user_id=current_user.id,
-        details={"reason": "GDPR data deletion request"},
-        request=request
-    )
-    
-    return {"message": "All user data has been deleted"}
+    # Handle user deletion based on hard_delete flag
+    if hard_delete:
+        # Hard delete: Permanently remove user record
+        db.delete(current_user)
+        db.commit()
+        
+        log_audit(
+            db=db,
+            action="hard_delete",
+            resource_type="user_data",
+            user_id=user_id,
+            details={"reason": "GDPR data deletion request (hard delete)", "user_email": user_email},
+            request=request
+        )
+        
+        return {"message": "User account and all data have been permanently deleted"}
+    else:
+        # Soft delete: Mark as inactive and anonymize
+        current_user.is_active = False
+        current_user.email = f"deleted_{current_user.id}@deleted.local"
+        current_user.hashed_password = ""
+        current_user.username = None
+        current_user.full_name = None
+        db.commit()
+        
+        log_audit(
+            db=db,
+            action="soft_delete",
+            resource_type="user_data",
+            user_id=user_id,
+            details={"reason": "GDPR data deletion request (soft delete)", "user_email": user_email},
+            request=request
+        )
+        
+        return {"message": "User account has been deactivated and all data deleted"}
 
 
 @app.post("/api/data/retention/cleanup")
