@@ -31,7 +31,7 @@
     "test": "jest",
     "test:e2e": "playwright test",
     "build": "npm run build --workspace=frontend",
-    "lighthouse": "lhci autorun"
+    "demo:privacy": "tsx scripts/demo-privacy.ts",
   },
   "dependencies": {
     "@prisma/client": "^5.7.0",

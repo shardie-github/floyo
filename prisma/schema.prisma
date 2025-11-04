@@ -30,6 +30,7 @@ model User {
   subscriptions Subscription[]
   utmTracks     UTMTrack[]
   cohorts       Cohort[]
+  privacyPrefs  PrivacyPrefs?
   
   @@index([email])
   @@map("users")
@@ -216,4 +217,109 @@ model RetentionPolicy {
   
   @@unique([tableName])
   @@map("retention_policies")
+}
+
+// Privacy-first monitoring tables
+model PrivacyPrefs {
+  id                  String    @id @default(uuid())
+  userId              String    @unique
+  consentGiven        Boolean   @default(false)
+  dataRetentionDays   Int       @default(14)
+  mfaRequired         Boolean   @default(true)
+  lastReviewedAt      DateTime?
+  monitoringEnabled   Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appAllowlists       AppAllowlist[]
+  signalToggles       SignalToggle[]
+  telemetryEvents     TelemetryEvent[]
+  transparencyLogs    PrivacyTransparencyLog[]
+  
+  @@index([userId])
+  @@map("privacy_prefs")
+}
+
+model AppAllowlist {
+  id          String   @id @default(uuid())
+  userId      String
+  appId       String
+  appName     String
+  enabled     Boolean  @default(false)
+  scope       String   @default("metadata_only") // metadata_only, metadata_plus_usage, none
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  user        PrivacyPrefs @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  
+  @@unique([userId, appId])
+  @@index([userId])
+  @@map("app_allowlist")
+}
+
+model SignalToggle {
+  id            String   @id @default(uuid())
+  userId        String
+  signalKey     String   // e.g., window_titles, durations, focus_switches
+  enabled       Boolean  @default(false)
+  samplingRate  Float    @default(1.0) // 0.0 to 1.0
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  user          PrivacyPrefs @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  
+  @@unique([userId, signalKey])
+  @@index([userId])
+  @@map("signal_toggles")
+}
+
+model TelemetryEvent {
+  id                  String   @id @default(uuid())
+  userId              String
+  timestamp           DateTime @default(now())
+  appId               String
+  eventType           String   // focus_switch, duration, window_title_change, etc.
+  durationMs          Int?
+  metadataRedactedJson Json?  // Encrypted/redacted metadata
+  createdAt           DateTime @default(now())
+  
+  user                PrivacyPrefs @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  
+  @@index([userId, timestamp])
+  @@index([appId])
+  @@index([timestamp])
+  @@map("telemetry_events")
+}
+
+model PrivacyTransparencyLog {
+  id              String   @id @default(uuid())
+  userId          String
+  action          String   // consent_given, consent_revoked, app_enabled, app_disabled, signal_toggled, export_requested, delete_requested, data_accessed, policy_changed
+  resource        String?  // app_id, signal_key, etc.
+  resourceId      String?
+  oldValueHash    String?  // Hash of old state before change
+  newValueHash    String?  // Hash of new state after change
+  metadata        Json?
+  timestamp       DateTime @default(now())
+  
+  user            PrivacyPrefs @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  
+  @@index([userId, timestamp])
+  @@index([action])
+  @@index([timestamp])
+  @@map("privacy_transparency_log")
+}
+
+model MfaEnforcedSession {
+  id              String   @id @default(uuid())
+  userId          String
+  sessionToken    String   @unique
+  expiresAt       DateTime
+  createdAt       DateTime @default(now())
+  
+  @@index([userId])
+  @@index([sessionToken])
+  @@index([expiresAt])
+  @@map("mfa_enforced_sessions")
 }
