@@ -615,3 +615,44 @@ class EnterpriseSettings(Base):
     __table_args__ = (
         Index('idx_enterprise_settings_org', 'organization_id', unique=True),
     )
+
+
+class TwoFactorAuth(Base):
+    """Two-factor authentication for users."""
+    __tablename__ = "two_factor_auth"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    secret = Column(String(255), nullable=True)  # TOTP secret (encrypted)
+    is_enabled = Column(Boolean, default=False)
+    backup_codes = Column(PGARRAY(String), nullable=True)  # Backup codes
+    last_used_at = Column(TIMESTAMP(timezone=True), nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    user = relationship("User", foreign_keys=[user_id])
+    
+    __table_args__ = (
+        Index('idx_two_factor_auth_user', 'user_id', unique=True),
+    )
+
+
+class SecurityAudit(Base):
+    """Security audit log for security events."""
+    __tablename__ = "security_audits"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    event_type = Column(String(100), nullable=False, index=True)  # failed_login, password_change, 2fa_enabled, etc.
+    severity = Column(String(50), nullable=False, index=True)  # low, medium, high, critical
+    details = Column(JSONB, nullable=True)
+    ip_address = Column(String(45), nullable=True, index=True)
+    user_agent = Column(Text, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
+    
+    user = relationship("User", foreign_keys=[user_id])
+    
+    __table_args__ = (
+        Index('idx_security_audit_user_created', 'user_id', 'created_at'),
+        Index('idx_security_audit_severity', 'severity', 'created_at'),
+    )

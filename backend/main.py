@@ -31,6 +31,14 @@ from backend.sentry_config import init_sentry
 from backend.rate_limit import limiter, get_rate_limit_exceeded_handler, RATE_LIMIT_PER_MINUTE, RATE_LIMIT_PER_HOUR
 from backend.cache import init_cache, cached, get, set, delete
 from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+
+# Import security modules
+from backend.security import (
+    SecurityHeadersMiddleware, TwoFactorAuthManager, DataEncryption,
+    SecurityAuditor, InputSanitizer
+)
 
 # Set up logging
 setup_logging()
@@ -48,7 +56,7 @@ from database.models import (
     WorkflowVersion, WorkflowExecution, Referral, ReferralReward,
     RetentionCampaign, WorkflowShare, SubscriptionPlan, Subscription,
     UsageMetric, BillingEvent, SSOProvider, SSOConnection,
-    ComplianceReport, EnterpriseSettings
+    ComplianceReport, EnterpriseSettings, TwoFactorAuth, SecurityAudit
 )
 from sqlalchemy import text
 from backend.batch_processor import process_event_batch
@@ -121,6 +129,15 @@ from backend.database import SessionLocal as DB
 db_init = DB()
 initialize_connectors(db_init)
 db_init.close()
+
+# Security Headers Middleware
+class SecurityHeadersMiddlewareClass(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        headers = SecurityHeadersMiddleware.get_security_headers()
+        for key, value in headers.items():
+            response.headers[key] = value
+        return response
 
 # FastAPI app
 app = FastAPI(
@@ -206,7 +223,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:;"
         return response
 
-app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(SecurityHeadersMiddlewareClass)
 
 # Rate limiting
 app.state.limiter = limiter
@@ -3038,6 +3055,133 @@ async def fork_workflow(
     """Fork a shared workflow."""
     result = EcosystemManager.fork_workflow(db, current_user.id, share_code)
     return result
+
+# Security Endpoints (P0 - Critical)
+@app.post("/api/security/2fa/setup")
+async def setup_2fa(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Set up 2FA for current user."""
+    try:
+        result = TwoFactorAuthManager.setup_2fa(db, current_user.id)
+        
+        # Log security event
+        SecurityAuditor.log_security_event(
+            db=db,
+            user_id=current_user.id,
+            event_type="2fa_setup_initiated",
+            severity="medium",
+            details={"user_id": str(current_user.id)}
+        )
+        
+        return result
+    except Exception as e:
+        logger.error(f"2FA setup error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/security/2fa/verify")
+async def verify_and_enable_2fa(
+    token: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Verify 2FA token and enable 2FA."""
+    success = TwoFactorAuthManager.verify_and_enable_2fa(db, current_user.id, token)
+    
+    if success:
+        SecurityAuditor.log_security_event(
+            db=db,
+            user_id=current_user.id,
+            event_type="2fa_enabled",
+            severity="high",
+            details={"user_id": str(current_user.id)}
+        )
+        return {"message": "2FA enabled successfully", "enabled": True}
+    else:
+        SecurityAuditor.log_security_event(
+            db=db,
+            user_id=current_user.id,
+            event_type="2fa_verification_failed",
+            severity="medium",
+            details={"user_id": str(current_user.id)}
+        )
+        raise HTTPException(status_code=400, detail="Invalid 2FA token")
+
+@app.post("/api/security/2fa/disable")
+async def disable_2fa(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Disable 2FA for current user."""
+    success = TwoFactorAuthManager.disable_2fa(db, current_user.id)
+    
+    if success:
+        SecurityAuditor.log_security_event(
+            db=db,
+            user_id=current_user.id,
+            event_type="2fa_disabled",
+            severity="high",
+            details={"user_id": str(current_user.id)}
+        )
+        return {"message": "2FA disabled successfully"}
+    else:
+        raise HTTPException(status_code=400, detail="2FA not enabled")
+
+@app.get("/api/security/2fa/status")
+async def get_2fa_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get 2FA status for current user."""
+    two_fa = db.query(TwoFactorAuth).filter(TwoFactorAuth.user_id == current_user.id).first()
+    
+    if not two_fa:
+        return {"enabled": False, "setup": False}
+    
+    return {
+        "enabled": two_fa.is_enabled,
+        "setup": True,
+        "has_backup_codes": len(two_fa.backup_codes) > 0 if two_fa.backup_codes else False
+    }
+
+@app.get("/api/security/audit")
+async def get_security_audit(
+    severity: Optional[str] = None,
+    limit: int = 100,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get security audit events (admin only or own events)."""
+    if current_user.is_superuser:
+        # Admin can see all events
+        events = SecurityAuditor.get_security_events(db, None, severity, limit)
+    else:
+        # Users can only see their own events
+        events = SecurityAuditor.get_security_events(db, current_user.id, severity, limit)
+    
+    return {"security_events": events, "count": len(events)}
+
+@app.get("/api/security/suspicious-activity")
+async def check_suspicious_activity(
+    time_window_minutes: int = 15,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Check for suspicious activity on current user account."""
+    activity = SecurityAuditor.detect_suspicious_activity(
+        db, current_user.id, time_window_minutes
+    )
+    return activity
+
+@app.post("/api/security/validate-password")
+async def validate_password_strength(
+    password: str,
+    db: Session = Depends(get_db)
+):
+    """Validate password strength."""
+    validation = InputSanitizer.validate_password_strength(password)
+    return validation
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
