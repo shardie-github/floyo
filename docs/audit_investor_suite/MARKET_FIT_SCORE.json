@@ -1,0 +1,35 @@
+{
+  "overall_score": 55.95,
+  "dimension_scores": {
+    "retention": 17.599999999999998,
+    "growth": 65.0,
+    "engagement": 69.0,
+    "cac_ltv": 80.0,
+    "conversion": 84.5,
+    "nps": 62.5,
+    "viral_coefficient": 30.0
+  },
+  "weights": {
+    "retention": 0.25,
+    "growth": 0.2,
+    "engagement": 0.15,
+    "cac_ltv": 0.15,
+    "conversion": 0.1,
+    "nps": 0.1,
+    "viral_coefficient": 0.05
+  },
+  "timestamp": "2025-11-04T03:17:46.348650",
+  "metrics_used": {
+    "d7_retention": 0.25,
+    "d30_retention": 0.15,
+    "d90_retention": 0.08,
+    "mom_growth": 0.08,
+    "dau_mau_ratio": 0.15,
+    "feature_adoption_rate": 0.3,
+    "ltv_cac_ratio": 2.5,
+    "signup_to_activation_rate": 0.35,
+    "activation_to_paid_rate": 0.08,
+    "nps": 35,
+    "viral_coefficient": 0.3
+  }
+}

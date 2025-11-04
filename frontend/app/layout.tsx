@@ -2,6 +2,7 @@ import './globals.css'
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Providers } from './providers'
+import { AnalyticsProvider } from './analytics-provider'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -62,7 +63,9 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <Providers>
+          <AnalyticsProvider>{children}</AnalyticsProvider>
+        </Providers>
       </body>
     </html>
   )

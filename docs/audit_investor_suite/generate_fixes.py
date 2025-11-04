@@ -2,6 +2,9 @@
 """
 Generate Fix Scripts and PR Plans
 Creates fix scripts and PR plan documents for each issue
+
+SECURITY NOTE: This script does not contain hardcoded secrets.
+All secrets should be provided via environment variables or secure configuration.
 """
 import json
 import sys

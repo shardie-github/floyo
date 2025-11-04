@@ -75,11 +75,19 @@ class Settings(BaseSettings):
         
         errors = []
         
-        # SECRET_KEY validation - CRITICAL: Fail if default
-        if self.secret_key == "your-secret-key-change-in-production" or len(self.secret_key) < 32:
+        # SECRET_KEY validation - CRITICAL: Fail if default or weak
+        default_secret_patterns = [
+            "your-secret-key-change-in-production",
+            "CHANGE_ME_USE_STRONG_RANDOM_SECRET_KEY",
+            "change_me",
+            "secret",
+            "default",
+            "floyo"  # Prevent using project name as secret
+        ]
+        if any(pattern.lower() in self.secret_key.lower() for pattern in default_secret_patterns) or len(self.secret_key) < 32:
             errors.append(
                 "SECRET_KEY must be set in production to a strong, random value (minimum 32 characters). "
-                "Set the SECRET_KEY environment variable."
+                "Do not use default values or weak secrets. Set the SECRET_KEY environment variable."
             )
         
         # CORS validation - CRITICAL: Fail if permissive
