@@ -30,7 +30,14 @@ RETENTION_DAYS = int(os.getenv("BACKUP_RETENTION_DAYS", "30"))
 COMPRESSION = os.getenv("BACKUP_COMPRESSION", "gzip").lower() == "true"
 
 # Database connection from environment
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://floyo:floyo@localhost:5432/floyo")
+# CRITICAL: DATABASE_URL must be provided via environment variable
+# Do not use default values with credentials in production
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError(
+        "DATABASE_URL environment variable is required. "
+        "Set it to your PostgreSQL connection string (e.g., postgresql://user:password@host:port/database)"
+    )
 
 
 def parse_db_url(url: str) -> dict:
@@ -41,8 +48,11 @@ def parse_db_url(url: str) -> dict:
         auth, rest = url.split("@", 1)
         user, password = auth.split(":", 1)
     else:
-        user, password = "floyo", ""
-        rest = url
+        # No credentials in URL - user must provide DATABASE_URL with credentials
+        raise ValueError(
+            "DATABASE_URL must include credentials (user:password@host). "
+            "Do not use default credentials in production."
+        )
     
     if ":" in rest:
         host_port, dbname = rest.rsplit("/", 1)

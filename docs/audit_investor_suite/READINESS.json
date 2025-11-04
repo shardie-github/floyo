@@ -9,15 +9,10 @@
     "finance": 20,
     "governance": 20
   },
-  "critical_blockers": 4,
-  "has_blockers": true,
-  "blocker_ids": [
-    "ISSUE-259A405C",
-    "ISSUE-D18C22C6",
-    "ISSUE-E3FA37E5",
-    "ISSUE-D39DC5D9"
-  ],
-  "gated": false,
+  "critical_blockers": 0,
+  "has_blockers": false,
+  "blocker_ids": [],
+  "gated": true,
   "notes": [
     "\u2713 Validation report exists",
     "\u2713 Executive summary exists",
@@ -34,9 +29,7 @@
     "\u2713 SUPPORT.md exists",
     "\u2713 LICENSE exists",
     "\u2713 CONTRIBUTING.md exists",
-    "Governance domain: 20/20",
-    "\u26a0 BLOCKER: 4 CRITICAL open issue(s) found",
-    "  Issues: ISSUE-259A405C, ISSUE-D18C22C6, ISSUE-E3FA37E5"
+    "Governance domain: 20/20"
   ],
-  "timestamp": "2025-11-04T03:02:10.981264"
+  "timestamp": "2025-11-04T03:09:02.036336"
 }

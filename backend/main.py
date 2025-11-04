@@ -59,6 +59,9 @@ from fastapi.responses import Response
 # Configuration
 from backend.config import settings
 
+# SECURITY: All credentials MUST come from environment variables via settings
+# No hardcoded passwords, secrets, or API keys are allowed in this file
+# Settings are validated on load (see backend/config.py for validation rules)
 SECRET_KEY = settings.secret_key
 ALGORITHM = settings.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
