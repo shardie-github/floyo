@@ -56,7 +56,8 @@ from database.models import (
     WorkflowVersion, WorkflowExecution, Referral, ReferralReward,
     RetentionCampaign, WorkflowShare, SubscriptionPlan, Subscription,
     UsageMetric, BillingEvent, SSOProvider, SSOConnection,
-    ComplianceReport, EnterpriseSettings, TwoFactorAuth, SecurityAudit
+    ComplianceReport, EnterpriseSettings, TwoFactorAuth, SecurityAudit,
+    GuardianEvent, TrustLedgerRoot, TrustFabricModel, GuardianSettings
 )
 from sqlalchemy import text
 from backend.batch_processor import process_event_batch
@@ -70,6 +71,8 @@ from backend.data_retention import get_retention_policy
 from backend.sample_data import SampleDataGenerator
 from backend.monitoring import router as monitoring_router
 from backend.analytics import router as analytics_router
+from backend.guardian.api import router as guardian_router
+from backend.guardian.middleware import GuardianMiddleware
 from fastapi.responses import Response
 
 # Configuration
@@ -213,6 +216,9 @@ app.add_middleware(
 
 # Compression middleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Guardian privacy middleware
+app.add_middleware(GuardianMiddleware)
 
 # Security headers middleware (already added above via SecurityHeadersMiddlewareClass)
 
@@ -809,6 +815,7 @@ app.include_router(api_v1_router)
 app.include_router(api_router)
 app.include_router(monitoring_router)
 app.include_router(analytics_router)
+app.include_router(guardian_router)
 
 
 @app.post("/api/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
