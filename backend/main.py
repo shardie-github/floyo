@@ -65,6 +65,8 @@ from backend.audit import log_audit
 from backend.organizations import create_organization, get_user_organizations, get_organization_members, add_member, update_member_role
 from backend.workflow_scheduler import WorkflowScheduler
 from backend.connectors import initialize_connectors, get_available_connectors, create_user_integration
+from backend.email_service import email_service
+from backend.data_retention import get_retention_policy
 from fastapi.responses import Response
 
 # Configuration
@@ -209,21 +211,7 @@ app.add_middleware(
 # Compression middleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Security headers middleware
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
-
-class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' ws: wss:;"
-        return response
-
-app.add_middleware(SecurityHeadersMiddlewareClass)
+# Security headers middleware (already added above via SecurityHeadersMiddlewareClass)
 
 # Rate limiting
 app.state.limiter = limiter
@@ -373,9 +361,12 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-def create_refresh_token(data: dict):
+def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
@@ -842,6 +833,14 @@ async def register(
     # Generate email verification token
     verification_token = secrets.token_urlsafe(32)
     
+    # Validate password strength
+    password_validation = InputSanitizer.validate_password_strength(user.password)
+    if not password_validation["is_valid"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Password does not meet requirements: {', '.join(password_validation['issues'])}"
+        )
+    
     # Create user
     hashed_password = get_password_hash(user.password)
     db_user = User(
@@ -857,9 +856,14 @@ async def register(
     db.commit()
     db.refresh(db_user)
     
-    # In production, send verification email here
-    # Only log token in development
-    if settings.environment != "production":
+    # Send verification email
+    email_sent = email_service.send_email_verification_email(
+        to_email=user.email,
+        verification_token=verification_token
+    )
+    
+    if not email_sent and settings.environment != "production":
+        # Fallback: log token in development if email service not configured
         logger.info(f"Email verification token for {user.email}: {verification_token}")
     
     db.refresh(db_user)
@@ -909,7 +913,7 @@ async def register(
 
 
 @app.post("/api/auth/login", response_model=Token)
-@limiter.limit(f"{RATE_LIMIT_PER_HOUR}/hour")
+@limiter.limit("5/minute")  # More restrictive to prevent brute force attacks
 async def login(
     request: Request,
     user_credentials: UserLogin,
@@ -969,11 +973,14 @@ async def login(
 
 
 @app.post("/api/auth/refresh")
+@limiter.limit("30/minute")  # Rate limited for refresh token endpoint
 async def refresh_token(
+    request: Request,
     refresh_token: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    rotate: bool = False  # Token rotation flag
 ):
-    """Refresh access token using refresh token."""
+    """Refresh access token using refresh token with optional rotation."""
     try:
         payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
         if payload.get("type") != "refresh":
@@ -1008,9 +1015,36 @@ async def refresh_token(
                 detail="User not found or inactive"
             )
         
-        # Update session last_used
-        session.last_used_at = datetime.utcnow()
-        db.commit()
+        # Token rotation: if requested, invalidate old refresh token and create new one
+        if rotate:
+            # Delete old session
+            db.delete(session)
+            db.commit()
+            
+            # Create new refresh token and session
+            refresh_token_expires = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+            new_refresh_token = create_refresh_token(
+                data={"sub": str(user.id), "type": "refresh"},
+                expires_delta=refresh_token_expires
+            )
+            
+            # Create new session
+            new_session = UserSession(
+                user_id=user.id,
+                token_hash=new_refresh_token[:50],
+                device_info=request.headers.get("user-agent"),
+                ip_address=request.client.host if request.client else None,
+                expires_at=datetime.utcnow() + refresh_token_expires
+            )
+            db.add(new_session)
+            db.commit()
+            
+            refresh_token_to_return = new_refresh_token
+        else:
+            # Just update last_used
+            session.last_used_at = datetime.utcnow()
+            db.commit()
+            refresh_token_to_return = refresh_token
         
         # Generate new access token
         access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -1019,11 +1053,17 @@ async def refresh_token(
             expires_delta=access_token_expires
         )
         
-        return {
+        result = {
             "access_token": access_token,
             "token_type": "bearer",
             "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60
         }
+        
+        # Include refresh token only if rotated
+        if rotate:
+            result["refresh_token"] = refresh_token_to_return
+        
+        return result
     except jwt.PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -1163,9 +1203,14 @@ async def resend_verification(
     current_user.email_verification_expires = datetime.utcnow() + timedelta(days=1)
     db.commit()
     
-    # In production, send verification email here
-    # Only log token in development
-    if settings.environment != "production":
+    # Send verification email
+    email_sent = email_service.send_email_verification_email(
+        to_email=current_user.email,
+        verification_token=verification_token
+    )
+    
+    if not email_sent and settings.environment != "production":
+        # Fallback: log token in development if email service not configured
         logger.info(f"Email verification token for {current_user.email}: {verification_token}")
     
     return {"message": "Verification email sent"}
@@ -1181,7 +1226,7 @@ class PasswordReset(BaseModel):
 
 
 @app.post("/api/auth/forgot-password")
-@limiter.limit("5/hour")
+@limiter.limit("5/hour")  # Rate limited to prevent email enumeration
 async def forgot_password(
     request: Request,
     reset_request: PasswordResetRequest,
@@ -1198,9 +1243,14 @@ async def forgot_password(
         user.password_reset_expires = datetime.utcnow() + timedelta(hours=1)
         db.commit()
         
-        # In production, send reset email here
-        # Only log token in development
-        if settings.environment != "production":
+        # Send password reset email
+        email_sent = email_service.send_password_reset_email(
+            to_email=user.email,
+            reset_token=reset_token
+        )
+        
+        if not email_sent and settings.environment != "production":
+            # Fallback: log token in development if email service not configured
             logger.info(f"Password reset token for {user.email}: {reset_token}")
     
     return {"message": "If the email exists, a password reset link has been sent"}
@@ -1215,10 +1265,11 @@ async def reset_password(
 ):
     """Reset password with token."""
     # Validate password strength
-    if len(reset_data.new_password) < 8:
+    password_validation = InputSanitizer.validate_password_strength(reset_data.new_password)
+    if not password_validation["is_valid"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 8 characters long"
+            detail=f"Password does not meet requirements: {', '.join(password_validation['issues'])}"
         )
     
     user = db.query(User).filter(
@@ -1238,13 +1289,25 @@ async def reset_password(
     user.password_reset_expires = None
     db.commit()
     
+    # Log audit event
+    log_audit(
+        db=db,
+        action="password_reset",
+        resource_type="user",
+        user_id=user.id,
+        resource_id=user.id,
+        details={"email": user.email}
+    )
+    
     logger.info(f"Password reset successful for user: {user.email}")
     
     return {"message": "Password reset successfully"}
 
 
 @app.post("/api/auth/change-password")
+@limiter.limit("5/hour")  # Rate limited for security
 async def change_password(
+    request: Request,
     old_password: str,
     new_password: str,
     current_user: User = Depends(get_current_user),
@@ -1258,14 +1321,25 @@ async def change_password(
         )
     
     # Validate password strength
-    if len(new_password) < 8:
+    password_validation = InputSanitizer.validate_password_strength(new_password)
+    if not password_validation["is_valid"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 8 characters long"
+            detail=f"Password does not meet requirements: {', '.join(password_validation['issues'])}"
         )
     
     current_user.hashed_password = get_password_hash(new_password)
     db.commit()
+    
+    # Log audit event
+    log_audit(
+        db=db,
+        action="password_change",
+        resource_type="user",
+        user_id=current_user.id,
+        resource_id=current_user.id,
+        details={}
+    )
     
     return {"message": "Password changed successfully"}
 
@@ -3193,6 +3267,56 @@ async def websocket_endpoint(websocket: WebSocket):
             await manager.send_personal_message(f"Message: {data}", websocket)
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+
+@app.post("/api/admin/data-retention/cleanup")
+async def run_data_retention_cleanup(
+    dry_run: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Run data retention cleanup (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can run data retention cleanup"
+        )
+    
+    policy = get_retention_policy()
+    results = policy.cleanup_all(db, dry_run=dry_run)
+    
+    log_audit(
+        db=db,
+        user_id=current_user.id,
+        action="data_retention_cleanup",
+        resource_type="data",
+        resource_id=None,
+        details={"dry_run": dry_run, "results": results}
+    )
+    
+    return results
+
+
+@app.get("/api/admin/data-retention/policy")
+async def get_data_retention_policy(
+    current_user: User = Depends(get_current_user)
+):
+    """Get current data retention policy (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can view data retention policy"
+        )
+    
+    policy = get_retention_policy()
+    return {
+        "events_retention_days": policy.events_retention_days,
+        "patterns_retention_days": policy.patterns_retention_days,
+        "sessions_retention_days": policy.sessions_retention_days,
+        "audit_logs_retention_days": policy.audit_logs_retention_days,
+        "workflow_executions_retention_days": policy.workflow_executions_retention_days,
+        "suggestions_retention_days": policy.suggestions_retention_days,
+    }
 
 
 if __name__ == "__main__":

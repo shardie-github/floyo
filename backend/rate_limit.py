@@ -37,6 +37,31 @@ else:
 RATE_LIMIT_PER_MINUTE = settings.rate_limit_per_minute
 RATE_LIMIT_PER_HOUR = settings.rate_limit_per_hour
 
+# Endpoint-specific rate limits (more restrictive for sensitive operations)
+RATE_LIMITS = {
+    "auth": {
+        "login": "5/minute",
+        "register": "3/hour",
+        "password_reset": "3/hour",
+        "forgot_password": "5/hour",
+        "change_password": "5/hour",
+        "refresh_token": "30/minute",
+    },
+    "security": {
+        "2fa_setup": "5/hour",
+        "2fa_verify": "10/hour",
+        "2fa_disable": "3/hour",
+    },
+    "admin": {
+        "data_retention": "1/hour",
+        "user_management": "10/hour",
+    },
+    "default": {
+        "per_minute": f"{RATE_LIMIT_PER_MINUTE}/minute",
+        "per_hour": f"{RATE_LIMIT_PER_HOUR}/hour",
+    }
+}
+
 def get_rate_limit_exceeded_handler():
     """Get rate limit exceeded exception handler."""
     @_rate_limit_exceeded_handler

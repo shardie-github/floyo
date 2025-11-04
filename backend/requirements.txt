@@ -43,3 +43,6 @@ croniter>=2.0.1
 pyotp>=2.9.0
 qrcode[pil]>=7.4.2
 cryptography>=41.0.7
+
+# Email (optional - for password reset and notifications)
+sendgrid>=6.10.0  # Optional: for SendGrid email service

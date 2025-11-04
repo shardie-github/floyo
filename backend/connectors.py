@@ -192,19 +192,17 @@ def create_user_integration(
     config: Dict[str, Any],
     organization_id: Optional[UUID] = None
 ) -> UserIntegration:
-    """Create a user integration."""
-    # Encrypt sensitive config fields (simplified - in production use proper encryption)
-    import hashlib
-    from base64 import b64encode
+    """Create a user integration with encrypted sensitive fields."""
+    from backend.security import DataEncryption
     
-    sensitive_fields = ['access_token', 'secret_access_key', 'password', 'api_key', 'webhook_url']
+    sensitive_fields = ['access_token', 'secret_access_key', 'password', 'api_key', 'webhook_url', 
+                       'private_key', 'secret', 'token', 'auth_token', 'api_secret']
     encrypted_config = config.copy()
     
     for key, value in config.items():
         if key.lower() in [f.lower() for f in sensitive_fields] and isinstance(value, str):
-            # Simple obfuscation - in production use proper encryption (Fernet, etc.)
-            # For now, just mark as encrypted
-            encrypted_config[key] = value  # Keep original for now, add encryption later
+            # Encrypt sensitive fields
+            encrypted_config[key] = DataEncryption.encrypt_field(value)
     
     integration = UserIntegration(
         user_id=user_id,
@@ -227,6 +225,8 @@ def sync_integration(
     integration_id: UUID
 ) -> bool:
     """Sync/test an integration connection."""
+    from backend.security import DataEncryption
+    
     integration = db.query(UserIntegration).filter(
         UserIntegration.id == integration_id
     ).first()
@@ -237,7 +237,19 @@ def sync_integration(
     try:
         connector = integration.connector
         service_type = connector.service_type
-        config = integration.config
+        config = integration.config.copy()  # Work with a copy
+        
+        # Decrypt sensitive fields
+        sensitive_fields = ['access_token', 'secret_access_key', 'password', 'api_key', 'webhook_url',
+                           'private_key', 'secret', 'token', 'auth_token', 'api_secret']
+        for key, value in config.items():
+            if key.lower() in [f.lower() for f in sensitive_fields] and isinstance(value, str):
+                try:
+                    # Try to decrypt (if encrypted) or use as-is
+                    config[key] = DataEncryption.decrypt_field(value)
+                except Exception:
+                    # If decryption fails, assume it's not encrypted (backward compatibility)
+                    pass
         
         # Test connection based on service type
         if service_type == "github":
