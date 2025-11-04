@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { NotificationProvider } from '@/components/NotificationProvider'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { I18nProvider } from '@/components/I18nProvider'
+import { WebVitalsTracker } from '@/components/WebVitalsTracker'
 import { initBackgroundSync } from '@/lib/backgroundSync'
 import { initOfflineDB } from '@/lib/offline'
 
@@ -43,6 +44,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <I18nProvider>
         <QueryClientProvider client={queryClient}>
           <NotificationProvider>
+            <WebVitalsTracker />
             {children}
           </NotificationProvider>
         </QueryClientProvider>

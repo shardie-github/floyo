@@ -1,8 +1,9 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
-import { statsAPI, suggestionsAPI, patternsAPI, eventsAPI } from '@/lib/api'
+import { statsAPI, suggestionsAPI, patternsAPI, eventsAPI, sampleDataAPI } from '@/lib/api'
 import { SuggestionsList } from './SuggestionsList'
 import { StatsCards } from './StatsCards'
 import { PatternsList } from './PatternsList'
@@ -13,14 +14,24 @@ import { Pagination } from './Pagination'
 import { PatternChart } from './PatternChart'
 import { EventTimeline } from './EventTimeline'
 import { EmptyState } from './EmptyState'
+import { NotificationCenter } from './NotificationCenter'
+import { useNotifications } from './NotificationProvider'
 import { ProductTour, defaultTourSteps } from './ProductTour'
+import { InstallPrompt } from './InstallPrompt'
+import { ServiceWorkerUpdate } from './ServiceWorkerUpdate'
+import { OfflineIndicator } from './OfflineIndicator'
+import { LoadingButton, ProgressBar } from './LoadingStates'
+import { getErrorMessage } from '@/lib/errorMessages'
 
 export function Dashboard() {
   const { user, logout } = useAuth()
   const queryClient = useQueryClient()
+  const { addNotification } = useNotifications()
+  const [showNotificationCenter, setShowNotificationCenter] = useState(false)
+  const [sampleDataProgress, setSampleDataProgress] = useState<number | null>(null)
+  const [isGeneratingSampleData, setIsGeneratingSampleData] = useState(false)
   
   const [eventFilters, setEventFilters] = useState<{
-    event_type?: string
     tool?: string
     search?: string
     sort_by?: string
@@ -144,6 +155,15 @@ export function Dashboard() {
               <h1 className="text-2xl font-bold text-primary-600 dark:text-primary-400">Floyo</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowNotificationCenter(true)}
+                className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                aria-label="Notifications"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+              </button>
               <DarkModeToggle />
               <span className="text-sm text-gray-700 dark:text-gray-300">{user?.email}</span>
               <button
@@ -210,21 +230,53 @@ export function Dashboard() {
               secondaryAction={{
                 label: "Try Sample Data",
                 onClick: async () => {
+                  setIsGeneratingSampleData(true)
+                  setSampleDataProgress(0)
                   try {
-                    const response = await fetch('/api/data/sample', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                    });
-                    if (response.ok) {
-                      queryClient.invalidateQueries({ queryKey: ['suggestions'] });
-                      queryClient.invalidateQueries({ queryKey: ['events'] });
-                      queryClient.invalidateQueries({ queryKey: ['patterns'] });
+                    // Simulate progress
+                    const progressInterval = setInterval(() => {
+                      setSampleDataProgress((prev) => {
+                        if (prev === null || prev >= 90) {
+                          clearInterval(progressInterval)
+                          return prev
+                        }
+                        return prev + 10
+                      })
+                    }, 200)
+
+                    const result = await sampleDataAPI.generate()
+                    clearInterval(progressInterval)
+                    setSampleDataProgress(100)
+
+                    if (result.success) {
+                      addNotification({
+                        type: 'success',
+                        message: `Generated ${result.events_generated} events, ${result.patterns_generated} patterns, and ${result.suggestions_generated} suggestions!`,
+                      })
+                      queryClient.invalidateQueries({ queryKey: ['suggestions'] })
+                      queryClient.invalidateQueries({ queryKey: ['events'] })
+                      queryClient.invalidateQueries({ queryKey: ['patterns'] })
                     }
+                    setTimeout(() => {
+                      setSampleDataProgress(null)
+                      setIsGeneratingSampleData(false)
+                    }, 1000)
                   } catch (error) {
-                    console.error('Failed to generate sample data:', error);
+                    const errorMsg = getErrorMessage(error)
+                    addNotification({
+                      type: 'error',
+                      message: errorMsg.message,
+                    })
+                    setSampleDataProgress(null)
+                    setIsGeneratingSampleData(false)
                   }
                 }
               }}
+              {sampleDataProgress !== null && (
+                <div className="mt-4">
+                  <ProgressBar progress={sampleDataProgress} label="Generating sample data..." />
+                </div>
+              )}
             />
           )}
         </div>
@@ -257,17 +309,43 @@ export function Dashboard() {
               action={{
                 label: "Try Sample Data",
                 onClick: async () => {
+                  setIsGeneratingSampleData(true)
+                  setSampleDataProgress(0)
                   try {
-                    const response = await fetch('/api/data/sample', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                    });
-                    if (response.ok) {
-                      queryClient.invalidateQueries({ queryKey: ['patterns'] });
-                      queryClient.invalidateQueries({ queryKey: ['events'] });
+                    const progressInterval = setInterval(() => {
+                      setSampleDataProgress((prev) => {
+                        if (prev === null || prev >= 90) {
+                          clearInterval(progressInterval)
+                          return prev
+                        }
+                        return prev + 10
+                      })
+                    }, 200)
+
+                    const result = await sampleDataAPI.generate()
+                    clearInterval(progressInterval)
+                    setSampleDataProgress(100)
+
+                    if (result.success) {
+                      addNotification({
+                        type: 'success',
+                        message: `Generated ${result.events_generated} events, ${result.patterns_generated} patterns!`,
+                      })
+                      queryClient.invalidateQueries({ queryKey: ['patterns'] })
+                      queryClient.invalidateQueries({ queryKey: ['events'] })
                     }
+                    setTimeout(() => {
+                      setSampleDataProgress(null)
+                      setIsGeneratingSampleData(false)
+                    }, 1000)
                   } catch (error) {
-                    console.error('Failed to generate sample data:', error);
+                    const errorMsg = getErrorMessage(error)
+                    addNotification({
+                      type: 'error',
+                      message: errorMsg.message,
+                    })
+                    setSampleDataProgress(null)
+                    setIsGeneratingSampleData(false)
                   }
                 }
               }}
@@ -305,23 +383,53 @@ export function Dashboard() {
                 action={{
                   label: "Try Sample Data",
                   onClick: async () => {
+                    setIsGeneratingSampleData(true)
+                    setSampleDataProgress(0)
                     try {
-                      const response = await fetch('/api/data/sample', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                      });
-                      if (response.ok) {
-                        queryClient.invalidateQueries({ queryKey: ['events'] });
-                        queryClient.invalidateQueries({ queryKey: ['patterns'] });
+                      const progressInterval = setInterval(() => {
+                        setSampleDataProgress((prev) => {
+                          if (prev === null || prev >= 90) {
+                            clearInterval(progressInterval)
+                            return prev
+                          }
+                          return prev + 10
+                        })
+                      }, 200)
+
+                      const result = await sampleDataAPI.generate()
+                      clearInterval(progressInterval)
+                      setSampleDataProgress(100)
+
+                      if (result.success) {
+                        addNotification({
+                          type: 'success',
+                          message: `Generated ${result.events_generated} events, ${result.patterns_generated} patterns!`,
+                        })
+                        queryClient.invalidateQueries({ queryKey: ['events'] })
+                        queryClient.invalidateQueries({ queryKey: ['patterns'] })
                       }
+                      setTimeout(() => {
+                        setSampleDataProgress(null)
+                        setIsGeneratingSampleData(false)
+                      }, 1000)
                     } catch (error) {
-                      console.error('Failed to generate sample data:', error);
+                      const errorMsg = getErrorMessage(error)
+                      addNotification({
+                        type: 'error',
+                        message: errorMsg.message,
+                      })
+                      setSampleDataProgress(null)
+                      setIsGeneratingSampleData(false)
                     }
                   }
                 }}
               />
-            )}
-          </div>
+              {sampleDataProgress !== null && (
+                <div className="mt-4">
+                  <ProgressBar progress={sampleDataProgress} label="Generating sample data..." />
+                </div>
+              )}
+          )}
         </div>
       </main>
       
@@ -329,6 +437,41 @@ export function Dashboard() {
       <ProductTour steps={defaultTourSteps} run={!localStorage.getItem('has_completed_product_tour')} />
       <InstallPrompt />
       <ServiceWorkerUpdate />
+      
+      {/* Notification Center */}
+      <NotificationCenter
+        isOpen={showNotificationCenter}
+        onClose={() => setShowNotificationCenter(false)}
+      />
+      
+      {/* Onboarding Flow for New Users */}
+      {user && !localStorage.getItem('has_completed_onboarding') && (
+        <OnboardingFlow
+          steps={[
+            {
+              id: 'welcome',
+              title: 'Welcome to Floyo!',
+              description: 'Track your file usage patterns and discover integration opportunities.',
+              component: <div>Let's get started!</div>
+            },
+            {
+              id: 'dashboard',
+              title: 'Dashboard Overview',
+              description: 'Your dashboard shows events, patterns, and suggestions.',
+              component: <div>Explore your data here.</div>
+            },
+            {
+              id: 'suggestions',
+              title: 'Integration Suggestions',
+              description: 'Get personalized suggestions based on your workflow.',
+              component: <div>Check out the suggestions!</div>
+            }
+          ]}
+          onComplete={() => {
+            localStorage.setItem('has_completed_onboarding', 'true')
+          }}
+        />
+      )}
     </div>
   )
 }

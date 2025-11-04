@@ -68,6 +68,8 @@ from backend.connectors import initialize_connectors, get_available_connectors, 
 from backend.email_service import email_service
 from backend.data_retention import get_retention_policy
 from backend.sample_data import SampleDataGenerator
+from backend.monitoring import router as monitoring_router
+from backend.analytics import router as analytics_router
 from fastapi.responses import Response
 
 # Configuration
@@ -805,6 +807,8 @@ async def system_selfcheck():
 # Mount versioned router
 app.include_router(api_v1_router)
 app.include_router(api_router)
+app.include_router(monitoring_router)
+app.include_router(analytics_router)
 
 
 @app.post("/api/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
