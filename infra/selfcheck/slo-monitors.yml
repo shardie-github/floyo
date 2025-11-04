@@ -1,0 +1,122 @@
+# SLO Monitors Configuration
+# Top 3 SLOs from OPS_SLO_RUNBOOK_SEEDS.md
+# These are synthetic monitors or test stubs for SLO validation
+
+slo_monitors:
+  # SLO 1: API Availability - 99.9% uptime
+  api_availability:
+    name: "API Availability SLO"
+    target: 99.9  # percentage
+    measurement: "GET /health returns 200"
+    error_budget: 0.1  # percentage
+    check_interval: 60  # seconds
+    timeout: 5  # seconds
+    endpoint: "/health"
+    method: "GET"
+    expected_status: 200
+    alert_on_violation: true
+    alert_threshold: 0.05  # Alert if error budget drops below 5%
+    
+  # SLO 2: API Latency - P95 < 200ms, P99 < 500ms
+  api_latency:
+    name: "API Latency SLO"
+    targets:
+      p95: 200  # milliseconds
+      p99: 500  # milliseconds
+    measurement: "Endpoint response time"
+    error_budget: 5  # percentage of requests exceeding thresholds
+    check_interval: 60  # seconds
+    endpoints:
+      - "/health"
+      - "/api/events"
+      - "/api/patterns"
+    method: "GET"
+    alert_on_violation: true
+    alert_threshold: 3  # Alert if >3% exceed threshold
+    
+  # SLO 3: Data Consistency - 99.99% consistency
+  data_consistency:
+    name: "Data Consistency SLO"
+    target: 99.99  # percentage
+    measurement: "Database replication lag < 100ms (if replicated)"
+    error_budget: 0.01  # percentage
+    check_interval: 300  # seconds
+    check_type: "database_replication_lag"
+    max_lag_ms: 100
+    alert_on_violation: true
+    note: "Currently single database instance - monitoring for future replication"
+
+# Health check endpoints for SLO validation
+health_endpoints:
+  - name: "Basic Health"
+    path: "/health"
+    method: "GET"
+    expected_status: 200
+    timeout: 2
+    
+  - name: "Readiness Check"
+    path: "/health/readiness"
+    method: "GET"
+    expected_status: 200
+    timeout: 5
+    checks:
+      - database
+      - redis
+      - connection_pool
+      
+  - name: "Liveness Check"
+    path: "/health/liveness"
+    method: "GET"
+    expected_status: 200
+    timeout: 1
+    
+  - name: "Migration Status"
+    path: "/health/migrations"
+    method: "GET"
+    expected_status: 200
+    timeout: 3
+
+# Synthetic monitor configuration
+synthetic_monitors:
+  # Can be implemented as:
+  # 1. GitHub Actions scheduled jobs
+  # 2. External monitoring service (UptimeRobot, Pingdom, etc.)
+  # 3. Internal cron job calling /health endpoints
+  # 4. Prometheus blackbox exporter
+  
+  implementation_suggestions:
+    - "GitHub Actions: Scheduled workflow every 5 minutes"
+    - "Prometheus: blackbox_exporter with alertmanager"
+    - "Internal: Cron job in backend calling health endpoints"
+    - "External: UptimeRobot/Pingdom for external availability monitoring"
+
+# Alerting configuration
+alerting:
+  channels:
+    - type: "slack"
+      webhook_url: "${SLACK_WEBHOOK_URL}"
+      enabled: false  # Enable when webhook URL is configured
+      
+    - type: "email"
+      recipients: ["ops@example.com"]
+      enabled: false
+      
+    - type: "github_issue"
+      repo: "${GITHUB_REPOSITORY}"
+      enabled: true  # Create GitHub issues on SLO violations
+  
+  thresholds:
+    critical:
+      error_budget_remaining: 0.1  # Alert if <10% error budget remaining
+      consecutive_failures: 5  # Alert after 5 consecutive failures
+      
+    warning:
+      error_budget_remaining: 0.3  # Warn if <30% error budget remaining
+      consecutive_failures: 3  # Warn after 3 consecutive failures
+
+# Metadata
+metadata:
+  version: "1.0.0"
+  generated_date: "2024-12-19"
+  audit_source: "docs/audit/OPS_SLO_RUNBOOK_SEEDS.md"
+  update_frequency: "monthly"  # Review and update SLOs monthly
