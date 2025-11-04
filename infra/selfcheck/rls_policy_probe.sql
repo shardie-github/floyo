@@ -1,0 +1,5 @@
+-- Template probes (read-only) — run in CI with a read role.
+-- Replace public.table with actual tables; ensure RLS expected outcomes.
+-- Example: expect tenant_id scoping and no cross-tenant leakage.
+-- SELECT count(*) FROM public.some_table WHERE tenant_id <> current_setting('app.tenant_id', true);
+-- Should return 0 rows in CI role.

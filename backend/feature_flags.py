@@ -7,6 +7,7 @@ Supports:
 - User-specific overrides
 - Organization-specific overrides
 - A/B testing variants
+- Kill-switch support (emergency disable mechanism)
 """
 
 from typing import Dict, Any, Optional, List
@@ -32,6 +33,7 @@ class FeatureFlag(Base):
     name = Column(String(100), unique=True, nullable=False, index=True)
     description = Column(String(500), nullable=True)
     enabled = Column(Boolean, default=False)
+    kill_switch = Column(Boolean, default=False, nullable=False)  # Emergency disable - overrides all other settings
     rollout_percentage = Column(Integer, default=0)  # 0-100
     variant_config = Column(JSONB, nullable=True)  # For A/B tests
     target_users = Column(JSONB, nullable=True)  # List of user IDs to always enable
@@ -73,16 +75,21 @@ class FeatureFlagService:
         Check if a feature flag is enabled for a user/organization.
         
         Priority:
-        1. User-specific override
-        2. Organization-specific override
-        3. User in target list
-        4. Organization in target list
-        5. Percentage-based rollout
-        6. Global enabled state
+        1. Kill-switch (if enabled, always returns False)
+        2. User-specific override
+        3. Organization-specific override
+        4. User in target list
+        5. Organization in target list
+        6. Percentage-based rollout
+        7. Global enabled state
         """
         flag = db.query(FeatureFlag).filter(FeatureFlag.name == flag_name).first()
         
         if not flag:
+            return False
+        
+        # Kill-switch takes highest priority - if enabled, feature is disabled regardless of other settings
+        if flag.kill_switch:
             return False
         
         # Check user override
@@ -163,6 +170,7 @@ class FeatureFlagService:
         name: str,
         description: Optional[str] = None,
         enabled: bool = False,
+        kill_switch: bool = False,
         rollout_percentage: int = 0
     ) -> FeatureFlag:
         """Create a new feature flag."""
@@ -170,6 +178,7 @@ class FeatureFlagService:
             name=name,
             description=description,
             enabled=enabled,
+            kill_switch=kill_switch,
             rollout_percentage=rollout_percentage
         )
         db.add(flag)
@@ -182,6 +191,7 @@ class FeatureFlagService:
         db: Session,
         flag_name: str,
         enabled: Optional[bool] = None,
+        kill_switch: Optional[bool] = None,
         rollout_percentage: Optional[int] = None,
         variant_config: Optional[Dict[str, Any]] = None
     ) -> FeatureFlag:
@@ -192,6 +202,8 @@ class FeatureFlagService:
         
         if enabled is not None:
             flag.enabled = enabled
+        if kill_switch is not None:
+            flag.kill_switch = kill_switch
         if rollout_percentage is not None:
             flag.rollout_percentage = rollout_percentage
         if variant_config is not None:
