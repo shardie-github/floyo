@@ -20,14 +20,16 @@ import { ProductTour, defaultTourSteps } from './ProductTour'
 import { InstallPrompt } from './InstallPrompt'
 import { ServiceWorkerUpdate } from './ServiceWorkerUpdate'
 import { OfflineIndicator } from './OfflineIndicator'
-import { LoadingSkeleton } from './LoadingSkeleton'
-import { OnboardingFlow } from './OnboardingFlow'
+import { LoadingButton, ProgressBar } from './LoadingStates'
+import { getErrorMessage } from '@/lib/errorMessages'
 
 export function Dashboard() {
   const { user, logout } = useAuth()
   const queryClient = useQueryClient()
   const { addNotification } = useNotifications()
   const [showNotificationCenter, setShowNotificationCenter] = useState(false)
+  const [sampleDataProgress, setSampleDataProgress] = useState<number | null>(null)
+  const [isGeneratingSampleData, setIsGeneratingSampleData] = useState(false)
   
   const [eventFilters, setEventFilters] = useState<{
     tool?: string
@@ -228,8 +230,24 @@ export function Dashboard() {
               secondaryAction={{
                 label: "Try Sample Data",
                 onClick: async () => {
+                  setIsGeneratingSampleData(true)
+                  setSampleDataProgress(0)
                   try {
+                    // Simulate progress
+                    const progressInterval = setInterval(() => {
+                      setSampleDataProgress((prev) => {
+                        if (prev === null || prev >= 90) {
+                          clearInterval(progressInterval)
+                          return prev
+                        }
+                        return prev + 10
+                      })
+                    }, 200)
+
                     const result = await sampleDataAPI.generate()
+                    clearInterval(progressInterval)
+                    setSampleDataProgress(100)
+
                     if (result.success) {
                       addNotification({
                         type: 'success',
@@ -239,14 +257,26 @@ export function Dashboard() {
                       queryClient.invalidateQueries({ queryKey: ['events'] })
                       queryClient.invalidateQueries({ queryKey: ['patterns'] })
                     }
+                    setTimeout(() => {
+                      setSampleDataProgress(null)
+                      setIsGeneratingSampleData(false)
+                    }, 1000)
                   } catch (error) {
+                    const errorMsg = getErrorMessage(error)
                     addNotification({
                       type: 'error',
-                      message: 'Failed to generate sample data',
+                      message: errorMsg.message,
                     })
+                    setSampleDataProgress(null)
+                    setIsGeneratingSampleData(false)
                   }
                 }
               }}
+              {sampleDataProgress !== null && (
+                <div className="mt-4">
+                  <ProgressBar progress={sampleDataProgress} label="Generating sample data..." />
+                </div>
+              )}
             />
           )}
         </div>
@@ -279,17 +309,43 @@ export function Dashboard() {
               action={{
                 label: "Try Sample Data",
                 onClick: async () => {
+                  setIsGeneratingSampleData(true)
+                  setSampleDataProgress(0)
                   try {
-                    const response = await fetch('/api/data/sample', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                    });
-                    if (response.ok) {
-                      queryClient.invalidateQueries({ queryKey: ['patterns'] });
-                      queryClient.invalidateQueries({ queryKey: ['events'] });
+                    const progressInterval = setInterval(() => {
+                      setSampleDataProgress((prev) => {
+                        if (prev === null || prev >= 90) {
+                          clearInterval(progressInterval)
+                          return prev
+                        }
+                        return prev + 10
+                      })
+                    }, 200)
+
+                    const result = await sampleDataAPI.generate()
+                    clearInterval(progressInterval)
+                    setSampleDataProgress(100)
+
+                    if (result.success) {
+                      addNotification({
+                        type: 'success',
+                        message: `Generated ${result.events_generated} events, ${result.patterns_generated} patterns!`,
+                      })
+                      queryClient.invalidateQueries({ queryKey: ['patterns'] })
+                      queryClient.invalidateQueries({ queryKey: ['events'] })
                     }
+                    setTimeout(() => {
+                      setSampleDataProgress(null)
+                      setIsGeneratingSampleData(false)
+                    }, 1000)
                   } catch (error) {
-                    console.error('Failed to generate sample data:', error);
+                    const errorMsg = getErrorMessage(error)
+                    addNotification({
+                      type: 'error',
+                      message: errorMsg.message,
+                    })
+                    setSampleDataProgress(null)
+                    setIsGeneratingSampleData(false)
                   }
                 }
               }}
@@ -327,8 +383,23 @@ export function Dashboard() {
                 action={{
                   label: "Try Sample Data",
                   onClick: async () => {
+                    setIsGeneratingSampleData(true)
+                    setSampleDataProgress(0)
                     try {
+                      const progressInterval = setInterval(() => {
+                        setSampleDataProgress((prev) => {
+                          if (prev === null || prev >= 90) {
+                            clearInterval(progressInterval)
+                            return prev
+                          }
+                          return prev + 10
+                        })
+                      }, 200)
+
                       const result = await sampleDataAPI.generate()
+                      clearInterval(progressInterval)
+                      setSampleDataProgress(100)
+
                       if (result.success) {
                         addNotification({
                           type: 'success',
@@ -337,17 +408,28 @@ export function Dashboard() {
                         queryClient.invalidateQueries({ queryKey: ['events'] })
                         queryClient.invalidateQueries({ queryKey: ['patterns'] })
                       }
+                      setTimeout(() => {
+                        setSampleDataProgress(null)
+                        setIsGeneratingSampleData(false)
+                      }, 1000)
                     } catch (error) {
+                      const errorMsg = getErrorMessage(error)
                       addNotification({
                         type: 'error',
-                        message: 'Failed to generate sample data',
+                        message: errorMsg.message,
                       })
+                      setSampleDataProgress(null)
+                      setIsGeneratingSampleData(false)
                     }
                   }
                 }}
               />
-            )}
-          </div>
+              {sampleDataProgress !== null && (
+                <div className="mt-4">
+                  <ProgressBar progress={sampleDataProgress} label="Generating sample data..." />
+                </div>
+              )}
+          )}
         </div>
       </main>
       
