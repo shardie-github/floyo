@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useNotifications } from './NotificationProvider'
-import { useQuery } from '@tanstack/react-query'
 
 interface NotificationCenterProps {
   isOpen: boolean

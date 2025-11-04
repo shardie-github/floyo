@@ -21,6 +21,7 @@ import { InstallPrompt } from './InstallPrompt'
 import { ServiceWorkerUpdate } from './ServiceWorkerUpdate'
 import { OfflineIndicator } from './OfflineIndicator'
 import { LoadingSkeleton } from './LoadingSkeleton'
+import { OnboardingFlow } from './OnboardingFlow'
 
 export function Dashboard() {
   const { user, logout } = useAuth()
@@ -29,7 +30,6 @@ export function Dashboard() {
   const [showNotificationCenter, setShowNotificationCenter] = useState(false)
   
   const [eventFilters, setEventFilters] = useState<{
-    event_type?: string
     tool?: string
     search?: string
     sort_by?: string
@@ -361,6 +361,35 @@ export function Dashboard() {
         isOpen={showNotificationCenter}
         onClose={() => setShowNotificationCenter(false)}
       />
+      
+      {/* Onboarding Flow for New Users */}
+      {user && !localStorage.getItem('has_completed_onboarding') && (
+        <OnboardingFlow
+          steps={[
+            {
+              id: 'welcome',
+              title: 'Welcome to Floyo!',
+              description: 'Track your file usage patterns and discover integration opportunities.',
+              component: <div>Let's get started!</div>
+            },
+            {
+              id: 'dashboard',
+              title: 'Dashboard Overview',
+              description: 'Your dashboard shows events, patterns, and suggestions.',
+              component: <div>Explore your data here.</div>
+            },
+            {
+              id: 'suggestions',
+              title: 'Integration Suggestions',
+              description: 'Get personalized suggestions based on your workflow.',
+              component: <div>Check out the suggestions!</div>
+            }
+          ]}
+          onComplete={() => {
+            localStorage.setItem('has_completed_onboarding', 'true')
+          }}
+        />
+      )}
     </div>
   )
 }

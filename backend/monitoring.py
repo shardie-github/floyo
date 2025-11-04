@@ -12,13 +12,20 @@ from database.models import Event, Pattern, Suggestion, User, WorkflowExecution
 from backend.database import get_db, get_pool_status
 from backend.cache import redis_client
 from backend.logging_config import get_logger
+from backend.rate_limit import limiter
+from backend.main import get_current_user
+from database.models import User as UserModel
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
 
 
 @router.get("/metrics")
-async def get_metrics(db: Session = Depends(get_db)) -> Dict[str, Any]:
+@limiter.limit("10/minute")  # Rate limit monitoring endpoints
+async def get_metrics(
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
     """Get application metrics for monitoring."""
     metrics = {
         "timestamp": datetime.utcnow().isoformat(),
@@ -102,7 +109,11 @@ async def get_metrics(db: Session = Depends(get_db)) -> Dict[str, Any]:
 
 
 @router.get("/health/detailed")
-async def detailed_health_check(db: Session = Depends(get_db)) -> Dict[str, Any]:
+@limiter.limit("10/minute")
+async def detailed_health_check(
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
     """Detailed health check with component status."""
     health = {
         "status": "healthy",
@@ -178,7 +189,11 @@ async def detailed_health_check(db: Session = Depends(get_db)) -> Dict[str, Any]
 
 
 @router.get("/performance")
-async def get_performance_metrics(db: Session = Depends(get_db)) -> Dict[str, Any]:
+@limiter.limit("10/minute")
+async def get_performance_metrics(
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> Dict[str, Any]:
     """Get performance metrics."""
     metrics = {
         "timestamp": datetime.utcnow().isoformat(),
