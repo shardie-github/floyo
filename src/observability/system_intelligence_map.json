@@ -1,0 +1,432 @@
+{
+  "version": "1.0.0",
+  "generated_date": "2024-12-19",
+  "audit_source": "docs/audit/*.md",
+  "purpose": "System Intelligence Map linking modules to business goals and resilience dependencies",
+  
+  "modules": {
+    "backend/main.py": {
+      "purpose": "Main FastAPI application - entry point for all API routes",
+      "business_goals": [
+        "User authentication and authorization",
+        "Event tracking and pattern analysis",
+        "Workflow execution and scheduling",
+        "Real-time WebSocket communication"
+      ],
+      "resilience_dependencies": [
+        "database.py (connection pool)",
+        "rate_limit.py (DDoS protection)",
+        "cache.py (performance)",
+        "circuit_breaker.py (failure isolation)"
+      ],
+      "critical_paths": [
+        "User registration → Email verification",
+        "Event creation → Pattern analysis",
+        "Workflow execution → Integration calls"
+      ],
+      "known_risks": [
+        "Monolithic file (2,298 lines) - needs splitting",
+        "WebSocket connections in-memory (lost on restart)",
+        "Token logging in dev mode"
+      ],
+      "guardrails": [
+        "SECRET_KEY validation",
+        "CORS validation",
+        "Health check endpoints",
+        "Migration status check"
+      ],
+      "health_indicators": [
+        "/health",
+        "/health/readiness",
+        "/health/liveness"
+      ]
+    },
+    
+    "backend/database.py": {
+      "purpose": "Database connection management and session handling",
+      "business_goals": [
+        "Data persistence",
+        "Connection pooling for performance",
+        "Transaction management"
+      ],
+      "resilience_dependencies": [
+        "circuit_breaker.py (failure isolation)",
+        "config.py (pool configuration)"
+      ],
+      "critical_paths": [
+        "All API endpoints require database access",
+        "Connection pool exhaustion → System failure"
+      ],
+      "known_risks": [
+        "Connection pool exhaustion (SPOF)",
+        "No circuit breaker wired (exists but unused)",
+        "No connection leak detection"
+      ],
+      "guardrails": [
+        "Pool monitoring (get_pool_status)",
+        "Pool size limits (pool_size=10, max_overflow=20)",
+        "Connection recycling (pool_recycle=3600)"
+      ],
+      "health_indicators": [
+        "Pool utilization",
+        "Checked out connections",
+        "Overflow connections"
+      ]
+    },
+    
+    "backend/config.py": {
+      "purpose": "Centralized configuration management",
+      "business_goals": [
+        "Environment-specific configuration",
+        "Security settings validation",
+        "Single source of truth for settings"
+      ],
+      "resilience_dependencies": [],
+      "critical_paths": [
+        "Application startup → Config validation",
+        "Production deployment → Security validation"
+      ],
+      "known_risks": [
+        "SECRET_KEY default in .env.example",
+        "CORS permissive in dev",
+        "Configuration duplication (alembic.ini, docker-compose.yml)"
+      ],
+      "guardrails": [
+        "SECRET_KEY validation (fail if default in production)",
+        "CORS validation (fail if '*' in production)",
+        "Environment validation (development/staging/production)"
+      ],
+      "health_indicators": [
+        "Config validation passes on startup"
+      ]
+    },
+    
+    "backend/rate_limit.py": {
+      "purpose": "Rate limiting to prevent abuse and DDoS",
+      "business_goals": [
+        "API abuse prevention",
+        "Fair resource allocation",
+        "Cost control"
+      ],
+      "resilience_dependencies": [
+        "cache.py (Redis for global rate limiting)",
+        "config.py (rate limit configuration)"
+      ],
+      "critical_paths": [
+        "All API endpoints → Rate limit check"
+      ],
+      "known_risks": [
+        "Per-instance rate limiting (bypassable with load balancer)",
+        "No Redis fallback strategy documented",
+        "Rate limit configuration not environment-specific"
+      ],
+      "guardrails": [
+        "Rate limit per minute (60)",
+        "Rate limit per hour (1000)",
+        "Redis-backed storage (when available)"
+      ],
+      "health_indicators": [
+        "Rate limit hit rate",
+        "Redis availability (for global rate limiting)"
+      ]
+    },
+    
+    "backend/cache.py": {
+      "purpose": "Caching layer for performance optimization",
+      "business_goals": [
+        "Reduce database load",
+        "Improve response times",
+        "Handle traffic spikes"
+      ],
+      "resilience_dependencies": [
+        "config.py (Redis URL configuration)"
+      ],
+      "critical_paths": [
+        "Pattern analysis results",
+        "User session data",
+        "Frequently accessed data"
+      ],
+      "known_risks": [
+        "In-memory cache lost on restart",
+        "Cache stampede (no protection)",
+        "No cache warming strategy"
+      ],
+      "guardrails": [
+        "Redis fallback to in-memory",
+        "TTL for cache entries",
+        "Cache health check"
+      ],
+      "health_indicators": [
+        "Cache hit rate",
+        "Redis availability"
+      ]
+    },
+    
+    "backend/circuit_breaker.py": {
+      "purpose": "Circuit breaker pattern for failure isolation",
+      "business_goals": [
+        "Prevent cascade failures",
+        "Graceful degradation",
+        "System stability"
+      ],
+      "resilience_dependencies": [],
+      "critical_paths": [
+        "Database operations (when wired)",
+        "External API calls (potential)"
+      ],
+      "known_risks": [
+        "Circuit breaker exists but not wired into database.py",
+        "No monitoring of circuit breaker state",
+        "No automatic recovery strategy"
+      ],
+      "guardrails": [
+        "Circuit breaker implementation exists",
+        "Open/close/half-open states",
+        "Failure threshold configuration"
+      ],
+      "health_indicators": [
+        "Circuit breaker state (open/closed/half-open)",
+        "Failure count",
+        "Last failure time"
+      ]
+    },
+    
+    "backend/workflow_scheduler.py": {
+      "purpose": "Workflow scheduling and execution",
+      "business_goals": [
+        "Automated workflow execution",
+        "Scheduled task processing",
+        "Workflow versioning"
+      ],
+      "resilience_dependencies": [
+        "database.py (workflow storage)",
+        "connectors.py (integration execution)",
+        "Celery (when implemented)"
+      ],
+      "critical_paths": [
+        "Scheduled workflow → Execution",
+        "Workflow step → External API call",
+        "Workflow failure → Retry logic"
+      ],
+      "known_risks": [
+        "No Celery worker process (workflows never auto-execute)",
+        "No retry mechanism for failed steps",
+        "No timeout for long-running workflows"
+      ],
+      "guardrails": [
+        "Workflow execution logic exists",
+        "Workflow versioning",
+        "Execution status tracking"
+      ],
+      "health_indicators": [
+        "Scheduled workflows count",
+        "Execution success rate",
+        "Failed executions count"
+      ]
+    },
+    
+    "backend/connectors.py": {
+      "purpose": "External integration connectors",
+      "business_goals": [
+        "Third-party API integration",
+        "Data synchronization",
+        "Workflow automation"
+      ],
+      "resilience_dependencies": [
+        "database.py (integration storage)",
+        "config.py (encryption keys)"
+      ],
+      "critical_paths": [
+        "Integration creation → Credential storage",
+        "Workflow execution → Integration API call",
+        "OAuth refresh → Token renewal"
+      ],
+      "known_risks": [
+        "Unencrypted credentials in database",
+        "No automatic token refresh",
+        "No API key rotation"
+      ],
+      "guardrails": [
+        "Integration connector initialization",
+        "Available connectors list",
+        "User integration creation"
+      ],
+      "health_indicators": [
+        "Active integrations count",
+        "Integration health status",
+        "API call success rate"
+      ]
+    },
+    
+    "database/models.py": {
+      "purpose": "SQLAlchemy ORM models - database schema definition",
+      "business_goals": [
+        "Data model definition",
+        "Type safety",
+        "Schema versioning"
+      ],
+      "resilience_dependencies": [
+        "alembic (migrations)"
+      ],
+      "critical_paths": [
+        "Model changes → Migration required",
+        "Schema drift → Application errors"
+      ],
+      "known_risks": [
+        "Schema.sql incomplete (8/17 tables)",
+        "Migration models not in main models.py (feature flags, experiments, fraud)",
+        "No schema validation on startup"
+      ],
+      "guardrails": [
+        "Alembic migrations",
+        "Migration status check on startup",
+        "Model definitions match database"
+      ],
+      "health_indicators": [
+        "Migration status (up to date)",
+        "Model count vs database table count"
+      ]
+    }
+  },
+  
+  "business_goals": {
+    "user_authentication": {
+      "modules": ["backend/main.py", "backend/config.py"],
+      "resilience_requirements": [
+        "SECRET_KEY security",
+        "JWT token validation",
+        "Session management"
+      ],
+      "slo_targets": [
+        "99.9% authentication success rate",
+        "<200ms authentication latency"
+      ]
+    },
+    
+    "event_tracking": {
+      "modules": ["backend/main.py", "backend/database.py", "backend/batch_processor.py"],
+      "resilience_requirements": [
+        "Database availability",
+        "Batch processing reliability",
+        "Event persistence"
+      ],
+      "slo_targets": [
+        "99.99% event persistence",
+        "<100ms event ingestion latency"
+      ]
+    },
+    
+    "pattern_analysis": {
+      "modules": ["backend/main.py", "backend/cache.py"],
+      "resilience_requirements": [
+        "Cache performance",
+        "Database query optimization",
+        "Real-time analysis"
+      ],
+      "slo_targets": [
+        "95% cache hit rate",
+        "<500ms pattern analysis latency"
+      ]
+    },
+    
+    "workflow_automation": {
+      "modules": ["backend/workflow_scheduler.py", "backend/connectors.py"],
+      "resilience_requirements": [
+        "Celery worker availability",
+        "Integration API reliability",
+        "Retry mechanisms"
+      ],
+      "slo_targets": [
+        "99% workflow execution success rate",
+        "Automatic retry on transient failures"
+      ]
+    }
+  },
+  
+  "resilience_dependencies": {
+    "database_connection_pool": {
+      "modules": ["backend/database.py"],
+      "risk_level": "high",
+      "guardrails": [
+        "Pool monitoring",
+        "Circuit breaker",
+        "Connection leak detection"
+      ],
+      "mitigation": [
+        "Monitor pool utilization",
+        "Wire circuit breaker",
+        "Add connection timeout"
+      ]
+    },
+    
+    "rate_limiting": {
+      "modules": ["backend/rate_limit.py"],
+      "risk_level": "high",
+      "guardrails": [
+        "Redis-backed global rate limiting",
+        "Per-endpoint rate limits",
+        "Rate limit monitoring"
+      ],
+      "mitigation": [
+        "Implement Redis storage",
+        "Add rate limit metrics",
+        "Alert on rate limit bypass attempts"
+      ]
+    },
+    
+    "credential_security": {
+      "modules": ["backend/connectors.py", "database/models.py"],
+      "risk_level": "high",
+      "guardrails": [
+        "Encrypt sensitive fields",
+        "Key rotation",
+        "Access logging"
+      ],
+      "mitigation": [
+        "Implement encryption",
+        "Add key management",
+        "Audit credential access"
+      ]
+    }
+  },
+  
+  "architecture_insights": {
+    "strengths": [
+      "Centralized configuration (config.py)",
+      "Health check endpoints exist",
+      "Circuit breaker pattern implemented (needs wiring)",
+      "Migration system (Alembic) in place"
+    ],
+    "weaknesses": [
+      "Monolithic main.py (needs splitting)",
+      "Per-instance rate limiting (needs Redis)",
+      "Unencrypted credentials (needs encryption)",
+      "Workflow scheduler not running (needs Celery worker)"
+    ],
+    "recommendations": [
+      "Split main.py into route modules",
+      "Wire circuit breaker into database operations",
+      "Implement Redis-backed rate limiting",
+      "Encrypt integration credentials",
+      "Add Celery worker for workflow execution"
+    ]
+  },
+  
+  "monitoring_points": {
+    "api_availability": {
+      "endpoint": "/health",
+      "expected_status": 200,
+      "slo_target": "99.9%"
+    },
+    "database_health": {
+      "endpoint": "/health/readiness",
+      "checks": ["database", "connection_pool"],
+      "slo_target": "99.9%"
+    },
+    "migration_status": {
+      "endpoint": "/health/migrations",
+      "expected_status": 200,
+      "slo_target": "100% (blocking)"
+    }
+  }
+}

@@ -1,0 +1,160 @@
+# Architectural Guardrails - Living System Invariants
+# Generated from audit findings to enforce architectural integrity
+# These invariants are validated in CI/CD and can be checked at runtime
+
+guardrails:
+  # Critical Security Guardrails (P0)
+  security:
+    - name: "SECRET_KEY_NOT_DEFAULT"
+      description: "SECRET_KEY must not be default in production"
+      condition: "config.environment == 'production' -> config.secret_key != 'your-secret-key-change-in-production' and len(config.secret_key) >= 32"
+      file: "backend/config.py"
+      severity: "critical"
+      priority: "P0"
+      audit_source: "EXEC_SUMMARY.md"
+      
+    - name: "CORS_NOT_PERMISSIVE"
+      description: "CORS origins cannot be '*' in production"
+      condition: "config.environment == 'production' -> '*' not in config.cors_origins"
+      file: "backend/config.py"
+      severity: "critical"
+      priority: "P0"
+      audit_source: "EXEC_SUMMARY.md"
+      
+    - name: "NO_HARDCODED_CREDENTIALS"
+      description: "No hardcoded API keys, tokens, or secrets in code"
+      condition: "grep -r 'api_key\\|secret\\|password\\|token' --exclude-dir=node_modules --exclude-dir=.git --exclude='*.md' --exclude='*.yaml' --exclude='*.yml' | grep -v 'SECRET_KEY' | grep -v 'your-secret-key-change-in-production' | wc -l == 0"
+      file: "ALL"
+      severity: "high"
+      priority: "P1"
+      audit_source: "SECURITY_PRIVACY_SKETCH.md"
+      
+  # Resilience Guardrails (P0-P1)
+  resilience:
+    - name: "DATABASE_POOL_MONITORING"
+      description: "Database connection pool must have monitoring"
+      condition: "grep -q 'get_pool_status\\|pool_status' backend/database.py backend/main.py"
+      file: "backend/database.py,backend/main.py"
+      severity: "high"
+      priority: "P0"
+      audit_source: "RESILIENCE_TABLE.md"
+      
+    - name: "CIRCUIT_BREAKER_WIRED"
+      description: "Circuit breaker must be wired into critical DB operations"
+      condition: "grep -q 'circuit_breaker\\|db_circuit_breaker' backend/database.py"
+      file: "backend/database.py"
+      severity: "high"
+      priority: "P0"
+      audit_source: "ROOT_CAUSE_AND_DRIFT_MAP.md"
+      
+    - name: "RATE_LIMITING_REDIS_BACKED"
+      description: "Rate limiting should use Redis in production (not per-instance)"
+      condition: "config.environment == 'production' and config.redis_url -> rate_limit uses Redis storage"
+      file: "backend/rate_limit.py"
+      severity: "high"
+      priority: "P1"
+      audit_source: "RESILIENCE_TABLE.md"
+      
+    - name: "HEALTH_CHECKS_EXIST"
+      description: "Health check endpoints must exist"
+      condition: "grep -q '/health' backend/main.py && grep -q '/health/readiness' backend/main.py && grep -q '/health/liveness' backend/main.py"
+      file: "backend/main.py"
+      severity: "medium"
+      priority: "P1"
+      audit_source: "OPS_SLO_RUNBOOK_SEEDS.md"
+      
+  # Architecture Guardrails (P1-P2)
+  architecture:
+    - name: "NO_CIRCULAR_DEPENDENCIES"
+      description: "No circular dependencies between modules"
+      condition: "python scripts/check_circular_deps.py"
+      file: "backend/"
+      severity: "medium"
+      priority: "P1"
+      audit_source: "ROOT_CAUSE_AND_DRIFT_MAP.md"
+      
+    - name: "MAIN_PY_NOT_MONOLITHIC"
+      description: "main.py should not exceed 2000 lines (split into route modules)"
+      condition: "wc -l backend/main.py | awk '{print $1}' < 2000"
+      file: "backend/main.py"
+      severity: "low"
+      priority: "P2"
+      audit_source: "THREE_STEP_REFACTOR_PLAN.md"
+      
+    - name: "API_VERSIONING_CONSISTENT"
+      description: "API versioning must be implemented if api_v1.py exists"
+      condition: "! -f backend/api_v1.py || (grep -q 'APIRouter' backend/api_v1.py && grep -q 'api/v1' backend/main.py)"
+      file: "backend/api_v1.py,backend/main.py"
+      severity: "medium"
+      priority: "P1"
+      audit_source: "ROOT_CAUSE_AND_DRIFT_MAP.md"
+      
+    - name: "SCHEMA_SQL_COMPLETE_OR_ARCHIVED"
+      description: "schema.sql must be complete or archived with migration-only note"
+      condition: "grep -q 'ARCHIVED\\|This file is auto-generated\\|Migration-only approach' database/schema.sql || python scripts/validate_schema_completeness.py"
+      file: "database/schema.sql"
+      severity: "medium"
+      priority: "P1"
+      audit_source: "EXEC_SUMMARY.md"
+      
+  # Contract Guardrails (P1)
+  contracts:
+    - name: "MIGRATIONS_UP_TO_DATE"
+      description: "Database migrations must be up to date"
+      condition: "python scripts/check_migration_status.py"
+      file: "migrations/"
+      severity: "high"
+      priority: "P1"
+      audit_source: "RESILIENCE_TABLE.md"
+      
+    - name: "MODELS_MATCH_SCHEMA"
+      description: "SQLAlchemy models must match database schema"
+      condition: "python scripts/validate_models_schema.py"
+      file: "database/models.py"
+      severity: "medium"
+      priority: "P1"
+      audit_source: "CONTRACTS_VS_IMPLEMENTATION.md"
+      
+  # Configuration Guardrails (P0-P1)
+  configuration:
+    - name: "ENV_COMPLETENESS"
+      description: ".env.example must include all required variables"
+      condition: "python scripts/validate_env_completeness.py"
+      file: ".env.example,backend/config.py"
+      severity: "medium"
+      priority: "P1"
+      audit_source: "CONFIG_ENTROPY_REPORT.md"
+      
+    - name: "NO_CONFIG_DUPLICATION"
+      description: "No duplicate configuration across files"
+      condition: "python scripts/check_config_duplication.py"
+      file: "backend/config.py,docker-compose.yml,alembic.ini"
+      severity: "low"
+      priority: "P2"
+      audit_source: "CONFIG_ENTROPY_REPORT.md"
+      
+  # Documentation Guardrails (P2)
+  documentation:
+    - name: "LIVING_DOCS_EXIST"
+      description: "Living architecture documentation must exist"
+      condition: "-f docs/LIVING_ARCHITECTURE_GUIDE.md"
+      file: "docs/LIVING_ARCHITECTURE_GUIDE.md"
+      severity: "low"
+      priority: "P2"
+      audit_source: "NARRATIVE_COHERENCE_SCORE.md"
+      
+    - name: "CRITICAL_LOGIC_DOCUMENTED"
+      description: "Critical logic must have docstrings"
+      condition: "python scripts/check_critical_docstrings.py"
+      file: "backend/main.py,backend/workflow_scheduler.py,backend/batch_processor.py"
+      severity: "low"
+      priority: "P2"
+      audit_source: "NARRATIVE_COHERENCE_SCORE.md"
+
+# Validation metadata
+metadata:
+  version: "1.0.0"
+  generated_date: "2024-12-19"
+  audit_source: "docs/audit/*.md"
+  enforcement_level: "ci_blocking"  # Options: ci_blocking, ci_warning, runtime_only
+  auto_fix_available: false
