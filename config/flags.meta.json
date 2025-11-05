@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "pwa": true,
+  "cloud_sync": true,
+  "telemetry": true,
+  "reco_ui": true,
+  "app_id": "floyo"
+}
