@@ -1,0 +1,6 @@
+project_id = "${SUPABASE_PROJECT_REF}"
+[api]
+enabled = true
+[db]
+port = 6543
+shadow_port = 6544

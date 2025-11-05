@@ -1,0 +1,63 @@
+name: Main Deploy (DB migrate + Vercel Prod)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: prod-deploy
+      cancel-in-progress: false
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      NEXT_PUBLIC_SITE_URL: https://${{ secrets.VERCEL_PROJECT_DOMAIN }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+
+      - name: Supabase Login & Link
+        run: |
+          npm run supa:login
+          npm run supa:link
+
+      - name: Apply Supabase Migrations (Prod)
+        run: |
+          npm run supa:migrate:apply
+
+      - name: Vercel Pull & Build
+        run: |
+          npm run vercel:pull
+          npm run vercel:build
+
+      - name: Deploy to Vercel (Production)
+        run: npm run vercel:deploy:prod
+
+      - name: Post-Deploy Smoke (optional)
+        run: |
+          echo "Deployed: $NEXT_PUBLIC_SITE_URL"

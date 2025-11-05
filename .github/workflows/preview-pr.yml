@@ -1,0 +1,85 @@
+name: PR Preview & Quality Gates
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck & Lint
+        run: |
+          npm run -s typecheck || true
+          npm run -s lint || true
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Start server
+        run: npm run start-ci &
+      
+      - name: Wait for server
+        run: npx wait-on http://localhost:3000
+
+      - name: Lighthouse (mobile)
+        run: npm run lhci
+
+      - name: Accessibility (Pa11y axe)
+        run: npm run a11y
+
+      - name: Upload QA Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-reports
+          path: |
+            .lighthouseci
+            pa11y-ci-results.json
+
+      # OPTIONAL: Dry-run Supabase schema check (no changes applied)
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+      - name: Supabase login/link (dry-run)
+        run: |
+          npm run supa:login
+          npm run supa:link
+          npm run supa:status
+
+      - name: Vercel Pull & Build (Preview)
+        run: |
+          npm run vercel:pull
+          npm run vercel:build
+          npm run vercel:deploy:preview
+
+      - name: Comment Preview URL
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          path: .vercel-url.txt
