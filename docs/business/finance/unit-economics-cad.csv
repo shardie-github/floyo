@@ -1,0 +1,13 @@
+metric,value,unit,notes
+COGS_per_user,2.50,CAD,Infrastructure + payment processing
+CAC_organic,4.00,CAD,Organic marketing (target)
+CAC_paid,15.00,CAD,Paid advertising (if applicable)
+LTV_starter_12mo,120.00,CAD,Starter tier × 12 months
+LTV_pro_12mo,290.00,CAD,Pro tier × 12 months
+LTV_starter_24mo,240.00,CAD,Starter tier × 24 months
+LTV_pro_24mo,580.00,CAD,Pro tier × 24 months
+Payback_period_months,2.5,months,CAC / (ARPU × margin)
+Gross_margin_percent,65.00,percent,Software margin (target)
+ARPU_starter,12.00,CAD,Starter tier monthly
+ARPU_pro,29.00,CAD,Pro tier monthly
+ARPU_blended,15.00,CAD,Blended ARPU (target)

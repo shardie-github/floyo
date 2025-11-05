@@ -1,0 +1,5 @@
+scenario,users_per_day,arpu_cad,churn_percent_monthly,breakeven_month,notes
+Conservative,5,12.00,5.00,6,Low growth, high churn
+Base,10,15.00,3.00,4,Moderate growth, moderate churn
+Optimistic,20,18.00,2.00,3,High growth, low churn
+Pessimistic,3,10.00,7.00,12,Very low growth, very high churn
