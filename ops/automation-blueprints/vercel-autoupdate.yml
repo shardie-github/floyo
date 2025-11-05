@@ -1,0 +1,67 @@
+{
+  "name": "vercel-autoupdate",
+  "version": "1.0.0",
+  "description": "Vercel auto-update configuration for floyo",
+  "config": {
+    "framework": "nextjs",
+    "buildCommand": "npm run build",
+    "outputDirectory": ".next",
+    "installCommand": "npm ci",
+    "devCommand": "npm run dev",
+    "env": {
+      "NEXT_PUBLIC_APP_ID": "floyo",
+      "NODE_ENV": "production"
+    },
+    "regions": ["iad1"],
+    "functions": {
+      "app/**": {
+        "maxDuration": 10
+      }
+    },
+    "headers": [
+      {
+        "source": "/(.*)",
+        "headers": [
+          {
+            "key": "X-Content-Type-Options",
+            "value": "nosniff"
+          },
+          {
+            "key": "X-Frame-Options",
+            "value": "DENY"
+          },
+          {
+            "key": "X-XSS-Protection",
+            "value": "1; mode=block"
+          },
+          {
+            "key": "Strict-Transport-Security",
+            "value": "max-age=31536000; includeSubDomains"
+          }
+        ]
+      }
+    ],
+    "rewrites": [
+      {
+        "source": "/api/:path*",
+        "destination": "/api/:path*"
+      }
+    ]
+  },
+  "cron": [
+    {
+      "path": "/api/cron/daily-analytics",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-backup",
+      "schedule": "0 2 * * 0"
+    }
+  ],
+  "notes": [
+    "Deploy automatically on push to main branch",
+    "Use Vercel CLI for local testing: vercel",
+    "Monitor deployments in Vercel dashboard",
+    "All times in ET (Eastern Time)"
+  ]
+}

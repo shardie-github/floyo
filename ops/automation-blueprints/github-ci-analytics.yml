@@ -1,0 +1,65 @@
+name: Daily Analytics Script + Report Generation
+
+on:
+  schedule:
+    # Run every day at 3 AM ET (8 AM UTC)
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  analytics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run analytics script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+        run: |
+          python scripts/generate_analytics_report.py --output ops/dashboards/reports/
+
+      - name: Generate daily report
+        run: |
+          timestamp=$(date +%Y%m%d)
+          echo "# Daily Analytics Report - $(date +%Y-%m-%d)" > ops/dashboards/reports/daily-${timestamp}.md
+          echo "" >> ops/dashboards/reports/daily-${timestamp}.md
+          echo "## Metrics" >> ops/dashboards/reports/daily-${timestamp}.md
+          echo "" >> ops/dashboards/reports/daily-${timestamp}.md
+          echo "- DAU: [calculated]" >> ops/dashboards/reports/daily-${timestamp}.md
+          echo "- MAU: [calculated]" >> ops/dashboards/reports/daily-${timestamp}.md
+          echo "- MRR: [calculated] CAD" >> ops/dashboards/reports/daily-${timestamp}.md
+          echo "- New Signups: [calculated]" >> ops/dashboards/reports/daily-${timestamp}.md
+          echo "- Conversions: [calculated]" >> ops/dashboards/reports/daily-${timestamp}.md
+
+      - name: Commit reports
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add ops/dashboards/reports/
+          git commit -m "ops(auto): daily analytics report $(date +%Y-%m-%d)" || exit 0
+          git push
+
+      - name: Notify on completion
+        run: |
+          echo "✅ Daily analytics report generated: ops/dashboards/reports/daily-*.md"

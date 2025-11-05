@@ -190,6 +190,72 @@ npm run ops release
 - **Weekly**: `ops release` + growth report + rotate secrets
 - **Monthly**: DR rehearsal + deps update + red-team sweep
 
+## 🤖 Automated Operations Suite (CAD)
+
+This repository includes a comprehensive **Automated Venture Operations Suite** designed for Canadian solo operators and small teams. All workflows, templates, and automation assets are self-contained and deployable from the repo.
+
+**Quick Start:**
+```bash
+# Review daily routine
+cat ops/daily-routine.md
+
+# Set up automation blueprints
+# See: ops/automation-blueprints/
+
+# Use dashboard templates
+# See: ops/dashboards/
+```
+
+**Key Components:**
+
+### 📋 Operations Documentation
+- **[Daily Routine](ops/daily-routine.md)** - 15-minute startup checklist for daily operations
+- **[Helpdesk Playbook](ops/support/helpdesk-playbook.md)** - Customer support procedures and templates
+- **[Chatbot FAQ Builder](ops/support/chatbot-faq-builder.md)** - Build and maintain FAQ system
+
+### 📊 Marketing & Growth
+- **[Automated Lead Flow Guide](ops/marketing/automated-leadflow-guide.md)** - Complete lead capture → CRM → email automation
+- **[CRM Integration Guide](ops/marketing/crm-integration-guide.md)** - Notion, Airtable, Google Sheets integration
+- **[Influencer Outreach Automation](ops/growth/influencer-outreach-automation.md)** - Systematic influencer partnership approach
+- **[Content Seeding Checklist](ops/growth/content-seeding-checklist.md)** - Weekly content distribution schedule
+- **[Community Engagement Plan](ops/growth/community-engagement-plan.md)** - Build and engage with online communities
+
+### 💰 Funding & Legal
+- **[Seed Prep Playbook](ops/funding/seed-prep-playbook.md)** - Complete seed funding preparation guide
+- **[Investor Outreach Email Bank](ops/funding/investor-outreach-email-bank.md)** - Pre-written email templates for investors
+- **[Grant and Incubator List — Canada](ops/funding/grant-and-incubator-list-canada.md)** - 2025 active programs (IRAP, SR&ED, Futurpreneur, etc.)
+- **[Vendor Contract Template](ops/legal/vendor-contract-template.md)** - Standard vendor contract for Canadian ventures
+- **[NDA Template](ops/legal/nda-template.md)** - Non-disclosure agreement template
+
+### 🔧 Automation Blueprints
+- **[Zapier/Make Flows](ops/automation-blueprints/zapier-make-flows.json)** - Pre-configured automation flows
+- **[GitHub CI Auto-Deploy](ops/automation-blueprints/github-ci-autodeploy.yml)** - Auto-deploy to Vercel on push to main
+- **[Supabase Backup](ops/automation-blueprints/github-ci-supabase-backup.yml)** - Weekly Supabase migration + backup
+- **[Daily Analytics](ops/automation-blueprints/github-ci-analytics.yml)** - Daily analytics script + report generation
+- **[Vercel Auto-Update](ops/automation-blueprints/vercel-autoupdate.yml)** - Vercel deployment configuration
+- **[Supabase Maintenance](ops/automation-blueprints/supabase-maintenance.yml)** - Supabase maintenance and monitoring
+- **[floyo Wellness Journaling](ops/automation-blueprints/floyo-wellness-journaling-automation.md)** - Wellness journaling automation flows (floyo-specific)
+
+### 📈 Dashboard Templates
+- **[Marketing Dashboard](ops/dashboards/marketing-dashboard-template.csv)** - Track social media, content performance
+- **[Finance Dashboard](ops/dashboards/finance-dashboard-template.csv)** - Revenue tracking (CAD), GST/HST reconciliation
+- **[KPI Tracker](ops/dashboards/kpi-tracker-template.csv)** - Daily metrics (DAU, MAU, MRR, CAC, LTV, etc.)
+
+**Features:**
+- ✅ All financials in CAD with GST/HST tracking
+- ✅ Privacy and data-flow maps for automation
+- ✅ Fallback/manual run instructions if automation fails
+- ✅ Exportable to ZIP (no hidden dependencies)
+- ✅ Tested workflows with valid syntax
+- ✅ Self-contained documentation and scripts
+
+**Operations Schedule:**
+- **Daily**: Review `ops/daily-routine.md` → check automated reports → address issues
+- **Weekly**: Review growth/finance dashboards → generate weekly reports
+- **Monthly**: Review legal/funding docs → update investor CRM → plan content
+
+For detailed setup instructions, see individual files in `/ops/` directory.
+
 ## License
 
 Apache-2.0
