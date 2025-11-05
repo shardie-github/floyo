@@ -15,6 +15,21 @@
 - **Security**: Added RLS verification script (`scripts/verify-rls.ts`)
 - **Security**: Added secrets audit script (`scripts/audit-secrets.ts`)
 - **Documentation**: Added next steps roadmap (`docs/upgrade/NEXT_STEPS.md`)
+- **API**: Added ingest API route with guardrails (`frontend/app/api/ingest/route.ts`)
+- **Workflow**: Added queue shim for workflow runs (`frontend/lib/crux/queue.ts`)
+- **Workflow**: Added workflow executor with retries (`frontend/lib/crux/executor.ts`)
+- **Observability**: Added Sentry integration (`frontend/lib/obs/sentry.ts`)
+- **Observability**: Added metrics collection (`frontend/lib/obs/metrics.ts`)
+- **Performance**: Added KV-based rate limiter (`frontend/lib/utils/rate-limit-kv.ts`)
+- **Security**: Enhanced CSP headers with nonce and allowlist support
+- **Database**: Added workflow_runs table migration (`supabase/migrations/20251105_workflow_runs.sql`)
+- **Monitoring**: Added performance dashboard (`frontend/app/admin/performance/page.tsx`)
+- **Scripts**: Added migration concurrent helper (`scripts/migrate-concurrent.sh`)
+- **CI/CD**: Added bundle analyzer workflow (`.github/workflows/bundle-analyzer.yml`)
+- **Documentation**: Added API rate limiting guide (`docs/api/rate-limiting.md`)
+- **Documentation**: Added security headers guide (`docs/security/headers.md`)
+- **Documentation**: Added observability guide (`docs/ops/observability.md`)
+- **Edge Functions**: Hardened analyze-patterns and generate-suggestions with guardrails
 
 ### Changed
 - **Build**: Patched `next.config.js` with bundle analyzer wrapper (non-destructive, marker-based)

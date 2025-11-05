@@ -9,5 +9,13 @@
   "hardened_mode": true,
   "csp_headers": false,
   "rate_limit_api": true,
-  "observability_min": true
+  "observability_min": true,
+  "edge_function_timeouts": true,
+  "edge_function_validation": true,
+  "retry_logic_enabled": true,
+  "ingest_guardrails": true,
+  "queue_shim_enabled": true,
+  "sentry_enabled": false,
+  "metrics_collection": true,
+  "rate_limit_kv_enabled": false
 }
