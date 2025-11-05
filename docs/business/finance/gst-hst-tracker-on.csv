@@ -1,0 +1,11 @@
+date,invoice_id,gross_cad,gst_hst_cad,net_cad,remitted,notes
+2024-01-15,INV-001,12.00,1.56,10.44,no,Starter subscription - January
+2024-01-15,INV-002,29.00,3.77,25.23,no,Pro subscription - January
+2024-01-16,INV-003,120.00,15.60,104.40,no,Starter annual subscription
+2024-01-17,INV-004,12.00,1.56,10.44,no,Starter subscription - January
+2024-01-18,INV-005,29.00,3.77,25.23,no,Pro subscription - January
+2024-01-19,INV-006,12.00,1.56,10.44,no,Starter subscription - January
+2024-01-20,INV-007,290.00,37.70,252.30,no,Pro annual subscription
+2024-01-21,INV-008,12.00,1.56,10.44,no,Starter subscription - January
+2024-01-22,INV-009,29.00,3.77,25.23,no,Pro subscription - January
+2024-01-23,INV-010,12.00,1.56,10.44,no,Starter subscription - January

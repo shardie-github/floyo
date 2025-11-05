@@ -1,0 +1,13 @@
+month,revenue_cad,expenses_cad,net_cashflow_cad,cumulative_cashflow_cad,notes
+2024-01,0.00,27.00,-27.00,-27.00,Pre-launch (infrastructure only)
+2024-02,120.00,50.00,70.00,43.00,Launch month (100 users, 10% conversion)
+2024-03,240.00,75.00,165.00,208.00,Growth (200 users, 10% conversion)
+2024-04,360.00,100.00,260.00,468.00,Growth (300 users, 10% conversion)
+2024-05,480.00,125.00,355.00,823.00,Growth (400 users, 10% conversion)
+2024-06,600.00,150.00,450.00,1273.00,Growth (500 users, 10% conversion)
+2024-07,720.00,175.00,545.00,1818.00,Growth (600 users, 10% conversion)
+2024-08,840.00,200.00,640.00,2458.00,Growth (700 users, 10% conversion)
+2024-09,960.00,225.00,735.00,3193.00,Growth (800 users, 10% conversion)
+2024-10,1080.00,250.00,830.00,4023.00,Growth (900 users, 10% conversion)
+2024-11,1200.00,275.00,925.00,4948.00,Growth (1000 users, 10% conversion)
+2024-12,1320.00,300.00,1020.00,5968.00,Growth (1100 users, 10% conversion)
