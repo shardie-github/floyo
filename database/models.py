@@ -656,3 +656,134 @@ class SecurityAudit(Base):
         Index('idx_security_audit_user_created', 'user_id', 'created_at'),
         Index('idx_security_audit_severity', 'severity', 'created_at'),
     )
+
+
+class GuardianEvent(Base):
+    """Guardian privacy monitoring events."""
+    __tablename__ = "guardian_events"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    event_id = Column(String(255), unique=True, nullable=False, index=True)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    
+    # Event details
+    event_type = Column(String(100), nullable=False, index=True)
+    scope = Column(String(50), nullable=False)  # user, app, api, external
+    data_class = Column(String(50), nullable=False)  # telemetry, location, audio, etc.
+    
+    # Description
+    description = Column(Text, nullable=True)
+    data_touched = Column(JSONB, nullable=True)
+    purpose = Column(Text, nullable=True)
+    
+    # Risk assessment
+    risk_level = Column(String(50), nullable=False, index=True)  # low, medium, high, critical
+    risk_score = Column(Float, nullable=False, default=0.0)
+    risk_factors = Column(PGARRAY(String), nullable=True)
+    
+    # Guardian action
+    guardian_action = Column(String(50), nullable=False)  # allow, mask, redact, block, alert
+    action_reason = Column(Text, nullable=True)
+    
+    # User context
+    user_decision = Column(String(50), nullable=True)
+    session_id = Column(String(255), nullable=True, index=True)
+    mfa_required = Column(Boolean, default=False)
+    
+    # Metadata
+    source = Column(String(255), nullable=True)
+    metadata = Column(JSONB, nullable=True)
+    
+    # Timestamps
+    timestamp = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    
+    user = relationship("User", foreign_keys=[user_id])
+    
+    __table_args__ = (
+        Index('idx_guardian_user_timestamp', 'user_id', 'timestamp'),
+        Index('idx_guardian_risk_level', 'risk_level', 'timestamp'),
+        Index('idx_guardian_event_type', 'event_type', 'timestamp'),
+    )
+
+
+class TrustLedgerRoot(Base):
+    """Daily hash roots for trust ledger verification."""
+    __tablename__ = "trust_ledger_roots"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    date = Column(TIMESTAMP(timezone=True), nullable=False, index=True)  # Date (time set to 00:00:00)
+    hash_root = Column(String(255), nullable=False, index=True)  # SHA256 hash of day's entries
+    entry_count = Column(Integer, nullable=False, default=0)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    
+    user = relationship("User", foreign_keys=[user_id])
+    
+    __table_args__ = (
+        Index('idx_trust_ledger_user_date', 'user_id', 'date', unique=True),
+    )
+
+
+class TrustFabricModel(Base):
+    """User's Trust Fabric AI model for adaptive learning."""
+    __tablename__ = "trust_fabric_models"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    
+    # Learning parameters
+    privacy_mode_toggles = Column(Integer, default=0)  # How often user toggles privacy modes
+    disabled_signals = Column(PGARRAY(String), nullable=True)  # Which signals user disabled
+    trust_responses = Column(JSONB, nullable=True)  # History of allow/deny decisions
+    
+    # Adaptive risk weights
+    risk_weights = Column(JSONB, nullable=True)  # Personalized risk weights
+    comfort_zones = Column(JSONB, nullable=True)  # User's comfort zones per data class
+    
+    # Statistics
+    total_events_assessed = Column(Integer, default=0)
+    avg_risk_score = Column(Float, default=0.0)
+    last_updated = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    
+    user = relationship("User", foreign_keys=[user_id])
+    
+    __table_args__ = (
+        Index('idx_trust_fabric_user', 'user_id', unique=True),
+    )
+
+
+class GuardianSettings(Base):
+    """User's Guardian privacy settings."""
+    __tablename__ = "guardian_settings"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    
+    # Mode toggles
+    private_mode_enabled = Column(Boolean, default=False)
+    lockdown_enabled = Column(Boolean, default=False)
+    
+    # Sensitive context detection
+    sensitive_context_detection = Column(Boolean, default=True)
+    camera_active = Column(Boolean, default=False)
+    microphone_active = Column(Boolean, default=False)
+    
+    # MFA bubble settings
+    mfa_bubble_enabled = Column(Boolean, default=True)
+    elevated_session_expiry_minutes = Column(Integer, default=15)
+    
+    # Trust level
+    trust_level = Column(String(50), default="balanced")  # strict, balanced, permissive
+    
+    # Metadata
+    settings = Column(JSONB, nullable=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    user = relationship("User", foreign_keys=[user_id])
+    
+    __table_args__ = (
+        Index('idx_guardian_settings_user', 'user_id', unique=True),
+    )

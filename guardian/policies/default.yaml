@@ -1,0 +1,121 @@
+# Default Guardian Policy
+# Defines allowed scopes, data classes, risk weights, and response actions
+
+allowed_scopes:
+  - user      # User's own data
+  - app       # App internal operations
+  - api       # External API calls
+  - external  # Third-party services
+
+data_classes:
+  telemetry:
+    risk: 0.2
+    description: "Usage analytics and performance metrics"
+  
+  location:
+    risk: 0.6
+    description: "Geographic location data"
+    requires_consent: true
+  
+  audio:
+    risk: 0.7
+    description: "Audio recordings and voice data"
+    requires_consent: true
+    requires_mfa: true
+  
+  video:
+    risk: 0.7
+    description: "Video recordings and camera data"
+    requires_consent: true
+    requires_mfa: true
+  
+  biometrics:
+    risk: 0.9
+    description: "Biometric identifiers (fingerprint, face, etc.)"
+    requires_consent: true
+    requires_mfa: true
+  
+  contacts:
+    risk: 0.7
+    description: "Contact information"
+    requires_consent: true
+  
+  calendar:
+    risk: 0.3
+    description: "Calendar events and schedules"
+  
+  messages:
+    risk: 0.7
+    description: "Messages and communications"
+    requires_consent: true
+  
+  files:
+    risk: 0.5
+    description: "File access and content"
+  
+  browsing:
+    risk: 0.4
+    description: "Browsing history and web activity"
+  
+  credentials:
+    risk: 1.0
+    description: "Passwords, tokens, and authentication data"
+    requires_consent: true
+    requires_mfa: true
+    block_external: true
+  
+  payment:
+    risk: 0.9
+    description: "Payment information and financial data"
+    requires_consent: true
+    requires_mfa: true
+    block_external: true
+  
+  health:
+    risk: 0.8
+    description: "Health and medical data"
+    requires_consent: true
+    requires_mfa: true
+  
+  other:
+    risk: 0.3
+    description: "Other data types"
+
+risk_weights:
+  scope: 0.3          # Weight for data scope factor
+  data_class: 0.4     # Weight for data classification factor
+  external: 0.3       # Weight for external API factor
+
+response_actions:
+  allow:
+    threshold: 0.4
+    description: "Allow access with logging"
+  
+  redact:
+    threshold: 0.5
+    description: "Redact sensitive fields before transmission"
+  
+  mask:
+    threshold: 0.6
+    description: "Mask sensitive data"
+  
+  alert:
+    threshold: 0.7
+    description: "Alert user and require consent"
+  
+  block:
+    threshold: 0.8
+    description: "Block access completely"
+
+sensitive_context_detection:
+  enabled: true
+  triggers:
+    - camera_active
+    - microphone_active
+    - payment_flow
+    - credential_entry
+  
+  actions:
+    - mute_monitoring
+    - require_mfa
+    - elevate_session_security
