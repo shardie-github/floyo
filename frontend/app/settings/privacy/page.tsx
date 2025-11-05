@@ -7,9 +7,12 @@
 
 import { useState, useEffect } from 'react';
 import { privacyAPI, verifyMFA, checkMfaElevation } from '@/lib/privacy-api';
+import { useConsent } from '@/app/providers/consent-provider';
 import Link from 'next/link';
+import integrationsConfig from '@/config/integrations.json';
 
 export default function PrivacySettingsPage() {
+  const { consent, setConsent } = useConsent();
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [prefs, setPrefs] = useState<any>(null);
@@ -100,6 +103,7 @@ export default function PrivacySettingsPage() {
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
+    { id: 'integrations', label: 'Frontend Integrations' },
     { id: 'apps', label: 'Apps & Scopes' },
     { id: 'signals', label: 'Signals' },
     { id: 'retention', label: 'Data & Retention' },
@@ -205,6 +209,241 @@ export default function PrivacySettingsPage() {
               >
                 Read full privacy policy →
               </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Frontend Integrations */}
+        {activeTab === 'integrations' && (
+          <div className="space-y-6">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
+              <h3 className="text-lg font-semibold mb-2 text-blue-900 dark:text-blue-100">
+                Frontend Integration Consent
+              </h3>
+              <p className="text-blue-800 dark:text-blue-200 text-sm mb-4">
+                Control which frontend services and integrations are allowed to run on this site. 
+                Changes take effect immediately and are stored in your browser.
+              </p>
+            </div>
+
+            {/* Analytics Consent */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Analytics & Monitoring
+                    </h3>
+                    <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded">
+                      Recommended
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Enable analytics services to help us improve the site experience and identify issues.
+                  </p>
+                  <div className="space-y-2">
+                    {integrationsConfig.vercelAnalytics && (
+                      <div className="text-sm text-gray-500 dark:text-gray-500 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                        Vercel Analytics — Page views and performance metrics
+                      </div>
+                    )}
+                    {integrationsConfig.sentry && (
+                      <div className="text-sm text-gray-500 dark:text-gray-500 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                        Sentry — Error tracking and performance monitoring
+                      </div>
+                    )}
+                    {integrationsConfig.posthog && (
+                      <div className="text-sm text-gray-500 dark:text-gray-500 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                        PostHog — Product analytics, feature flags, session replay
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <label className="flex items-center ml-4 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={consent.analytics}
+                    onChange={(e) => setConsent({ ...consent, analytics: e.target.checked })}
+                    className="w-6 h-6 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500"
+                  />
+                </label>
+              </div>
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  {consent.analytics ? (
+                    <span className="text-green-600 dark:text-green-400">
+                      ✓ Analytics services are currently enabled
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">
+                      Analytics services are disabled. No tracking data is collected.
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Marketing Consent */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Marketing & Engagement
+                    </h3>
+                    <span className="text-xs px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 rounded">
+                      Optional
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Enable marketing tools and engagement features to enhance your experience.
+                  </p>
+                  <div className="space-y-2">
+                    {(integrationsConfig.tidio || integrationsConfig.crisp) && (
+                      <div className="text-sm text-gray-500 dark:text-gray-500 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                        Live Chat — Customer support widgets
+                      </div>
+                    )}
+                    {(integrationsConfig.pusher || integrationsConfig.ably) && (
+                      <div className="text-sm text-gray-500 dark:text-gray-500 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                        Realtime Features — Live updates and notifications
+                      </div>
+                    )}
+                    {integrationsConfig.trustpilot && (
+                      <div className="text-sm text-gray-500 dark:text-gray-500 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                        Trustpilot — Review and trust badges
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <label className="flex items-center ml-4 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={consent.marketing}
+                    onChange={(e) => setConsent({ ...consent, marketing: e.target.checked })}
+                    className="w-6 h-6 text-blue-600 rounded border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500"
+                  />
+                </label>
+              </div>
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  {consent.marketing ? (
+                    <span className="text-green-600 dark:text-green-400">
+                      ✓ Marketing features are currently enabled
+                    </span>
+                  ) : (
+                    <span className="text-gray-500">
+                      Marketing features are disabled.
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Functional Notice */}
+            <div className="bg-gray-50 dark:bg-gray-800/50 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-start gap-3">
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                    Essential Features
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    These features are essential for the website to function and cannot be disabled.
+                  </p>
+                  <div className="space-y-2">
+                    {integrationsConfig.lenis && (
+                      <div className="text-sm text-gray-500 dark:text-gray-500 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                        Smooth Scrolling — Enhanced scrolling experience
+                      </div>
+                    )}
+                    {integrationsConfig.framerMotion && (
+                      <div className="text-sm text-gray-500 dark:text-gray-500 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                        Animations — UI animations and transitions
+                      </div>
+                    )}
+                    {integrationsConfig.cloudinary && (
+                      <div className="text-sm text-gray-500 dark:text-gray-500 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                        Image Optimization — Optimized image delivery
+                      </div>
+                    )}
+                    {integrationsConfig.hcaptcha && (
+                      <div className="text-sm text-gray-500 dark:text-gray-500 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                        Security — Bot protection for forms
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400 px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded">
+                  Always Active
+                </span>
+              </div>
+            </div>
+
+            {/* Integration Status Overview */}
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                Integration Status
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {Object.entries(integrationsConfig).map(([key, enabled]) => (
+                  <div
+                    key={key}
+                    className={`p-3 rounded-lg border ${
+                      enabled
+                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                        : 'bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white capitalize">
+                        {key.replace(/([A-Z])/g, ' $1').trim()}
+                      </span>
+                      <span
+                        className={`text-xs px-2 py-1 rounded ${
+                          enabled
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gray-400 text-white'
+                        }`}
+                      >
+                        {enabled ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Reset Consent */}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <h3 className="text-lg font-semibold mb-2 text-yellow-900 dark:text-yellow-100">
+                Reset Consent Preferences
+              </h3>
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-4">
+                Clear all consent preferences and show the consent banner again on your next visit.
+              </p>
+              <button
+                onClick={() => {
+                  if (confirm('Are you sure you want to reset all consent preferences?')) {
+                    localStorage.removeItem('consent_banner_seen');
+                    localStorage.removeItem('privacy_choices_v2');
+                    setConsent({ analytics: false, marketing: false, functional: true });
+                    alert('Consent preferences reset. The consent banner will appear on your next visit.');
+                  }
+                }}
+                className="px-4 py-2 text-sm font-medium text-yellow-900 dark:text-yellow-100 bg-yellow-100 dark:bg-yellow-900/50 border border-yellow-300 dark:border-yellow-700 rounded-lg hover:bg-yellow-200 dark:hover:bg-yellow-900/70 transition-colors"
+              >
+                Reset All Preferences
+              </button>
             </div>
           </div>
         )}
