@@ -61,8 +61,17 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  // [STAKE+TRUST:BEGIN:i18n_attributes]
+  // i18n preparation: language and direction attributes
+  // In production, these should be determined from user preferences or locale detection
+  const locale = 'en-US'; // Default to English
+  const language = locale.split('-')[0];
+  const rtlLanguages = ['ar', 'he', 'fa', 'ur'];
+  const direction = rtlLanguages.includes(language) ? 'rtl' : 'ltr';
+  // [STAKE+TRUST:END:i18n_attributes]
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} dir={direction} suppressHydrationWarning>
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
@@ -98,7 +107,37 @@ export default function RootLayout({
                 </main>
                 <footer className="border-t border-border py-10 text-sm text-muted-foreground mt-auto">
                   <div className="container">
-                    © {new Date().getFullYear()} Hardonia
+                    {/* [STAKE+TRUST:BEGIN:footer_links] */}
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                      <div>
+                        © {new Date().getFullYear()} Hardonia
+                      </div>
+                      <nav aria-label="Footer" className="flex flex-wrap gap-4">
+                        <a href="/privacy/policy" className="hover:underline">
+                          Privacy
+                        </a>
+                        {/* Trust links - gated by feature flags in production */}
+                        {process.env.NEXT_PUBLIC_TRUST_STATUS_PAGE === 'true' && (
+                          <a href="/status" className="hover:underline">
+                            Status
+                          </a>
+                        )}
+                        {process.env.NEXT_PUBLIC_TRUST_HELP_CENTER === 'true' && (
+                          <a href="/help" className="hover:underline">
+                            Help
+                          </a>
+                        )}
+                        {process.env.NEXT_PUBLIC_TRUST_EXPORT === 'true' && (
+                          <a href="/account/export" className="hover:underline">
+                            Export Data
+                          </a>
+                        )}
+                        <a href="/trust" className="hover:underline">
+                          Trust & Transparency
+                        </a>
+                      </nav>
+                    </div>
+                    {/* [STAKE+TRUST:END:footer_links] */}
                   </div>
                 </footer>
                 <PrivacyHUD />
