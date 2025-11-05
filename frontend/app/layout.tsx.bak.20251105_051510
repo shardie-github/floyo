@@ -77,10 +77,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Hardonia" />
         <link rel="manifest" href="/manifest.webmanifest" />
-        {/* [META:BEGIN:pwa] */}
-        <link rel="manifest" href="/manifest.json" />
-        <script dangerouslySetInnerHTML={{__html:`if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}));}`}} />
-        {/* [META:END:pwa] */}
       </head>
       <body className={`${inter.className} min-h-dvh antialiased`}>
         <a href="#main" className="skip-link">
@@ -148,12 +144,6 @@ export default function RootLayout({
                 <ServiceWorkerRegistration />
                 <PerformanceHUD />
                 <ConsentBanner />
-                {/* [META:BEGIN:mounts] */}
-                {/* Example mounts — wire auth user ID + app meta in your layout or provider */}
-                {/* <meta name="x-app-id" content={process.env.NEXT_PUBLIC_APP_ID || 'generic'} /> */}
-                {/* <ConsentPanel /> */}
-                {/* <RecoDrawer userId="{AUTH_USER_ID}" /> */}
-                {/* [META:END:mounts] */}
               </IntegrationsLoader>
             </AnalyticsProvider>
           </Providers>
