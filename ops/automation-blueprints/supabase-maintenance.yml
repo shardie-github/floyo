@@ -1,0 +1,82 @@
+{
+  "name": "supabase-maintenance",
+  "version": "1.0.0",
+  "description": "Supabase maintenance and monitoring configuration",
+  "functions": [
+    {
+      "name": "billing-snapshot",
+      "type": "edge_function",
+      "schedule": "0 2 * * *",
+      "description": "Daily billing snapshot in CAD",
+      "code": "supabase/functions/billing-snapshot/index.ts",
+      "output": "ops/dashboards/reports/billing-daily-{date}.csv"
+    },
+    {
+      "name": "webhook-trigger-marketing",
+      "type": "edge_function",
+      "trigger": "webhook",
+      "description": "Webhook to trigger marketing automation",
+      "code": "supabase/functions/webhook-marketing/index.ts",
+      "endpoints": [
+        {
+          "path": "/webhook/marketing",
+          "method": "POST",
+          "auth": "service_role"
+        }
+      ]
+    },
+    {
+      "name": "form-submission-handler",
+      "type": "database_trigger",
+      "table": "form_submissions",
+      "event": "INSERT",
+      "description": "Handle new form submissions",
+      "code": "supabase/functions/form-handler/index.ts"
+    }
+  ],
+  "backups": {
+    "schedule": "weekly",
+    "day": "sunday",
+    "time": "02:00 ET",
+    "retention_days": 30,
+    "encryption": true
+  },
+  "monitoring": {
+    "alerts": [
+      {
+        "metric": "database_connections",
+        "threshold": 80,
+        "notification": "email"
+      },
+      {
+        "metric": "storage_usage",
+        "threshold": 85,
+        "notification": "email"
+      },
+      {
+        "metric": "api_errors",
+        "threshold": 100,
+        "time_window": "1h",
+        "notification": "email"
+      }
+    ]
+  },
+  "maintenance": {
+    "vacuum": {
+      "schedule": "weekly",
+      "day": "sunday",
+      "time": "03:00 ET"
+    },
+    "index_rebuild": {
+      "schedule": "monthly",
+      "day": "first_sunday",
+      "time": "04:00 ET"
+    }
+  },
+  "notes": [
+    "All times in ET (Eastern Time)",
+    "Backups stored in encrypted format",
+    "Monitor alerts in Supabase dashboard",
+    "Functions deploy via Supabase CLI"
+  ]
+}

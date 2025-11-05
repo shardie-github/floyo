@@ -1,0 +1,9 @@
+Date,Revenue Type,Amount (CAD),Currency,Source,Plan,Customer Email,UTM Source,UTM Medium,UTM Campaign,Notes
+2025-01-15,Subscription,12.00,CAD,Stripe,Pro,user1@example.com,website,organic,homepage,Monthly subscription
+2025-01-15,Subscription,12.00,CAD,Stripe,Pro,user2@example.com,product_hunt,referral,launch,Product Hunt conversion
+2025-01-16,Subscription,49.00,CAD,Stripe,Enterprise,user3@example.com,linkedin,paid,2025_q1,Enterprise plan
+2025-01-16,Subscription,12.00,CAD,Stripe,Pro,user4@example.com,twitter,organic,community,Twitter conversion
+2025-01-17,Subscription,12.00,CAD,Stripe,Pro,user5@example.com,website,organic,homepage,Monthly subscription
+2025-01-17,Refund,-12.00,CAD,Stripe,Pro,user6@example.com,website,organic,homepage,Cancellation refund
+2025-01-18,Subscription,12.00,CAD,Stripe,Pro,user7@example.com,reddit,organic,review,Reddit conversion
+2025-01-18,Subscription,12.00,CAD,Stripe,Pro,user8@example.com,blog,organic,seo,Blog conversion

@@ -1,0 +1,53 @@
+name: Weekly Supabase Backup + Migration
+
+on:
+  schedule:
+    # Run every Sunday at 2 AM ET (7 AM UTC)
+    - cron: '0 7 * * 0'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Login to Supabase
+        run: supabase login --token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Link project
+        run: |
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Create backup
+        run: |
+          timestamp=$(date +%Y%m%d_%H%M%S)
+          supabase db dump -f backups/floyo_backup_${timestamp}.sql
+          gzip backups/floyo_backup_${timestamp}.sql
+
+      - name: Upload backup to S3 (if configured)
+        if: env.AWS_ACCESS_KEY_ID != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+        run: |
+          aws s3 cp backups/floyo_backup_*.sql.gz s3://${AWS_S3_BUCKET}/backups/
+
+      - name: Commit backup to repo
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add backups/
+          git commit -m "ops(auto): weekly Supabase backup $(date +%Y-%m-%d)" || exit 0
+          git push
+
+      - name: Notify on completion
+        run: |
+          echo "✅ Weekly backup completed: backups/floyo_backup_*.sql.gz"

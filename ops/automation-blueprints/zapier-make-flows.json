@@ -1,0 +1,274 @@
+{
+  "zapier_flows": [
+    {
+      "name": "New Lead → CRM + Email",
+      "trigger": {
+        "type": "webhook",
+        "source": "supabase",
+        "table": "form_submissions",
+        "event": "insert"
+      },
+      "actions": [
+        {
+          "action": "create_notion_page",
+          "database": "Leads",
+          "properties": {
+            "Email": "{{email}}",
+            "Name": "{{name}}",
+            "Source": "{{source}}",
+            "UTM Source": "{{utm_source}}",
+            "UTM Campaign": "{{utm_campaign}}",
+            "Status": "New",
+            "Created": "{{created_at}}"
+          }
+        },
+        {
+          "action": "send_email",
+          "service": "gmail",
+          "to": "{{email}}",
+          "subject": "Welcome to floyo — Let's automate your workflow",
+          "template": "welcome_email"
+        }
+      ]
+    },
+    {
+      "name": "Stripe Payment → CRM Update",
+      "trigger": {
+        "type": "webhook",
+        "source": "stripe",
+        "event": "payment.succeeded"
+      },
+      "actions": [
+        {
+          "action": "update_notion_page",
+          "database": "Leads",
+          "find_by": {
+            "Email": "{{customer_email}}"
+          },
+          "properties": {
+            "Status": "Converted",
+            "Conversion Date": "{{created_at}}",
+            "Plan": "{{plan_name}}"
+          }
+        },
+        {
+          "action": "send_email",
+          "service": "gmail",
+          "to": "{{customer_email}}",
+          "subject": "Welcome to floyo Pro! 🎉",
+          "template": "conversion_email"
+        }
+      ]
+    },
+    {
+      "name": "New Email → Support Ticket",
+      "trigger": {
+        "type": "email",
+        "service": "gmail",
+        "filter": {
+          "from": "support@floyo.dev"
+        }
+      },
+      "actions": [
+        {
+          "action": "create_notion_page",
+          "database": "Support Tickets",
+          "properties": {
+            "From": "{{from_email}}",
+            "Subject": "{{subject}}",
+            "Body": "{{body}}",
+            "Status": "New",
+            "Priority": "{{auto_priority}}"
+          }
+        },
+        {
+          "action": "send_slack_message",
+          "channel": "#support",
+          "message": "New ticket: {{subject}}"
+        }
+      ]
+    },
+    {
+      "name": "Social Post → Marketing Dashboard",
+      "trigger": {
+        "type": "webhook",
+        "source": "twitter",
+        "event": "tweet.created"
+      },
+      "actions": [
+        {
+          "action": "append_google_sheet",
+          "spreadsheet": "Marketing Dashboard",
+          "worksheet": "Social Posts",
+          "values": {
+            "Date": "{{created_at}}",
+            "Platform": "Twitter",
+            "Content": "{{text}}",
+            "Impressions": "{{impressions}}",
+            "Engagement": "{{engagement}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "New Form Fill → Notion CRM + Gmail Follow-up",
+      "trigger": {
+        "type": "webhook",
+        "source": "supabase",
+        "table": "form_submissions",
+        "event": "insert"
+      },
+      "actions": [
+        {
+          "action": "create_notion_page",
+          "database": "Leads",
+          "properties": {
+            "Email": "{{email}}",
+            "Name": "{{name}}",
+            "Source": "{{source}}",
+            "Status": "New"
+          }
+        },
+        {
+          "action": "send_email",
+          "service": "gmail",
+          "to": "{{email}}",
+          "subject": "Welcome to floyo",
+          "template": "welcome_email",
+          "delay": 0
+        },
+        {
+          "action": "schedule_email",
+          "service": "gmail",
+          "to": "{{email}}",
+          "subject": "Still interested in automating your workflow?",
+          "template": "followup_email_1",
+          "delay_days": 3
+        }
+      ]
+    }
+  ],
+  "make_scenarios": [
+    {
+      "name": "Lead Capture Flow",
+      "modules": [
+        {
+          "module": "webhook",
+          "source": "supabase",
+          "event": "form_submissions.insert"
+        },
+        {
+          "module": "router",
+          "branches": [
+            {
+              "condition": "{{source}} == 'product_hunt'",
+              "actions": [
+                {
+                  "action": "create_notion_page",
+                  "database": "Leads"
+                },
+                {
+                  "action": "send_email",
+                  "template": "welcome_email"
+                }
+              ]
+            },
+            {
+              "condition": "{{source}} == 'website'",
+              "actions": [
+                {
+                  "action": "create_notion_page",
+                  "database": "Leads"
+                },
+                {
+                  "action": "send_email",
+                  "template": "welcome_email"
+                },
+                {
+                  "action": "send_slack_message",
+                  "channel": "#leads"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "module": "update_supabase",
+          "table": "form_submissions",
+          "id": "{{id}}",
+          "data": {
+            "status": "processed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Nurture Sequence",
+      "modules": [
+        {
+          "module": "webhook",
+          "source": "supabase",
+          "event": "form_submissions.insert"
+        },
+        {
+          "module": "delay",
+          "days": 3
+        },
+        {
+          "module": "check_stripe",
+          "action": "payment_exists",
+          "email": "{{email}}"
+        },
+        {
+          "module": "if",
+          "condition": "{{payment_exists}} == false",
+          "then": {
+            "action": "send_email",
+            "template": "followup_email_1"
+          }
+        },
+        {
+          "module": "delay",
+          "days": 7
+        },
+        {
+          "module": "check_stripe",
+          "action": "payment_exists",
+          "email": "{{email}}"
+        },
+        {
+          "module": "if",
+          "condition": "{{payment_exists}} == false",
+          "then": {
+            "action": "send_email",
+            "template": "followup_email_2"
+          }
+        }
+      ]
+    }
+  ],
+  "setup_instructions": {
+    "zapier": [
+      "1. Create Zapier account at https://zapier.com",
+      "2. Create new Zap for each flow",
+      "3. Configure webhook triggers (Supabase, Stripe)",
+      "4. Set up actions (Notion, Gmail, Slack)",
+      "5. Test each Zap",
+      "6. Activate Zaps"
+    ],
+    "make": [
+      "1. Create Make account at https://make.com",
+      "2. Create new scenario for each flow",
+      "3. Configure webhook triggers",
+      "4. Set up modules (router, delay, email, etc.)",
+      "5. Test scenarios",
+      "6. Activate scenarios"
+    ]
+  },
+  "notes": [
+    "All financial amounts in CAD",
+    "Replace {{variables}} with actual values",
+    "Test all flows before activating",
+    "Monitor for errors and adjust as needed"
+  ]
+}
