@@ -3,27 +3,91 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --bg: 0 0% 100%;
+  --fg: 224 71% 4%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 46%;
+  --card: 0 0% 100%;
+  --primary: 221 83% 53%;
+  --primary-fg: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-fg: 222 47% 11%;
+  --accent: 269 83% 60%;
+  --accent-fg: 210 40% 98%;
+  --destructive: 0 84% 60%;
+  --destructive-fg: 210 40% 98%;
+  --border: 214 32% 91%;
+  --ring: 221 83% 53%;
+  --radius: 14px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+.dark {
+  --bg: 224 71% 4%;
+  --fg: 210 40% 98%;
+  --muted: 220 14% 14%;
+  --muted-foreground: 220 9% 65%;
+  --card: 224 71% 4%;
+  --primary: 217 90% 56%;
+  --primary-fg: 210 40% 98%;
+  --secondary: 217 16% 18%;
+  --secondary-fg: 210 40% 96%;
+  --accent: 269 83% 62%;
+  --accent-fg: 210 40% 98%;
+  --destructive: 0 72% 50%;
+  --destructive-fg: 210 40% 98%;
+  --border: 217 16% 24%;
+  --ring: 217 90% 56%;
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+  font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+a:focus,
+button:focus,
+[tabindex]:focus {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
   }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+/* Skip link */
+.skip-link {
+  position: absolute;
+  left: -999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+.skip-link:focus {
+  left: 8px;
+  top: 8px;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 0.75rem;
+  background: hsl(var(--bg));
+  color: hsl(var(--fg));
+  border: 2px solid hsl(var(--ring));
+  z-index: 9999;
 }
 
 @layer utilities {
