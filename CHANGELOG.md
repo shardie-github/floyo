@@ -2,6 +2,19 @@
 
 ## [Unreleased] - 2025-11-05
 
+### Added (STAKE+TRUST Trust Layer)
+- **Trust Documentation**: Added comprehensive trust documentation (`docs/trust/TRUST.md`, `PRIVACY_POLICY_DRAFT.md`, `SECURITY.md`, `STATUS.md`, `A11Y_REPORT_TEMPLATE.md`, `SLO_SLA.md`, `I18N_READINESS.md`)
+- **Trust Pages**: Added trust center (`/trust`), status page (`/status`), help center (`/help`), audit log viewer (`/account/audit-log`), and data export page (`/account/export`)
+- **Audit Logging**: Added `audit_log` table with RLS policies (`supabase/migrations/2025-11-05_trust_audit.sql`)
+- **API Endpoints**: Added `/api/audit/me` for personal audit log and `/api/feedback` for feedback submission
+- **Feature Flags**: Added trust feature flags (`config/flags.trust.json`) - all features default OFF
+- **Accessibility**: Added i18n language/direction attributes and reduced motion support preparation
+- **Footer**: Added trust resource links (Privacy, Status, Help, Export Data) to footer
+- **CI/CD**: Added Trust Smoke checks to deploy workflow
+- **Audit Reports**: Added stakeholder gap analysis (`docs/trust/00_inventory.md`, `01_gap_matrix.md`, `02_action_plan.md`)
+
+## [Unreleased] - 2025-11-05
+
 ### Added (CRUX+HARDEN Upgrade)
 - **Security**: Added CSP headers support (`frontend/app/headers.ts`) - disabled by default
 - **Performance**: Added rate limiting utility (`frontend/lib/utils/rate-limit.ts`)

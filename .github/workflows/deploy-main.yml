@@ -69,6 +69,31 @@ jobs:
           echo "Hardened utilities present ✓"
       # [CRUX+HARDEN:END:smoke]
 
+      # [STAKE+TRUST:BEGIN:checks]
+      - name: Trust Smoke
+        run: |
+          test -f docs/trust/TRUST.md
+          test -f docs/trust/PRIVACY_POLICY_DRAFT.md
+          test -f docs/trust/SECURITY.md
+          test -f docs/trust/STATUS.md
+          test -f docs/trust/A11Y_REPORT_TEMPLATE.md
+          test -f docs/trust/SLO_SLA.md
+          test -f docs/trust/I18N_READINESS.md
+          test -f docs/trust/00_inventory.md
+          test -f docs/trust/01_gap_matrix.md
+          test -f docs/trust/02_action_plan.md
+          test -f config/flags.trust.json
+          test -f frontend/app/trust/page.tsx
+          test -f frontend/app/status/page.tsx
+          test -f frontend/app/help/page.tsx
+          test -f frontend/app/account/audit-log/page.tsx
+          test -f frontend/app/account/export/page.tsx
+          test -f frontend/app/api/audit/me/route.ts
+          test -f frontend/app/api/feedback/route.ts
+          test -f supabase/migrations/2025-11-05_trust_audit.sql
+          echo "Trust artifacts present ✓"
+      # [STAKE+TRUST:END:checks]
+
       - name: Vercel Pull & Build
         run: |
           npm run vercel:pull

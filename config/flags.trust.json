@@ -1,0 +1,14 @@
+{
+  "privacy_center": false,
+  "status_page": false,
+  "audit_log": false,
+  "admin_controls": false,
+  "export_portability": false,
+  "help_center": false,
+  "a11y_checks": true,
+  "slo_sla_docs": false,
+  "incident_comms": false,
+  "api_portal": false,
+  "rate_limit_disclosure": false,
+  "data_retention_disclosure": false
+}
