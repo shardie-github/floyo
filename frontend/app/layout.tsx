@@ -9,6 +9,7 @@ import { ThemeToggle } from '@/components/ThemeToggle'
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration'
 import { PerformanceHUD } from '@/components/PerformanceHUD'
 import { IntegrationsLoader } from '@/components/integrations/IntegrationsLoader'
+import { ConsentBanner } from '@/components/integrations/ConsentBanner'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -103,6 +104,7 @@ export default function RootLayout({
                 <PrivacyHUD />
                 <ServiceWorkerRegistration />
                 <PerformanceHUD />
+                <ConsentBanner />
               </IntegrationsLoader>
             </AnalyticsProvider>
           </Providers>
