@@ -1,0 +1,13 @@
+{
+  "events_ingest": true,
+  "signals_detect": true,
+  "workflow_dsl": true,
+  "workflow_autogen": true,
+  "workflow_execute": true,
+  "macro_record": true,
+  "bandit_rank": false,
+  "hardened_mode": true,
+  "csp_headers": false,
+  "rate_limit_api": true,
+  "observability_min": true
+}

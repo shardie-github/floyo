@@ -50,14 +50,6 @@ jobs:
         run: |
           npm run supa:migrate:apply
 
-      # [CRUX+HARDEN:BEGIN:smoke]
-      - name: CRUX Harden Smoke
-        run: |
-          test -f frontend/lib/utils/rate-limit.ts
-          test -f frontend/lib/obs/log.ts
-          echo "Hardened utilities present ✓"
-      # [CRUX+HARDEN:END:smoke]
-
       - name: Vercel Pull & Build
         run: |
           npm run vercel:pull

@@ -137,18 +137,4 @@ const nextConfig = {
   },
 }
 
-// [CRUX+HARDEN:BEGIN:analyzer]
-// Optional bundle analyzer - only enabled when ANALYZE=true
-let config = withPWA(nextConfig);
-if (process.env.ANALYZE === 'true') {
-  try {
-    const withBundleAnalyzer = require('@next/bundle-analyzer')({
-      enabled: true,
-    });
-    config = withBundleAnalyzer(config);
-  } catch (e) {
-    console.warn('[CRUX+HARDEN] Bundle analyzer not installed. Run: npm install --save-dev @next/bundle-analyzer');
-  }
-}
-module.exports = config;
-// [CRUX+HARDEN:END:analyzer]
+module.exports = withPWA(nextConfig)
