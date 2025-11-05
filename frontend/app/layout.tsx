@@ -2,6 +2,7 @@ import './globals.css'
 import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import { Providers } from './providers'
+import { ConsentProvider } from './providers/consent-provider'
 import { AnalyticsProvider } from './analytics-provider'
 import { PrivacyHUD } from '@/components/PrivacyHUD'
 import { ThemeProvider } from '@/components/ThemeProvider'
@@ -74,9 +75,10 @@ export default function RootLayout({
           Skip to content
         </a>
         <ThemeProvider>
-          <Providers>
-            <AnalyticsProvider>
-              <IntegrationsLoader>
+          <ConsentProvider>
+            <Providers>
+              <AnalyticsProvider>
+                <IntegrationsLoader>
                 <header className="sticky top-0 z-50 backdrop-blur bg-bg/70 border-b border-border">
                   <div className="container flex items-center justify-between h-14">
                     <a href="/" className="font-bold">
@@ -108,6 +110,7 @@ export default function RootLayout({
               </IntegrationsLoader>
             </AnalyticsProvider>
           </Providers>
+        </ConsentProvider>
         </ThemeProvider>
       </body>
     </html>

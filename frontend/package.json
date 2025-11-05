@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "start-ci": "PORT=3000 next start -p 3000",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "test": "jest",
@@ -14,7 +15,9 @@
     "test:coverage": "jest --coverage",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "test:visual": "playwright test e2e/visual-regression.spec.ts"
+    "test:visual": "playwright test e2e/visual-regression.spec.ts",
+    "lhci": "lhci autorun --config=./lighthouserc.json || true",
+    "a11y": "pa11y-ci"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.490.0",
@@ -56,6 +59,7 @@
   },
   "devDependencies": {
     "@axe-core/react": "^4.8.4",
+    "@lhci/cli": "^0.12.0",
     "@playwright/test": "^1.40.0",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^14.1.2",
@@ -71,6 +75,8 @@
     "jest-axe": "^8.0.0",
     "jest-environment-jsdom": "^29.7.0",
     "next-pwa": "^5.6.0",
-    "typescript": "^5.3.3"
+    "pa11y-ci": "^3.0.1",
+    "typescript": "^5.3.3",
+    "wait-on": "^7.2.0"
   }
 }
