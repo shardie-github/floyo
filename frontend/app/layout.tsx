@@ -8,6 +8,7 @@ import { ThemeProvider } from '@/components/ThemeProvider'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration'
 import { PerformanceHUD } from '@/components/PerformanceHUD'
+import { IntegrationsLoader } from '@/components/integrations/IntegrationsLoader'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -74,33 +75,35 @@ export default function RootLayout({
         <ThemeProvider>
           <Providers>
             <AnalyticsProvider>
-              <header className="sticky top-0 z-50 backdrop-blur bg-bg/70 border-b border-border">
-                <div className="container flex items-center justify-between h-14">
-                  <a href="/" className="font-bold">
-                    Hardonia
-                  </a>
-                  <nav aria-label="Primary" className="flex items-center gap-4">
-                    <a className="px-3 py-2 hover:underline" href="/shop">
-                      Shop
+              <IntegrationsLoader>
+                <header className="sticky top-0 z-50 backdrop-blur bg-bg/70 border-b border-border">
+                  <div className="container flex items-center justify-between h-14">
+                    <a href="/" className="font-bold">
+                      Hardonia
                     </a>
-                    <a className="px-3 py-2 hover:underline" href="/about">
-                      About
-                    </a>
-                    <ThemeToggle />
-                  </nav>
-                </div>
-              </header>
-              <main id="main" className="container py-6">
-                {children}
-              </main>
-              <footer className="border-t border-border py-10 text-sm text-muted-foreground mt-auto">
-                <div className="container">
-                  © {new Date().getFullYear()} Hardonia
-                </div>
-              </footer>
-              <PrivacyHUD />
-              <ServiceWorkerRegistration />
-              <PerformanceHUD />
+                    <nav aria-label="Primary" className="flex items-center gap-4">
+                      <a className="px-3 py-2 hover:underline" href="/shop">
+                        Shop
+                      </a>
+                      <a className="px-3 py-2 hover:underline" href="/about">
+                        About
+                      </a>
+                      <ThemeToggle />
+                    </nav>
+                  </div>
+                </header>
+                <main id="main" className="container py-6">
+                  {children}
+                </main>
+                <footer className="border-t border-border py-10 text-sm text-muted-foreground mt-auto">
+                  <div className="container">
+                    © {new Date().getFullYear()} Hardonia
+                  </div>
+                </footer>
+                <PrivacyHUD />
+                <ServiceWorkerRegistration />
+                <PerformanceHUD />
+              </IntegrationsLoader>
             </AnalyticsProvider>
           </Providers>
         </ThemeProvider>

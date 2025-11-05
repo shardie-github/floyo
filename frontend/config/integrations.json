@@ -1,0 +1,22 @@
+{
+  "vercelAnalytics": true,
+  "plausible": false,
+  "posthog": true,
+  "clarity": false,
+  "sentry": true,
+  "cloudinary": true,
+  "uploadcare": false,
+  "lottie": true,
+  "lenis": true,
+  "framerMotion": true,
+  "tidio": false,
+  "crisp": false,
+  "hcaptcha": true,
+  "recaptcha": false,
+  "pusher": false,
+  "ably": false,
+  "algolia": false,
+  "meilisearch": false,
+  "trustpilot": false,
+  "lemonsqueezy": false
+}
