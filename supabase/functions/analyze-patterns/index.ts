@@ -3,18 +3,33 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// [CRUX+HARDEN:BEGIN:guardrails]
+import { createGuardrails } from '../_shared/guardrails.ts'
+// [CRUX+HARDEN:END:guardrails]
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+// [CRUX+HARDEN:BEGIN:guardrails]
+const guardrails = createGuardrails({
+  maxExecutionTime: 30000, // 30s
+  maxPayloadSize: 1024 * 1024, // 1MB
+  requireAuth: true,
+});
+// [CRUX+HARDEN:END:guardrails]
+
+serve(guardrails.withTimeout(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
+    // [CRUX+HARDEN:BEGIN:guardrails]
+    guardrails.validatePayloadSize(await req.text());
+    // [CRUX+HARDEN:END:guardrails]
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -25,9 +40,9 @@ serve(async (req) => {
       }
     )
 
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser()
+    // [CRUX+HARDEN:BEGIN:guardrails]
+    const { user } = await guardrails.validateAuth(supabaseClient, req.headers);
+    // [CRUX+HARDEN:END:guardrails]
 
     if (!user) {
       return new Response(

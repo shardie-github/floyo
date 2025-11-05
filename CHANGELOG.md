@@ -1,5 +1,55 @@
 # Changelog
 
+## [Unreleased] - 2025-11-05
+
+### Added (CRUX+HARDEN Upgrade)
+- **Security**: Added CSP headers support (`frontend/app/headers.ts`) - disabled by default
+- **Performance**: Added rate limiting utility (`frontend/lib/utils/rate-limit.ts`)
+- **Observability**: Added structured logging utility (`frontend/lib/obs/log.ts`)
+- **Performance**: Added optional bundle analyzer support (conditional on `ANALYZE=true`)
+- **Database**: Added online-safe concurrent indexes for events and signals tables
+- **Configuration**: Added feature flags system (`config/flags.crux.json`)
+- **CI/CD**: Added smoke tests for hardened utilities in deploy workflow
+- **Reliability**: Added retry utility with exponential backoff (`frontend/lib/utils/retry.ts`)
+- **Security**: Added edge function guardrails (`supabase/functions/_shared/guardrails.ts`)
+- **Security**: Added RLS verification script (`scripts/verify-rls.ts`)
+- **Security**: Added secrets audit script (`scripts/audit-secrets.ts`)
+- **Documentation**: Added next steps roadmap (`docs/upgrade/NEXT_STEPS.md`)
+- **API**: Added ingest API route with guardrails (`frontend/app/api/ingest/route.ts`)
+- **Workflow**: Added queue shim for workflow runs (`frontend/lib/crux/queue.ts`)
+- **Workflow**: Added workflow executor with retries (`frontend/lib/crux/executor.ts`)
+- **Observability**: Added Sentry integration (`frontend/lib/obs/sentry.ts`)
+- **Observability**: Added metrics collection (`frontend/lib/obs/metrics.ts`)
+- **Performance**: Added KV-based rate limiter (`frontend/lib/utils/rate-limit-kv.ts`)
+- **Security**: Enhanced CSP headers with nonce and allowlist support
+- **Database**: Added workflow_runs table migration (`supabase/migrations/20251105_workflow_runs.sql`)
+- **Monitoring**: Added performance dashboard (`frontend/app/admin/performance/page.tsx`)
+- **Scripts**: Added migration concurrent helper (`scripts/migrate-concurrent.sh`)
+- **CI/CD**: Added bundle analyzer workflow (`.github/workflows/bundle-analyzer.yml`)
+- **Documentation**: Added API rate limiting guide (`docs/api/rate-limiting.md`)
+- **Documentation**: Added security headers guide (`docs/security/headers.md`)
+- **Documentation**: Added observability guide (`docs/ops/observability.md`)
+- **Edge Functions**: Hardened analyze-patterns and generate-suggestions with guardrails
+
+### Changed
+- **Build**: Patched `next.config.js` with bundle analyzer wrapper (non-destructive, marker-based)
+- **CI**: Patched `.github/workflows/deploy-main.yml` with smoke test step (non-destructive)
+
+### Security
+- Added security headers: X-Frame-Options, X-Content-Type-Options, Referrer-Policy
+- CSP headers available but disabled by default (set `flags.crux.csp_headers=true` to enable)
+- Rate limiting utility available for API endpoints (enabled by default)
+
+### Documentation
+- Added upgrade guide: `docs/upgrade/README.md`
+- Added preflight scan plans: `docs/upgrade/00_inventory.plan.md`, `01_diffs.plan.md`, `02_risks.plan.md`
+
+### Notes
+- All changes are non-destructive and feature-flagged
+- Backup files created: `.bak.20251105_043451`
+- Migration uses `CREATE INDEX CONCURRENTLY` for zero-downtime
+- Rollback instructions available in `docs/upgrade/README.md`
+
 ## All Changes
 
 * Merge pull request #23 from shardie-github/cursor/complete-development-phases-1-4-6bc6 (adc0ef6)

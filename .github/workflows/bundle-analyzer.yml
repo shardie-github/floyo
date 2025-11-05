@@ -1,0 +1,56 @@
+name: Bundle Analyzer CI
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0' # Weekly on Sunday
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+          npm install --save-dev @next/bundle-analyzer
+
+      - name: Build with analyzer
+        run: |
+          cd frontend
+          ANALYZE=true npm run build
+        env:
+          ANALYZE: true
+
+      - name: Upload bundle report
+        uses: actions/upload-artifact@v3
+        with:
+          name: bundle-report
+          path: frontend/.next/analyze/*
+
+      - name: Comment PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const files = fs.readdirSync('frontend/.next/analyze');
+            const report = files.find(f => f.endsWith('.html'));
+            
+            if (report) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `📦 Bundle analysis complete. Report: bundle-report/${report}`
+              });
+            }
