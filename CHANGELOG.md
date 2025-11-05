@@ -10,6 +10,11 @@
 - **Database**: Added online-safe concurrent indexes for events and signals tables
 - **Configuration**: Added feature flags system (`config/flags.crux.json`)
 - **CI/CD**: Added smoke tests for hardened utilities in deploy workflow
+- **Reliability**: Added retry utility with exponential backoff (`frontend/lib/utils/retry.ts`)
+- **Security**: Added edge function guardrails (`supabase/functions/_shared/guardrails.ts`)
+- **Security**: Added RLS verification script (`scripts/verify-rls.ts`)
+- **Security**: Added secrets audit script (`scripts/audit-secrets.ts`)
+- **Documentation**: Added next steps roadmap (`docs/upgrade/NEXT_STEPS.md`)
 
 ### Changed
 - **Build**: Patched `next.config.js` with bundle analyzer wrapper (non-destructive, marker-based)

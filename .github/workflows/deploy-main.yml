@@ -54,7 +54,11 @@ jobs:
       - name: CRUX Harden Smoke
         run: |
           test -f frontend/lib/utils/rate-limit.ts
+          test -f frontend/lib/utils/retry.ts
           test -f frontend/lib/obs/log.ts
+          test -f supabase/functions/_shared/guardrails.ts
+          test -f scripts/verify-rls.ts
+          test -f scripts/audit-secrets.ts
           echo "Hardened utilities present ✓"
       # [CRUX+HARDEN:END:smoke]
 

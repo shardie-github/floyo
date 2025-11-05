@@ -6,14 +6,20 @@ This PR adds non-destructive performance, security, and observability enhancemen
 
 ## What Changed
 
-### ✅ New Files (7)
+### ✅ New Files (13)
 - `config/flags.crux.json` - Feature flags configuration
 - `frontend/lib/utils/rate-limit.ts` - Rate limiting utility
+- `frontend/lib/utils/retry.ts` - Retry logic with exponential backoff
 - `frontend/lib/obs/log.ts` - Structured logging utility  
 - `frontend/app/headers.ts` - Security headers (CSP disabled by default)
 - `supabase/migrations/20251105_crux_hardening.sql` - Online-safe indexes
+- `supabase/functions/_shared/guardrails.ts` - Edge function guardrails
+- `scripts/verify-rls.ts` - RLS verification script
+- `scripts/audit-secrets.ts` - Secrets audit script
 - `docs/upgrade/README.md` - Upgrade guide
 - `docs/upgrade/UPGRADE_SUMMARY.md` - Summary document
+- `docs/upgrade/NEXT_STEPS.md` - Next steps roadmap
+- `docs/upgrade/QUICK_REFERENCE.md` - Quick reference guide
 
 ### 🔧 Patched Files (2) - Marker-Based
 - `frontend/next.config.js` - Bundle analyzer support (conditional)
@@ -38,6 +44,16 @@ This PR adds non-destructive performance, security, and observability enhancemen
 ### Observability
 - ✅ Structured logging utility
 - ✅ CI smoke tests for hardened utilities
+
+### Reliability
+- ✅ Structured logging utility
+- ✅ Retry logic with exponential backoff and jitter
+- ✅ Edge function timeout guards and input validation
+- ✅ CI smoke tests for hardened utilities
+
+### Security Tools
+- ✅ RLS verification script (test user isolation)
+- ✅ Secrets audit script (scan for exposed secrets)
 
 ## Feature Flags
 
@@ -96,6 +112,14 @@ See `docs/upgrade/README.md` for detailed rollback instructions.
 3. Test migration on staging
 4. Merge when ready
 5. Enable features via flags as needed
+
+**See `docs/upgrade/NEXT_STEPS.md` for future enhancements roadmap:**
+- Edge function hardening (guardrails created)
+- Workflow executor with retries (utility ready)
+- Queue shim for workflow runs
+- Enhanced observability (Sentry integration)
+- Bundle analyzer integration
+- CSP policy customization
 
 ## Post-Merge
 
