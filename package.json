@@ -32,6 +32,7 @@
     "test:e2e": "playwright test",
     "build": "npm run build --workspace=frontend",
     "demo:privacy": "tsx scripts/demo-privacy.ts",
+    "security:check": "tsx scripts/security-self-check.ts",
   },
   "dependencies": {
     "@prisma/client": "^5.7.0",
