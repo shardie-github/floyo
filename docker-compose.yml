@@ -37,6 +37,55 @@ services:
       - ./database:/app/database
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
 
+  redis:
+    image: redis:7-alpine
+    container_name: floyo-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: floyo-celery
+    environment:
+      DATABASE_URL: postgresql://floyo:floyo@postgres:5432/floyo
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app/backend
+      - ./floyo:/app/floyo
+      - ./database:/app/database
+    command: celery -A backend.celery_app worker --loglevel=info
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: floyo-flower
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery
+    command: celery -A backend.celery_app flower --port=5555
+
   frontend:
     build:
       context: .
@@ -55,3 +104,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:

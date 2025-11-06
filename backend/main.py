@@ -962,6 +962,10 @@ app.include_router(ml_router)
 app.include_router(ml_enhanced_router)
 app.include_router(notifications_router)
 
+# Import and include webhook routes
+from backend.webhooks import router as webhook_router
+app.include_router(webhook_router)
+
 
 @app.post("/api/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit(get_endpoint_rate_limit("auth", "register") or "3/hour")
