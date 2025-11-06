@@ -50,6 +50,9 @@
     "supa:migrate:apply": "supabase db push --local false",
     "supa:status": "supabase db remote commit --dry-run || true",
     "typecheck": "npm run type-check",
+    "lint:all": "./scripts/lint-all.sh",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\" && cd backend && black . && ruff format .",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\" && cd backend && black --check . && ruff format --check .",
   },
   "dependencies": {
     "@prisma/client": "^5.7.0",

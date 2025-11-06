@@ -1,26 +1,28 @@
 """FastAPI backend application for Floyo."""
 
-from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Any
-from uuid import UUID
-
-from fastapi import FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, UploadFile, File, APIRouter, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy.orm import Session
-from sqlalchemy import create_engine, or_, and_
-from sqlalchemy.orm import sessionmaker
-import jwt
-from passlib.context import CryptContext
-from passlib.hash import bcrypt
-
 import os
 import sys
 import secrets
+import jwt
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional as TypingOptional
-from datetime import timedelta
+from typing import List, Optional, Dict, Any, Optional as TypingOptional
+from uuid import UUID
+
+from fastapi import (
+    FastAPI, Depends, HTTPException, status, WebSocket, WebSocketDisconnect,
+    UploadFile, File, APIRouter, Request
+)
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import Response
+from pydantic import BaseModel, EmailStr, Field
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import create_engine, or_, and_
+from passlib.context import CryptContext
+from passlib.hash import bcrypt
+from fastapi.middleware.gzip import GZipMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -30,9 +32,6 @@ from backend.logging_config import setup_logging, get_logger
 from backend.sentry_config import init_sentry
 from backend.rate_limit import limiter, get_rate_limit_exceeded_handler, RATE_LIMIT_PER_MINUTE, RATE_LIMIT_PER_HOUR
 from backend.cache import init_cache, cached, get, set, delete
-from fastapi.middleware.gzip import GZipMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
 
 # Import security modules
 from backend.security import (
@@ -820,6 +819,7 @@ app.include_router(analytics_router)
 app.include_router(guardian_router)
 app.include_router(ml_router)
 app.include_router(ml_enhanced_router)
+app.include_router(notifications_router)
 
 
 @app.post("/api/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)

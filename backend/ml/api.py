@@ -321,17 +321,16 @@ async def get_predictions(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
-        """Get recent predictions for the current user."""
-        try:
-            from database.models import Prediction, MLModel
-            
-            query = db.query(Prediction).filter(
+    """Get recent predictions for the current user."""
+    try:
+        from database.models import Prediction, MLModel
+        
+        query = db.query(Prediction).filter(
             Prediction.user_id == current_user.id
         )
         
-            if model_type:
-                from database.models import MLModel
-                model_ids = db.query(MLModel.id).filter(
+        if model_type:
+            model_ids = db.query(MLModel.id).filter(
                 MLModel.model_type == model_type
             ).subquery()
             query = query.filter(Prediction.model_id.in_(model_ids))
