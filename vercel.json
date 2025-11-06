@@ -1,3 +1,13 @@
-name: Privacy Cleanup Cron
-schedule: 0 2 * * * # Run daily at 2 AM UTC
-path: /api/privacy/cron/cleanup
+{
+  "buildCommand": "cd frontend && npm ci && npm run build",
+  "outputDirectory": "frontend/.next",
+  "framework": "nextjs",
+  "installCommand": "npm ci",
+  "devCommand": "cd frontend && npm run dev",
+  "crons": [
+    {
+      "path": "/api/privacy/cron/cleanup",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}
