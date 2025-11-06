@@ -1,8 +1,8 @@
 {
-  "name": "nomad-monorepo",
+  "name": "floyo-monorepo",
   "version": "1.0.0",
   "private": true,
-  "description": "Self-operating production framework",
+  "description": "Floyo - File usage pattern tracking and integration suggestions",
   "type": "module",
   "scripts": {
     "ops": "tsx ops/cli.ts",
