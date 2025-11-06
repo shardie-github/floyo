@@ -290,7 +290,20 @@ class UsageTracker:
 
 
 class BillingManager:
-    """Manage billing events and invoices."""
+    """
+    Manage billing events, invoices, and payment processing.
+    
+    Handles:
+    - Invoice generation
+    - Payment processing
+    - Refunds
+    - Payment retries
+    - Webhook processing
+    """
+    
+    # Payment retry configuration
+    MAX_RETRY_ATTEMPTS = 3
+    RETRY_DELAY_DAYS = [1, 3, 7]  # Days to wait before each retry
     
     @staticmethod
     def create_billing_event(
@@ -299,20 +312,57 @@ class BillingManager:
         event_type: str,
         amount: float,
         currency: str = "USD",
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        external_id: Optional[str] = None
     ) -> BillingEvent:
-        """Create a billing event (invoice, payment, refund, etc.)."""
+        """
+        Create a billing event (invoice, payment, refund, etc.).
+        
+        Args:
+            db: Database session
+            subscription_id: Subscription UUID
+            event_type: Type of billing event (invoice, payment, refund, etc.)
+            amount: Amount in currency units
+            currency: Currency code (default: USD)
+            metadata: Additional metadata dictionary
+            external_id: External payment provider ID (e.g., Stripe payment intent ID)
+            
+        Returns:
+            BillingEvent: Created billing event
+            
+        Raises:
+            ValueError: If event_type is invalid or amount is negative
+        """
+        # Validate event type
+        valid_types = ["invoice", "payment", "refund", "chargeback", "adjustment"]
+        if event_type not in valid_types:
+            raise ValueError(f"Invalid event_type. Must be one of: {valid_types}")
+        
+        # Validate amount (refunds can be negative)
+        if event_type != "refund" and amount < 0:
+            raise ValueError("Amount must be non-negative for non-refund events")
+        
         event = BillingEvent(
             subscription_id=subscription_id,
             event_type=event_type,
             amount=amount,
             currency=currency,
             metadata=metadata or {},
-            status="pending"
+            status="pending",
+            external_id=external_id
         )
         db.add(event)
         db.commit()
         db.refresh(event)
+        
+        logger.info(
+            f"Created billing event {event.id} for subscription {subscription_id}",
+            extra={
+                "event_type": event_type,
+                "amount": amount,
+                "currency": currency,
+            }
+        )
         
         return event
     
@@ -320,12 +370,125 @@ class BillingManager:
     def get_billing_history(
         db: Session,
         subscription_id: UUID,
-        limit: int = 50
+        limit: int = 50,
+        event_type: Optional[str] = None
     ) -> List[BillingEvent]:
-        """Get billing history for a subscription."""
-        return db.query(BillingEvent).filter(
+        """
+        Get billing history for a subscription.
+        
+        Args:
+            db: Database session
+            subscription_id: Subscription UUID
+            limit: Maximum number of events to return
+            event_type: Optional filter by event type
+            
+        Returns:
+            List[BillingEvent]: List of billing events, ordered by creation date (newest first)
+        """
+        query = db.query(BillingEvent).filter(
             BillingEvent.subscription_id == subscription_id
-        ).order_by(BillingEvent.created_at.desc()).limit(limit).all()
+        )
+        
+        if event_type:
+            query = query.filter(BillingEvent.event_type == event_type)
+        
+        return query.order_by(BillingEvent.created_at.desc()).limit(limit).all()
+    
+    @staticmethod
+    def process_payment_retry(
+        db: Session,
+        billing_event_id: UUID,
+        retry_count: int
+    ) -> bool:
+        """
+        Process payment retry for a failed billing event.
+        
+        Args:
+            db: Database session
+            billing_event_id: Billing event UUID
+            retry_count: Current retry attempt number
+            
+        Returns:
+            bool: True if retry should proceed, False if max retries exceeded
+        """
+        event = db.query(BillingEvent).filter(BillingEvent.id == billing_event_id).first()
+        if not event:
+            return False
+        
+        if retry_count > BillingManager.MAX_RETRY_ATTEMPTS:
+            event.status = "failed"
+            event.metadata["retry_exhausted"] = True
+            db.commit()
+            logger.warning(f"Payment retry exhausted for billing event {billing_event_id}")
+            return False
+        
+        # Update retry metadata
+        event.metadata["retry_count"] = retry_count
+        event.metadata["last_retry_at"] = datetime.utcnow().isoformat()
+        db.commit()
+        
+        logger.info(f"Processing payment retry {retry_count} for billing event {billing_event_id}")
+        return True
+    
+    @staticmethod
+    def mark_payment_successful(
+        db: Session,
+        billing_event_id: UUID,
+        external_id: Optional[str] = None
+    ) -> BillingEvent:
+        """
+        Mark a billing event as successfully paid.
+        
+        Args:
+            db: Database session
+            billing_event_id: Billing event UUID
+            external_id: External payment provider ID
+            
+        Returns:
+            BillingEvent: Updated billing event
+        """
+        event = db.query(BillingEvent).filter(BillingEvent.id == billing_event_id).first()
+        if not event:
+            raise ValueError("Billing event not found")
+        
+        event.status = "completed"
+        event.completed_at = datetime.utcnow()
+        if external_id:
+            event.external_id = external_id
+        
+        db.commit()
+        db.refresh(event)
+        
+        logger.info(f"Marked billing event {billing_event_id} as successful")
+        return event
+    
+    @staticmethod
+    def process_webhook(
+        db: Session,
+        webhook_data: Dict[str, Any],
+        provider: str = "stripe"
+    ) -> Optional[BillingEvent]:
+        """
+        Process webhook from payment provider.
+        
+        Args:
+            db: Database session
+            webhook_data: Webhook payload from payment provider
+            provider: Payment provider name (default: stripe)
+            
+        Returns:
+            Optional[BillingEvent]: Updated billing event if found, None otherwise
+        """
+        # This is a placeholder - implement based on your payment provider
+        # Example for Stripe:
+        # event_type = webhook_data.get("type")
+        # if event_type == "payment_intent.succeeded":
+        #     payment_intent = webhook_data.get("data", {}).get("object", {})
+        #     external_id = payment_intent.get("id")
+        #     # Find billing event by external_id and mark as successful
+        
+        logger.info(f"Processing webhook from {provider}")
+        return None
 
 
 class PricingCalculator:
