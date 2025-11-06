@@ -16,6 +16,7 @@ from backend.ml.sequence_predictor import SequencePredictor
 from backend.ml.workflow_trigger_predictor import WorkflowTriggerPredictor
 from backend.ml.workflow_recommender import WorkflowRecommender
 from backend.ml.anomaly_detector import PatternAnomalyDetector
+from database.models import MLModel, Prediction as PredictionModel
 from backend.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -39,7 +40,7 @@ class MLModel(Base):
     training_config = Column(JSONB, nullable=True)
 
 
-class Prediction(Base):
+class _PredictionBase(Base):
     """Database model for tracking predictions."""
     __tablename__ = "predictions"
     
@@ -89,7 +90,8 @@ class ModelManager:
             if cache_key in self._models:
                 return self._models[cache_key]
             
-            # Load from database
+            # Load from database (using imported MLModel from models)
+            from database.models import MLModel
             query = self.db.query(MLModel).filter(
                 MLModel.model_type == model_type,
                 MLModel.is_active == True
@@ -206,7 +208,7 @@ class ModelManager:
     
     def log_prediction(self, model_id: str, user_id: Optional[str], prediction_type: str,
                       input_features: Dict[str, Any], prediction_result: Dict[str, Any],
-                      confidence: Optional[float] = None) -> Prediction:
+                      confidence: Optional[float] = None) -> PredictionModel:
         """Log a prediction for evaluation.
         
         Args:
@@ -221,6 +223,7 @@ class ModelManager:
             Prediction record
         """
         try:
+            from database.models import Prediction
             prediction = Prediction(
                 model_id=model_id,
                 user_id=user_id,
@@ -249,6 +252,7 @@ class ModelManager:
             actual_outcome: Actual outcome
         """
         try:
+            from database.models import Prediction
             prediction = self.db.query(Prediction).filter(Prediction.id == prediction_id).first()
             if prediction:
                 prediction.actual_outcome = actual_outcome
@@ -272,6 +276,7 @@ class ModelManager:
                 return model.get_metrics()
             
             # Get from database
+            from database.models import MLModel
             model_record = self.db.query(MLModel).filter(
                 MLModel.model_type == model_type,
                 MLModel.is_active == True

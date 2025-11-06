@@ -819,6 +819,7 @@ app.include_router(monitoring_router)
 app.include_router(analytics_router)
 app.include_router(guardian_router)
 app.include_router(ml_router)
+app.include_router(ml_enhanced_router)
 
 
 @app.post("/api/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -1629,24 +1630,90 @@ async def generate_suggestions(
         Pattern.user_id == current_user.id
     ).all()
     
-    # Use the suggester logic (adapted for DB)
-    # This is a placeholder - you'd integrate the suggester properly
-    # For now, create a sample suggestion
-    new_suggestion = Suggestion(
-        user_id=current_user.id,
-        trigger="Recently used Python files",
-        suggested_integration="Dropbox API - auto-sync output files",
-        sample_code="# Auto-sync code here",
-        reasoning="Based on your usage patterns",
-        confidence=0.7
-    )
-    db.add(new_suggestion)
-    db.commit()
-    db.refresh(new_suggestion)
+    suggestions = []
+    
+    # Try ML-enhanced suggestion generation
+    try:
+        from backend.ml.model_manager import ModelManager
+        from backend.ml.pattern_classifier import PatternClassifier
+        from backend.ml.suggestion_scorer import SuggestionScorer
+        
+        model_manager = ModelManager(db)
+        pattern_classifier = model_manager.get_model("pattern_classifier")
+        suggestion_scorer = model_manager.get_model("suggestion_scorer")
+        
+        # Generate suggestions using ML if available
+        for pattern in patterns[:10]:  # Process top 10 patterns
+            if pattern.file_extension:
+                # Classify pattern
+                event_data = {
+                    "file_extension": pattern.file_extension,
+                    "tool": pattern.tools[0] if pattern.tools else None,
+                    "hour_of_day": datetime.utcnow().hour,
+                    "day_of_week": datetime.utcnow().weekday(),
+                    "ext_frequency": pattern.count,
+                }
+                
+                category = "general"
+                if pattern_classifier and pattern_classifier.is_trained:
+                    try:
+                        classification = pattern_classifier.predict(event_data)
+                        category = classification.get("category", "general")
+                    except:
+                        pass
+                
+                # Create suggestion
+                suggestion = Suggestion(
+                    user_id=current_user.id,
+                    trigger=f"Pattern detected: {pattern.file_extension} files",
+                    suggested_integration=f"Automate {category} workflow for {pattern.file_extension}",
+                    tools_involved=pattern.tools or [],
+                    sample_code=f"# {category} automation for {pattern.file_extension}",
+                    reasoning=f"Based on ML classification: {category}",
+                    confidence=0.6,
+                    actual_files=[f"pattern_{pattern.id}.{pattern.file_extension}"]
+                )
+                
+                # Score with ML if available
+                if suggestion_scorer and suggestion_scorer.is_trained:
+                    try:
+                        features = suggestion_scorer._extract_features(suggestion, db)
+                        if features:
+                            score_result = suggestion_scorer.predict(features)
+                            suggestion.confidence = score_result.get("confidence", 0.6)
+                    except:
+                        pass
+                
+                db.add(suggestion)
+                suggestions.append(suggestion)
+        
+        db.commit()
+        
+        # Refresh suggestions
+        for s in suggestions:
+            db.refresh(s)
+        
+    except Exception as e:
+        logger.warning(f"ML suggestion generation failed, using fallback: {e}")
+        # Fallback to basic suggestion
+        if patterns:
+            pattern = patterns[0]
+            new_suggestion = Suggestion(
+                user_id=current_user.id,
+                trigger=f"Recently used {pattern.file_extension} files",
+                suggested_integration="Dropbox API - auto-sync output files",
+                sample_code="# Auto-sync code here",
+                reasoning="Based on your usage patterns",
+                confidence=0.7
+            )
+            db.add(new_suggestion)
+            db.commit()
+            db.refresh(new_suggestion)
+            suggestions = [new_suggestion]
     
     await manager.broadcast("New suggestions generated")
     
-    return [new_suggestion]
+    return suggestions
 
 
 @app.get("/api/patterns", response_model=PaginatedResponse)
