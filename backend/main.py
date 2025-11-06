@@ -30,14 +30,31 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from backend.database import SessionLocal, init_db, get_db
 from backend.logging_config import setup_logging, get_logger
 from backend.sentry_config import init_sentry
-from backend.rate_limit import limiter, get_rate_limit_exceeded_handler, RATE_LIMIT_PER_MINUTE, RATE_LIMIT_PER_HOUR
-from backend.cache import init_cache, cached, get, set, delete
+from backend.rate_limit import (
+    limiter, get_rate_limit_exceeded_handler, RATE_LIMIT_PER_MINUTE, RATE_LIMIT_PER_HOUR,
+    get_endpoint_rate_limit
+)
+from backend.cache import init_cache, cached, get, set, delete, invalidate_user_cache, invalidate_resource_cache, get_cache_stats
+from backend.database import get_pool_status
 
 # Import security modules
 from backend.security import (
     SecurityHeadersMiddleware, TwoFactorAuthManager, DataEncryption,
     SecurityAuditor, InputSanitizer
 )
+
+# Import error handling
+from backend.error_handling import (
+    error_handler, APIError, NotFoundError, ValidationError,
+    AuthenticationError, AuthorizationError, ConflictError,
+    RateLimitError, InternalServerError, handle_database_error
+)
+
+# Import CSRF protection
+from backend.csrf_protection import CSRFProtectionMiddleware
+
+# Import request ID middleware
+from backend.request_id import RequestIDMiddleware
 
 # Set up logging
 setup_logging()
@@ -206,7 +223,10 @@ app = FastAPI(
 api_v1_router = APIRouter(prefix="/api/v1", tags=["v1"])
 api_router = APIRouter(prefix="/api", tags=["legacy"])
 
-# CORS middleware
+# Request ID middleware (first - for tracing)
+app.add_middleware(RequestIDMiddleware)
+
+# CORS middleware (must be early)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -215,18 +235,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# CSRF protection middleware (early in stack, after CORS)
+if settings.environment == "production":
+    app.add_middleware(CSRFProtectionMiddleware)
+
 # Compression middleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Guardian privacy middleware
 app.add_middleware(GuardianMiddleware)
 
-# Security headers middleware (already added above via SecurityHeadersMiddlewareClass)
+# Security headers middleware
+app.add_middleware(SecurityHeadersMiddlewareClass)
 
 # Rate limiting
 app.state.limiter = limiter
 from slowapi.errors import RateLimitExceeded
 app.add_exception_handler(RateLimitExceeded, get_rate_limit_exceeded_handler())
+
+# Global error handlers
+app.add_exception_handler(APIError, error_handler)
+app.add_exception_handler(HTTPException, error_handler)
+app.add_exception_handler(Exception, error_handler)
 
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -414,11 +444,17 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint for load balancers and monitoring."""
+    """
+    Health check endpoint for load balancers and monitoring.
+    
+    Returns basic health status without checking dependencies.
+    Use /health/readiness for dependency checks.
+    """
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "environment": settings.environment
     }
 
 
@@ -612,11 +648,76 @@ async def system_selfcheck():
     return results
 
 
+@app.get("/api/v1/monitoring/metrics")
+async def get_metrics(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get system metrics including cache statistics and database pool status.
+    
+    Requires authentication. Returns metrics for monitoring and observability.
+    """
+    metrics = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "cache": get_cache_stats(),
+        "database": get_pool_status(),
+    }
+    
+    # Add circuit breaker status
+    try:
+        from backend.circuit_breaker import db_circuit_breaker
+        metrics["circuit_breaker"] = {
+            "state": db_circuit_breaker.state,
+            "failure_count": db_circuit_breaker.failure_count,
+        }
+    except Exception:
+        pass
+    
+    return metrics
+
+
+@app.get("/api/v1/monitoring/cache/stats")
+async def get_cache_statistics(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get detailed cache statistics.
+    
+    Requires authentication. Returns cache hit rate, size, and other metrics.
+    """
+    return get_cache_stats()
+
+
+@app.get("/api/v1/monitoring/database/pool")
+async def get_database_pool_status(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get database connection pool status.
+    
+    Requires authentication. Returns pool utilization and connection metrics.
+    """
+    pool_status = get_pool_status()
+    
+    # Calculate utilization
+    pool_size = pool_status.get("size", 0)
+    checked_out = pool_status.get("checked_out", 0)
+    utilization = checked_out / pool_size if pool_size > 0 else 0
+    
+    return {
+        **pool_status,
+        "utilization": round(utilization, 3),
+        "utilization_percent": round(utilization * 100, 1),
+        "available": pool_size - checked_out,
+    }
+
+
 @app.get("/health/detailed")
 async def detailed_health_check(db: Session = Depends(get_db)):
     """Detailed health check with all component status."""
     from backend.database import get_pool_status
-    from backend.cache import redis_client
+    from backend.cache import redis_client, get_cache_stats
     from backend.circuit_breaker import db_circuit_breaker
     
     checks = {}
@@ -678,6 +779,17 @@ async def detailed_health_check(db: Session = Depends(get_db)):
             }
     else:
         checks["redis"] = {"status": "not_configured"}
+    
+    # Cache statistics
+    try:
+        cache_stats = get_cache_stats()
+        checks["cache"] = {
+            "status": "ok",
+            "backend": cache_stats.get("backend", "unknown"),
+            "hit_rate": cache_stats.get("hit_rate", 0),
+        }
+    except Exception as e:
+        checks["cache"] = {"status": "error", "message": str(e)}
     
     # Cache
     from backend.cache import get as cache_get
@@ -823,28 +935,32 @@ app.include_router(notifications_router)
 
 
 @app.post("/api/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("10/hour")
+@limiter.limit(get_endpoint_rate_limit("auth", "register") or "3/hour")
 async def register(
     request: Request,
     user: UserCreate,
     db: Session = Depends(get_db)
 ):
-    """Register a new user."""
+    """
+    Register a new user with enhanced validation.
+    
+    Validates email format, password strength, and checks for existing users.
+    """
+    # Validate email format
+    if not InputSanitizer.validate_email(user.email):
+        raise ValidationError("Invalid email format")
+    
     # Check if user exists
     existing_user = db.query(User).filter(User.email == user.email).first()
     if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
+        raise ConflictError("Email already registered")
     
     if user.username:
+        # Sanitize username
+        user.username = InputSanitizer.sanitize_string(user.username, max_length=50)
         existing_username = db.query(User).filter(User.username == user.username).first()
         if existing_username:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already taken"
-            )
+            raise ConflictError("Username already taken")
     
     # Generate email verification token
     verification_token = secrets.token_urlsafe(32)
@@ -852,9 +968,9 @@ async def register(
     # Validate password strength
     password_validation = InputSanitizer.validate_password_strength(user.password)
     if not password_validation["is_valid"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Password does not meet requirements: {', '.join(password_validation['issues'])}"
+        raise ValidationError(
+            "Password does not meet requirements",
+            details={"issues": password_validation["issues"]}
         )
     
     # Create user
@@ -1161,22 +1277,37 @@ async def update_profile(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Update user profile."""
-    if username and username != current_user.username:
-        existing = db.query(User).filter(User.username == username).first()
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already taken"
-            )
-        current_user.username = username
+    """
+    Update user profile with input validation and cache invalidation.
     
-    if full_name is not None:
-        current_user.full_name = full_name
-    
-    db.commit()
-    db.refresh(current_user)
-    return current_user
+    Sanitizes inputs and invalidates user cache on update.
+    """
+    try:
+        if username and username != current_user.username:
+            # Sanitize username
+            username = InputSanitizer.sanitize_string(username, max_length=50)
+            existing = db.query(User).filter(User.username == username).first()
+            if existing:
+                raise ConflictError("Username already taken")
+            current_user.username = username
+        
+        if full_name is not None:
+            # Sanitize full name
+            current_user.full_name = InputSanitizer.sanitize_string(full_name, max_length=200)
+        
+        db.commit()
+        db.refresh(current_user)
+        
+        # Invalidate user cache
+        invalidate_user_cache(str(current_user.id))
+        invalidate_resource_cache("user", str(current_user.id))
+        
+        return current_user
+    except APIError:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating profile: {e}", exc_info=True)
+        raise handle_database_error(e, context="update_profile")
 
 
 @app.get("/api/auth/verify-email/{token}")
