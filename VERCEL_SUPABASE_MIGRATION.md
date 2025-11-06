@@ -97,9 +97,43 @@ This is automatically configured via `vercel.json`. No additional setup needed.
 
 Add these secrets in Vercel (if using GitHub Actions integration):
 
-- `VERCEL_TOKEN`: Get from Vercel Settings → Tokens
-- `VERCEL_ORG_ID`: Found in project settings
-- `VERCEL_PROJECT_ID`: Found in project settings
+**How to get VERCEL_TOKEN:**
+1. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+2. Click on your profile icon (top right) → **Settings**
+3. Navigate to **Tokens** in the left sidebar
+4. Click **Create Token**
+5. Give it a name (e.g., "floyo-github-actions")
+6. Set expiration (recommended: 1 year or "No expiration" for CI/CD)
+7. Click **Create**
+8. **IMPORTANT**: Copy the token immediately - you won't be able to see it again!
+9. Store this token securely (use it as `VERCEL_TOKEN` in GitHub Secrets)
+
+**How to get VERCEL_ORG_ID:**
+1. Go to your project in Vercel Dashboard
+2. Go to **Settings** → **General**
+3. Look for **Organization ID** (it's a string like `team_xxxxxxxxxxxxx`)
+4. Copy this value
+
+**How to get VERCEL_PROJECT_ID:**
+1. Go to your project in Vercel Dashboard
+2. Go to **Settings** → **General**
+3. Look for **Project ID** (it's a string like `prj_xxxxxxxxxxxxx`)
+4. Copy this value
+
+**Alternative: Get from Vercel CLI**
+```bash
+# Install Vercel CLI
+npm i -g vercel
+
+# Login
+vercel login
+
+# Link your project
+cd frontend
+vercel link
+
+# This will show your project ID and org ID
+```
 
 ---
 
