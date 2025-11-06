@@ -59,3 +59,19 @@ tensorflow>=2.13.0  # or tensorflow-cpu for CPU-only environments
 transformers>=4.30.0  # For transformer models
 torch>=2.0.0  # Alternative to TensorFlow, required by transformers
 scipy>=1.11.0  # For statistical functions
+
+# HTTP Client (for SDK examples and external API calls)
+requests>=2.31.0
+
+# Payment Processing (for webhook verification)
+stripe>=7.0.0  # Optional but recommended for Stripe webhooks
+
+# Async HTTP (optional, for async HTTP requests)
+aiohttp>=3.9.0
+
+# Date/Time utilities
+python-dateutil>=2.8.2
+pytz>=2023.3
+
+# Additional SQLAlchemy utilities
+sqlalchemy-utils>=0.41.0

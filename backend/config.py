@@ -50,6 +50,14 @@ class Settings(BaseSettings):
     supabase_anon_key: Optional[str] = Field(default=None, description="Supabase anonymous key")
     supabase_service_role_key: Optional[str] = Field(default=None, description="Supabase service role key")
     
+    # Payment Providers (optional)
+    stripe_api_key: Optional[str] = Field(default=None, description="Stripe API key")
+    stripe_webhook_secret: Optional[str] = Field(default=None, description="Stripe webhook secret")
+    
+    # Celery (optional)
+    celery_broker_url: Optional[str] = Field(default=None, description="Celery broker URL (Redis)")
+    celery_result_backend: Optional[str] = Field(default=None, description="Celery result backend URL")
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
