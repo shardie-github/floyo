@@ -1,0 +1,25 @@
+[MASTER]
+extension-pkg-whitelist=pydantic
+ignore=CVS
+load-plugins=pylint_pydantic
+
+[MESSAGES CONTROL]
+disable=
+    C0111,  # missing-docstring
+    R0903,  # too-few-public-methods
+    R0913,  # too-many-arguments
+    C0103,  # invalid-name (for single-letter variables)
+
+[FORMAT]
+max-line-length=100
+
+[TYPECHECK]
+ignored-modules=sqlalchemy,alembic
+
+[DESIGN]
+max-args=8
+max-attributes=15
+max-locals=20
+max-returns=6
+max-branches=15
+max-statements=50
