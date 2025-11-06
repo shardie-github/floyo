@@ -9,10 +9,17 @@ import croniter
 
 from database.models import Workflow, WorkflowExecution, WorkflowVersion
 from backend.audit import log_audit
+from backend.ml.model_manager import ModelManager
+from backend.ml.workflow_trigger_predictor import WorkflowTriggerPredictor
+from backend.ml.sequence_predictor import SequencePredictor
+from backend.logging_config import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class WorkflowScheduler:
-    """Manages workflow scheduling and execution."""
+    """Manages workflow scheduling and execution with ML-powered predictions."""
     
     @staticmethod
     def create_version(
@@ -83,12 +90,56 @@ class WorkflowScheduler:
         return workflow
     
     @staticmethod
-    def should_run(workflow: Workflow) -> bool:
-        """Check if a workflow should run based on schedule."""
+    def should_run(workflow: Workflow, db: Session = None, use_ml: bool = True) -> bool:
+        """Check if a workflow should run based on schedule and ML predictions.
+        
+        Args:
+            workflow: Workflow to check
+            db: Database session (optional, needed for ML predictions)
+            use_ml: Whether to use ML predictions for smart triggering
+            
+        Returns:
+            True if workflow should run
+        """
         if not workflow.is_active:
             return False
         
         if not workflow.schedule_config:
+            # Check ML prediction for predictive triggering
+            if use_ml and db:
+                try:
+                    model_manager = ModelManager(db)
+                    sequence_predictor = model_manager.get_model("sequence_predictor")
+                    
+                    if sequence_predictor and sequence_predictor.is_trained:
+                        # Get recent events
+                        from database.models import Event
+                        from datetime import timedelta
+                        
+                        recent_events = db.query(Event).filter(
+                            Event.user_id == workflow.user_id,
+                            Event.timestamp >= datetime.utcnow() - timedelta(hours=1)
+                        ).order_by(Event.timestamp.desc()).limit(10).all()
+                        
+                        if recent_events:
+                            # Convert to dict format
+                            events_data = [{
+                                "timestamp": e.timestamp,
+                                "event_type": e.event_type,
+                                "file_path": e.file_path,
+                                "tool": e.tool,
+                                "hour_of_day": e.timestamp.hour,
+                                "day_of_week": e.timestamp.weekday(),
+                                "file_extension": e.file_path.split('.')[-1] if e.file_path and '.' in e.file_path else None,
+                            } for e in recent_events]
+                            
+                            prediction = sequence_predictor.predict(events_data)
+                            if prediction.get("will_trigger", False):
+                                logger.info(f"ML prediction triggered workflow {workflow.id}")
+                                return True
+                except Exception as e:
+                    logger.warning(f"Error in ML prediction: {e}")
+            
             return False
         
         schedule_type = workflow.schedule_config.get("type")
@@ -118,6 +169,37 @@ class WorkflowScheduler:
             last_run_dt = datetime.fromisoformat(last_run) if isinstance(last_run, str) else last_run
             time_since = (datetime.utcnow() - last_run_dt).total_seconds()
             return time_since >= interval_seconds
+        
+        elif schedule_type == "predictive" and use_ml and db:
+            # ML-based predictive scheduling
+            try:
+                model_manager = ModelManager(db)
+                trigger_predictor = model_manager.get_model("workflow_trigger_predictor")
+                
+                if trigger_predictor and trigger_predictor.is_trained:
+                    from database.models import Event
+                    from datetime import timedelta
+                    
+                    recent_events = db.query(Event).filter(
+                        Event.user_id == workflow.user_id,
+                        Event.timestamp >= datetime.utcnow() - timedelta(hours=24)
+                    ).order_by(Event.timestamp.desc()).limit(50).all()
+                    
+                    events_data = [{
+                        "timestamp": e.timestamp,
+                        "event_type": e.event_type,
+                        "file_path": e.file_path,
+                        "tool": e.tool,
+                    } for e in recent_events]
+                    
+                    prediction = trigger_predictor.predict_optimal_time(workflow, events_data, db)
+                    optimal_time = datetime.fromisoformat(prediction["optimal_time"])
+                    
+                    if datetime.utcnow() >= optimal_time:
+                        logger.info(f"ML optimal time reached for workflow {workflow.id}")
+                        return True
+            except Exception as e:
+                logger.warning(f"Error in ML predictive scheduling: {e}")
         
         return False
     

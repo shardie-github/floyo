@@ -57,7 +57,8 @@ from database.models import (
     RetentionCampaign, WorkflowShare, SubscriptionPlan, Subscription,
     UsageMetric, BillingEvent, SSOProvider, SSOConnection,
     ComplianceReport, EnterpriseSettings, TwoFactorAuth, SecurityAudit,
-    GuardianEvent, TrustLedgerRoot, TrustFabricModel, GuardianSettings
+    GuardianEvent, TrustLedgerRoot, TrustFabricModel, GuardianSettings,
+    MLModel, Prediction
 )
 from sqlalchemy import text
 from backend.batch_processor import process_event_batch
@@ -73,6 +74,7 @@ from backend.monitoring import router as monitoring_router
 from backend.analytics import router as analytics_router
 from backend.guardian.api import router as guardian_router
 from backend.guardian.middleware import GuardianMiddleware
+from backend.ml.api import router as ml_router
 from fastapi.responses import Response
 
 # Configuration
@@ -816,6 +818,7 @@ app.include_router(api_router)
 app.include_router(monitoring_router)
 app.include_router(analytics_router)
 app.include_router(guardian_router)
+app.include_router(ml_router)
 
 
 @app.post("/api/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -1544,7 +1547,7 @@ async def get_events(
     return result
 
 
-@app.get("/api/suggestions", response_model=PaginatedResponse)
+@app.get("/api/suggestions", response_model=PaginatedResponse, tags=["suggestions"])
 @limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_suggestions(
     request: Request,

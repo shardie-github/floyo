@@ -787,3 +787,43 @@ class GuardianSettings(Base):
     __table_args__ = (
         Index('idx_guardian_settings_user', 'user_id', unique=True),
     )
+
+
+class MLModel(Base):
+    """ML model metadata for tracking trained models."""
+    __tablename__ = "ml_models"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    model_type = Column(String(50), nullable=False, index=True)
+    version = Column(Integer, nullable=False, default=1)
+    training_data_hash = Column(String(64), nullable=True)
+    accuracy_metrics = Column(JSONB, nullable=True)
+    is_active = Column(Boolean, default=True, index=True)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now())
+    model_path = Column(String(500), nullable=True)
+    training_config = Column(JSONB, nullable=True)
+    
+    __table_args__ = (
+        Index('idx_ml_models_type_active', 'model_type', 'is_active'),
+    )
+
+
+class Prediction(Base):
+    """Track ML predictions for evaluation."""
+    __tablename__ = "predictions"
+    
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    model_id = Column(PGUUID(as_uuid=True), ForeignKey("ml_models.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
+    prediction_type = Column(String(50), nullable=False)
+    input_features = Column(JSONB, nullable=True)
+    prediction_result = Column(JSONB, nullable=False)
+    confidence = Column(Float, nullable=True)
+    actual_outcome = Column(JSONB, nullable=True)  # For evaluation
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), index=True)
+    
+    __table_args__ = (
+        Index('idx_predictions_user_created', 'user_id', 'created_at'),
+        Index('idx_predictions_model_type', 'model_id', 'prediction_type'),
+    )
