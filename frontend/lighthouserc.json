@@ -1,0 +1,23 @@
+{
+  "ci": {
+    "collect": {
+      "numberOfRuns": 1,
+      "startServerCommand": "npm run start-ci",
+      "url": ["http://localhost:3000/", "http://localhost:3000/integrations"],
+      "settings": {
+        "preset": "mobile",
+        "formFactor": "mobile",
+        "screenEmulation": { "mobile": true, "width": 360, "height": 640, "deviceScaleFactor": 2, "disabled": false }
+      }
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["warn", { "minScore": 0.9 }],
+        "categories:accessibility": ["warn", { "minScore": 0.95 }],
+        "cumulative-layout-shift": ["error", { "maxNumericValue": 0.05 }],
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2500 }],
+        "interactive": ["warn", { "maxNumericValue": 4000 }]
+      }
+    }
+  }
+}

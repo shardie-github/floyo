@@ -266,6 +266,70 @@ CI automatically runs both on `/integrations` page.
 
 ---
 
+## CI/CD Integration Audits
+
+This project includes automated performance and accessibility audits via GitHub Actions.
+
+### Lighthouse CI
+
+**Configuration:** `lighthouserc.json`
+
+**Metrics:**
+- Performance: min score 0.9 (warn)
+- Accessibility: min score 0.95 (warn)
+- LCP: ≤ 2500ms (error)
+- CLS: ≤ 0.05 (error)
+- TTI: ≤ 4000ms (warn)
+
+**Run locally:**
+```bash
+npm run lhci
+```
+
+### Pa11y (axe) Accessibility
+
+**Configuration:** `.pa11yci.json`
+
+**Standard:** WCAG2AA
+
+**Run locally:**
+```bash
+npm run a11y
+```
+
+### GitHub Actions Workflow
+
+The `integration-audit.yml` workflow runs on:
+- Pull requests to `main`
+- Manual workflow dispatch
+
+**Steps:**
+1. Build Next.js app
+2. Start production server (`npm run start-ci`)
+3. Run Lighthouse CI on `/` and `/integrations`
+4. Run Pa11y on `/` and `/integrations`
+5. Upload artifacts for review
+
+**Artifacts:**
+- `lighthouse-report`: Lighthouse CI results
+- `pa11y-report`: Pa11y accessibility results
+
+---
+
+## Demo Page
+
+Visit `/integrations` to see all enabled integrations in action:
+
+- **Lottie Animations**: Live Lottie player demo
+- **Smooth Scroll**: Lenis integration status
+- **Live Visitors**: Real-time visitor counter (Pusher/Ably)
+- **Trust Badges**: Trustpilot widget (consent-gated)
+- **Chat Widgets**: Tidio/Crisp status (consent-gated)
+
+All components are lazy-loaded and respect consent preferences.
+
+---
+
 ## Quick Start
 
 1. Copy `.env.example` to `.env.local`
