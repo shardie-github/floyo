@@ -56,6 +56,14 @@ from backend.csrf_protection import CSRFProtectionMiddleware
 # Import request ID middleware
 from backend.request_id import RequestIDMiddleware
 
+# Import API response standardization
+from backend.response_middleware import APIResponseMiddleware, create_standard_response, create_paginated_response
+
+# Import API versioning
+from backend.api_versioning import (
+    VersionDeprecationMiddleware, get_api_version, check_version_deprecation, add_version_headers
+)
+
 # Set up logging
 setup_logging()
 logger = get_logger(__name__)
@@ -235,9 +243,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# API versioning middleware (adds deprecation warnings)
+app.middleware("http")(VersionDeprecationMiddleware())
+
 # CSRF protection middleware (early in stack, after CORS)
 if settings.environment == "production":
     app.add_middleware(CSRFProtectionMiddleware)
+
+# API response standardization middleware (before routes)
+app.add_middleware(APIResponseMiddleware)
 
 # Compression middleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -438,8 +452,23 @@ async def get_current_user(
 
 # Routes
 @app.get("/")
-async def root():
-    return {"message": "Floyo API", "version": "1.0.0", "api_version": "v1"}
+async def root(request: Request):
+    """
+    Root endpoint with API information.
+    
+    Returns API version, status, and available versions.
+    """
+    from backend.api_versioning import get_version_info
+    
+    return create_standard_response(
+        data={
+            "message": "Floyo API",
+            "version": "1.0.0",
+            "api_version": "v1",
+            "versions": get_version_info(),
+        },
+        request=request
+    )
 
 
 @app.get("/health")
