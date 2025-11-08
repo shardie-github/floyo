@@ -1,6 +1,30 @@
-project_id = "${SUPABASE_PROJECT_REF}"
+# Supabase Configuration
+# All values are loaded from environment variables dynamically
+project_id = "${SUPABASE_PROJECT_REF:-}"
+
 [api]
 enabled = true
+port = ${SUPABASE_API_PORT:-54321}
+
 [db]
-port = 6543
-shadow_port = 6544
+port = ${SUPABASE_DB_PORT:-6543}
+shadow_port = ${SUPABASE_SHADOW_PORT:-6544}
+pooler_port = ${SUPABASE_POOLER_PORT:-6543}
+
+[auth]
+enabled = true
+site_url = "${SUPABASE_SITE_URL:-http://localhost:3000}"
+additional_redirect_urls = ["${SUPABASE_ADDITIONAL_REDIRECT_URLS:-}"]
+jwt_expiry = ${SUPABASE_JWT_EXPIRY:-3600}
+enable_signup = ${SUPABASE_ENABLE_SIGNUP:-true}
+
+[realtime]
+enabled = ${SUPABASE_REALTIME_ENABLED:-true}
+ip_version = "${SUPABASE_REALTIME_IP_VERSION:-ipv4}"
+
+[storage]
+enabled = ${SUPABASE_STORAGE_ENABLED:-true}
+file_size_limit = "${SUPABASE_STORAGE_FILE_SIZE_LIMIT:-52428800}"
+
+[edge_runtime]
+enabled = ${SUPABASE_EDGE_RUNTIME_ENABLED:-true}
