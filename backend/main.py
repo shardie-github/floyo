@@ -234,6 +234,10 @@ api_router = APIRouter(prefix="/api", tags=["legacy"])
 # Request ID middleware (first - for tracing)
 app.add_middleware(RequestIDMiddleware)
 
+# Comprehensive Security Middleware (early - before CORS)
+from backend.middleware_security import ComprehensiveSecurityMiddleware
+app.add_middleware(ComprehensiveSecurityMiddleware)
+
 # CORS middleware (must be early)
 app.add_middleware(
     CORSMiddleware,
