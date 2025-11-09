@@ -3,10 +3,12 @@
  * Utilities to prevent race conditions in concurrent operations
  */
 
+import type { QueryClient } from '@tanstack/react-query';
+
 /**
  * Debounce function to prevent rapid successive calls
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -28,7 +30,7 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * Throttle function to limit function execution rate
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
@@ -80,7 +82,7 @@ export class Mutex {
  * Request deduplication - prevents duplicate concurrent requests
  */
 class RequestDeduplicator {
-  private pending = new Map<string, Promise<any>>();
+  private pending = new Map<string, Promise<unknown>>();
 
   async dedupe<T>(
     key: string,
@@ -113,7 +115,7 @@ export const requestDeduplicator = new RequestDeduplicator();
  * Safe query invalidation - prevents race conditions in React Query
  */
 export function safeInvalidateQueries(
-  queryClient: any,
+  queryClient: QueryClient,
   queryKey: string[],
   options?: { debounceMs?: number }
 ): void {
@@ -142,7 +144,7 @@ export class WebSocketManager {
     private options: {
       maxReconnectAttempts?: number;
       baseReconnectDelay?: number;
-      onMessage?: (data: any) => void;
+      onMessage?: (data: Record<string, unknown>) => void;
       onError?: (error: Event) => void;
     } = {}
   ) {}
@@ -220,7 +222,7 @@ export class WebSocketManager {
     this.reconnectAttempts = 0;
   }
 
-  send(data: any): void {
+  send(data: Record<string, unknown>): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(data));
     }

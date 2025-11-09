@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { statsAPI, suggestionsAPI, patternsAPI, eventsAPI, sampleDataAPI } from '@/lib/api'
@@ -80,9 +80,10 @@ export function Dashboard() {
   // Set up WebSocket connection for realtime updates with race condition protection
   useEffect(() => {
     // Import WebSocketManager dynamically to avoid SSR issues
+    const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws';
     import('@/lib/race-condition-guards').then(({ WebSocketManager, safeInvalidateQueries }) => {
       const wsManager = new WebSocketManager(
-        process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws',
+        WS_URL,
         {
           maxReconnectAttempts: 5,
           baseReconnectDelay: 1000,

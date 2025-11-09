@@ -67,13 +67,13 @@ export function LoginForm() {
       await authAPI.forgotPassword(email)
       addNotification({ 
         type: 'info', 
-        message: 'If the email exists, a password reset link has been sent',
+        message: 'Password reset link sent',
         duration: 7000
       })
       setShowPasswordReset(false)
     } catch (err: any) {
-      setError(err.message || 'Failed to send reset email')
-      addNotification({ type: 'error', message: err.message || 'Failed to send reset email' })
+      setError(err.message || 'Unable to send reset email. Please try again.')
+      addNotification({ type: 'error', message: err.message || 'Unable to send reset email. Please try again.' })
     } finally {
       setLoading(false)
     }

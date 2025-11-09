@@ -5,16 +5,16 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/db/prisma';
 import { getUserId } from '@/lib/auth-utils';
-
-const prisma = new PrismaClient();
+import { createErrorResponse, withErrorHandler } from '@/lib/api/error-handler';
+import { ValidationError } from '@/src/lib/errors';
 
 // Check kill-switch
 const PRIVACY_KILL_SWITCH = process.env.PRIVACY_KILL_SWITCH === 'true';
 
 // Redact sensitive fields
-function redactMetadata(metadata: any): any {
+function redactMetadata(metadata: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
   if (!metadata || typeof metadata !== 'object') {
     return metadata;
   }
@@ -40,15 +40,16 @@ function redactMetadata(metadata: any): any {
 }
 
 const TelemetryEventSchema = z.object({
-  appId: z.string(),
-  eventType: z.string(),
-  durationMs: z.number().int().optional(),
-  metadata: z.record(z.any()).optional(),
+  appId: z.string().min(1),
+  eventType: z.string().min(1),
+  durationMs: z.number().int().positive().optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
+type TelemetryEventInput = z.infer<typeof TelemetryEventSchema>;
+
 // POST /api/privacy/telemetry
-export async function POST(request: NextRequest) {
-  try {
+export const POST = withErrorHandler(async (request: NextRequest) => {
     // Check kill-switch
     if (PRIVACY_KILL_SWITCH) {
       return NextResponse.json(
@@ -85,7 +86,13 @@ export async function POST(request: NextRequest) {
     });
 
     const body = await request.json();
-    const data = TelemetryEventSchema.parse(body);
+    const parseResult = TelemetryEventSchema.safeParse(body);
+    if (!parseResult.success) {
+      throw new ValidationError('Invalid telemetry event data', {
+        fields: parseResult.error.flatten().fieldErrors,
+      });
+    }
+    const data: TelemetryEventInput = parseResult.data;
 
     // Re-check app with actual appId
     const allowedApp = await prisma.appAllowlist.findUnique({
@@ -142,11 +149,4 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, eventId: event.id });
-  } catch (error: any) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid input', details: error.errors }, { status: 400 });
-    }
-    // Fail silently to avoid disrupting user experience
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
-}
+});
