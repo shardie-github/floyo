@@ -1,6 +1,6 @@
 agent-engine/index.ts:19 - AgentEngineConfig (used in module)
-frontend/middleware.ts:4 - default
-frontend/middleware.ts:10 - config
+frontend/middleware.ts:18 - middleware
+frontend/middleware.ts:140 - config
 frontend/playwright.config.ts:6 - default
 frontend/tailwind.config.ts:3 - default
 scripts/load-env-dynamic.ts:174 - loadEnvironmentVariables (used in module)
@@ -42,6 +42,19 @@ unified-agent/index.ts:13 - ReflectionAgent
 unified-agent/index.ts:13 - ReflectionReport
 unified-agent/orchestrator.ts:17 - AgentConfig (used in module)
 unified-agent/orchestrator.ts:29 - AgentRunResult (used in module)
+marketplace/financial/manager.ts:9 - CostEntry (used in module)
+marketplace/financial/manager.ts:23 - RevenueEntry (used in module)
+marketplace/financial/manager.ts:36 - OperatingExpense (used in module)
+marketplace/financial/manager.ts:50 - ProfitabilityMetrics (used in module)
+marketplace/financial/manager.ts:80 - FinancialConfig (used in module)
+marketplace/moderation/service.ts:16 - ModerationResult (used in module)
+marketplace/moderation/service.ts:25 - ModerationFlag (used in module)
+marketplace/moderation/service.ts:32 - ModerationScores (used in module)
+marketplace/moderation/service.ts:41 - ModerationConfig (used in module)
+marketplace/sdk/index.ts:179 - createSDK
+marketplace/sdk/index.ts:6 - SDKConfig (used in module)
+marketplace/sdk/index.ts:13 - SDKInitOptions (used in module)
+marketplace/sdk/index.ts:19 - FloyoMarketplaceSDK (used in module)
 agent-engine/core/types.ts:33 - ToolCall
 agent-engine/core/types.ts:72 - Insight (used in module)
 agent-engine/mcp/client.ts:9 - MCPMessage (used in module)
@@ -53,11 +66,12 @@ frontend/app/layout.tsx:17 - metadata
 frontend/app/layout.tsx:53 - viewport
 frontend/app/page.tsx:11 - default (used in module)
 frontend/app/providers.tsx:12 - Providers
+frontend/app/robots.ts:3 - default
 frontend/components/AccessibilityHelpers.tsx:10 - AriaLive
 frontend/components/AccessibilityHelpers.tsx:30 - FocusTrap
 frontend/components/AnalyticsDashboard.tsx:18 - AnalyticsDashboard
 frontend/components/DarkModeToggle.tsx:6 - DarkModeToggle
-frontend/components/Dashboard.tsx:26 - Dashboard
+frontend/components/Dashboard.tsx:27 - Dashboard
 frontend/components/EmptyState.tsx:21 - EmptyState
 frontend/components/ErrorBoundary.tsx:15 - ErrorBoundary
 frontend/components/EventFilters.tsx:22 - EventFilters
@@ -115,6 +129,7 @@ frontend/hooks/usePasswordValidation.ts:7 - validatePassword
 frontend/hooks/usePasswordValidation.ts:57 - getPasswordStrengthColor
 frontend/hooks/usePasswordValidation.ts:1 - PasswordValidationResult (used in module)
 frontend/hooks/useServiceWorkerUpdate.ts:3 - useServiceWorkerUpdate
+frontend/lib/i18n.ts:4 - Locale
 ops/utils/ai-guardrails.ts:49 - safeLLMCall
 ops/utils/ai-guardrails.ts:116 - createOfflineFallback
 ops/utils/auto-pr.ts:10 - SafeFix (used in module)
@@ -232,6 +247,8 @@ tools/testing/fixtures/synthetic.ts:104 - Coupons
 frontend/app/account/audit-log/page.tsx:13 - default
 frontend/app/account/export/page.tsx:6 - default
 frontend/app/admin/metrics/page.tsx:55 - default
+frontend/app/admin/metrics.json/route.ts:12 - GET
+frontend/app/admin/metrics.json/route.ts:3 - config
 frontend/app/admin/performance/page.tsx:14 - default
 frontend/app/api/feedback/route.ts:7 - POST
 frontend/app/api/feedback/route.ts:5 - runtime
@@ -252,6 +269,10 @@ frontend/app/settings/privacy/page.tsx:14 - default
 frontend/app/admin/(console)/wiring/page.tsx:35 - default
 frontend/app/api/audit/me/route.ts:7 - GET
 frontend/app/api/audit/me/route.ts:5 - runtime
+frontend/app/api/marketplace/financial/route.ts:21 - POST
+frontend/app/api/marketplace/financial/route.ts:71 - GET
+frontend/app/api/marketplace/moderate/route.ts:18 - POST
+frontend/app/api/marketplace/moderate/route.ts:49 - GET
 frontend/app/api/metrics/collect/route.ts:10 - GET
 frontend/app/api/metrics/collect/route.ts:4 - runtime
 frontend/app/api/privacy/apps/route.ts:46 - GET

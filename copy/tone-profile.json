@@ -1,0 +1,50 @@
+{
+  "persona": {
+    "style": "calm, authoritative, minimal",
+    "description": "User-facing copy should be calm (non-alarming), authoritative (clear and direct), and minimal (concise and to the point)"
+  },
+  "bannedPhrases": [
+    "click here",
+    "please note"
+  ],
+  "cta": {
+    "standard": "Add to Cart",
+    "note": "For B2B SaaS products, use action-oriented CTAs like 'Save', 'Create', 'Export'"
+  },
+  "guidelines": {
+    "errors": {
+      "tone": "calm, helpful",
+      "examples": [
+        "Something went wrong",
+        "An error occurred",
+        "Please try again"
+      ]
+    },
+    "success": {
+      "tone": "brief, positive",
+      "examples": [
+        "Saved successfully",
+        "Created successfully"
+      ]
+    },
+    "loading": {
+      "tone": "minimal",
+      "examples": [
+        "Loading...",
+        "Saving..."
+      ]
+    },
+    "emptyStates": {
+      "tone": "clear, actionable",
+      "examples": [
+        "No items found",
+        "Get started by creating your first item"
+      ]
+    }
+  },
+  "icuPlaceholders": {
+    "preserve": true,
+    "format": "{variable, type, format}",
+    "example": "{count, plural, =0 {No items} one {# item} other {# items}}"
+  }
+}

@@ -346,6 +346,13 @@ async function checkBuildArtifacts(): Promise<CheckResult> {
     };
   }
 
+  return {
+    name: 'Build Artifacts',
+    status: 'pass',
+    message: 'Build artifacts present'
+  };
+}
+
 async function checkPrivacyLint(): Promise<CheckResult> {
   try {
     const { execSync } = await import('child_process');

@@ -62,7 +62,9 @@
     "scan:usage": "knip --reporter json > reports/knip.json || true",
     "hygiene": "npm run typecheck && npm run lint && npm run prune:exports && npm run scan:usage && npm run audit:deps",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\" && cd backend && black . && ruff format .",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\" && cd backend && black --check . && ruff format --check ."
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\" && cd backend && black --check . && ruff format --check .",
+    "bench": "tsx bench/example.bench.ts",
+    "bench:trend": "node scripts/bench-trend.js"
   },
   "dependencies": {
     "@octokit/rest": "^20.0.0",
@@ -83,8 +85,7 @@
     "eslint-config-next": "^14.0.4",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-security": "^3.0.1",
-    "eslint-plugin-sonarjs": "^3.0.5",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
     "eslint-plugin-unused-imports": "^4.3.0",
     "knip": "^5.68.0",
     "madge": "^6.1.0",

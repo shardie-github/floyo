@@ -100,7 +100,7 @@ export class MCPClient extends EventEmitter {
    * Send JSON-RPC request
    */
   private async sendRequest(
-    server: string,
+    _server: string,
     request: { method: string; params: any }
   ): Promise<MCPMessage> {
     const message: MCPMessage = {

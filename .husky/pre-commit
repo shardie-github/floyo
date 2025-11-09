@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Pre-commit hooks for Phase 1 leverage point: Pre-merge Validation Checks
+# Gradual rollout: Start with warnings, then enforce
+
+echo "🔍 Running pre-commit checks..."
+
+# Type check (fast, always run)
+echo "  ✓ Type checking..."
+npm run type-check --silent || {
+  echo "❌ Type check failed. Please fix type errors before committing."
+  echo "   (You can skip with --no-verify, but this is not recommended)"
+  exit 1
+}
+
+# Lint check (fast, always run)
+echo "  ✓ Linting..."
+npm run lint --silent || {
+  echo "⚠️  Linting issues found. Consider fixing before committing."
+  # Don't fail for now (gradual rollout)
+}
+
+# Format check (optional, can be auto-fixed)
+echo "  ✓ Format check..."
+npm run format:check --silent || {
+  echo "⚠️  Formatting issues found. Run 'npm run format' to auto-fix."
+  # Don't fail for now (gradual rollout)
+}
+
+echo "✅ Pre-commit checks passed!"

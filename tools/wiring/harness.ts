@@ -209,7 +209,7 @@ class WiringHarness {
         });
         
         if (loginResponse.ok) {
-          const token = await loginResponse.json();
+          const token = await loginResponse.json() as { access_token: string };
           
           // Test protected endpoint
           const meResponse = await fetch(`${this.apiUrl}/auth/me`, {
@@ -398,7 +398,8 @@ class WiringHarness {
     console.log('?? Checking SRE Infrastructure...');
     
     // Check backup script exists
-    const backupScript = path.join(__workspace__, 'scripts/backup_database.py');
+    const workspacePath = this.getWorkspacePath();
+    const backupScript = path.join(workspacePath, 'scripts/backup_database.py');
     const exists = fs.existsSync(backupScript);
     
     this.addResult({

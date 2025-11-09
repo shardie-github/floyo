@@ -20,7 +20,7 @@ import { ProductTour, defaultTourSteps } from './ProductTour'
 import { InstallPrompt } from './InstallPrompt'
 import { ServiceWorkerUpdate } from './ServiceWorkerUpdate'
 import { OfflineIndicator } from './OfflineIndicator'
-import { LoadingButton, ProgressBar } from './LoadingStates'
+import { ProgressBar } from './LoadingStates'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { getErrorMessage } from '@/lib/errorMessages'
 
@@ -65,9 +65,11 @@ export function Dashboard() {
 
   const generateSuggestionsMutation = useMutation({
     mutationFn: suggestionsAPI.generate,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['suggestions'] })
-      queryClient.invalidateQueries({ queryKey: ['stats'] })
+    onSuccess: async () => {
+      // Use safe invalidation to prevent race conditions
+      const { safeInvalidateQueries } = await import('@/lib/race-condition-guards')
+      safeInvalidateQueries(queryClient, ['suggestions'], { debounceMs: 100 })
+      safeInvalidateQueries(queryClient, ['stats'], { debounceMs: 100 })
     },
   })
 
@@ -75,75 +77,42 @@ export function Dashboard() {
   const patterns = patternsData?.items || []
   const events = eventsData?.items || []
 
-  // Set up WebSocket connection for realtime updates with reconnection logic
+  // Set up WebSocket connection for realtime updates with race condition protection
   useEffect(() => {
-    let ws: WebSocket | null = null
-    let reconnectTimeout: NodeJS.Timeout | null = null
-    let reconnectAttempts = 0
-    const maxReconnectAttempts = 5
-    const baseReconnectDelay = 1000 // 1 second
-    
-    const connect = () => {
-      try {
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws'
-        ws = new WebSocket(wsUrl)
-        
-        ws.onopen = () => {
-          reconnectAttempts = 0 // Reset on successful connection
-        }
-        
-        ws.onmessage = (event) => {
-          try {
-            const message = JSON.parse(event.data)
-            // Refresh relevant queries on updates
+    // Import WebSocketManager dynamically to avoid SSR issues
+    import('@/lib/race-condition-guards').then(({ WebSocketManager, safeInvalidateQueries }) => {
+      const wsManager = new WebSocketManager(
+        process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws',
+        {
+          maxReconnectAttempts: 5,
+          baseReconnectDelay: 1000,
+          onMessage: (message) => {
+            // Use safe invalidation to prevent race conditions
             if (message.type === 'event') {
-              queryClient.invalidateQueries({ queryKey: ['events'] })
-              queryClient.invalidateQueries({ queryKey: ['stats'] })
+              safeInvalidateQueries(queryClient, ['events'], { debounceMs: 100 })
+              safeInvalidateQueries(queryClient, ['stats'], { debounceMs: 100 })
             } else if (message.type === 'suggestion') {
-              queryClient.invalidateQueries({ queryKey: ['suggestions'] })
+              safeInvalidateQueries(queryClient, ['suggestions'], { debounceMs: 100 })
             }
-          } catch (error) {
-            // Silently handle parse errors
+          },
+          onError: (error) => {
             if (process.env.NODE_ENV === 'development') {
-              console.error('Failed to parse WebSocket message:', error)
+              console.error('WebSocket error:', error)
             }
-          }
+          },
         }
+      )
+      
+      wsManager.connect()
 
-        ws.onerror = (error) => {
-          // Silently handle WebSocket errors - connection will retry automatically
-          if (process.env.NODE_ENV === 'development') {
-            console.error('WebSocket error:', error)
-          }
-        }
-
-        ws.onclose = () => {
-          // Attempt reconnection if not manually closed
-          if (reconnectAttempts < maxReconnectAttempts) {
-            reconnectAttempts++
-            const delay = baseReconnectDelay * Math.pow(2, reconnectAttempts - 1)
-            reconnectTimeout = setTimeout(() => {
-              connect()
-            }, delay)
-          }
-        }
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('WebSocket connection error:', error)
-        }
+      return () => {
+        wsManager.disconnect()
       }
-    }
-    
-    connect()
-
-    return () => {
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout)
+    }).catch((error) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to initialize WebSocket:', error)
       }
-      if (ws) {
-        ws.close()
-      }
-    }
+    })
   }, [queryClient])
 
   return (
