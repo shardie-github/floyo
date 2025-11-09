@@ -1,0 +1,10 @@
+ERROR: Error loading /workspace/.github/workflows/ci-intent-tests.yml
+Reason: bad indentation of a mapping entry (34:25)
+
+ 31 |           pip install -r backend/requirements.txt
+ 32 |           pip install pydantic pydantic-settings
+ 33 | 
+ 34 |       - name: Self-check: Guardrails
+------------------------------^
+ 35 |         id: guardrails
+ 36 |         run: |

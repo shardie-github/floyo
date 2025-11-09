@@ -3,10 +3,25 @@
     "next/core-web-vitals",
     "prettier"
   ],
+  "plugins": [
+    "@typescript-eslint",
+    "unused-imports",
+    "import"
+  ],
   "rules": {
     "no-console": ["warn", { "allow": ["warn", "error"] }],
-    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
-    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["error", { 
+      "argsIgnorePattern": "^_",
+      "varsIgnorePattern": "^_"
+    }],
+    "unused-imports/no-unused-imports": "error",
+    "import/order": ["warn", {
+      "alphabetize": {
+        "order": "asc"
+      },
+      "newlines-between": "always"
+    }],
     "prefer-const": "error",
     "no-var": "error"
   },

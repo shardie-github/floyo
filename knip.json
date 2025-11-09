@@ -1,0 +1,40 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": [
+    "frontend/app/**/*.{ts,tsx}",
+    "frontend/middleware.ts",
+    "ops/cli.ts",
+    "agent-engine/cli.ts",
+    "scripts/**/*.ts",
+    "tools/**/*.ts"
+  ],
+  "project": [
+    "frontend/**/*.{ts,tsx}",
+    "ops/**/*.ts",
+    "agent-engine/**/*.ts",
+    "scripts/**/*.ts",
+    "tools/**/*.ts",
+    "tests/**/*.ts",
+    "k6/**/*.js",
+    "admin/**/*.{js,jsx}",
+    "infra/**/*.{ts,mjs,js}"
+  ],
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/*.test.tsx",
+    "**/*.spec.tsx",
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/dist/**",
+    "**/build/**"
+  ],
+  "ignoreDependencies": [
+    "@types/*",
+    "eslint-config-*",
+    "eslint-plugin-*",
+    "@testing-library/*",
+    "jest-*",
+    "@playwright/*"
+  ]
+}
