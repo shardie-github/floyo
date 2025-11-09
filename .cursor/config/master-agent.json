@@ -1,0 +1,27 @@
+{
+  "agentMode": "hardonia-global",
+  "autoRun": true,
+  "schedule": {
+    "reliability": "0 */6 * * *",
+    "cost": "0 0 * * *",
+    "security": "0 */12 * * *",
+    "documentation": "0 */4 * * *",
+    "planning": "0 0 * * 1",
+    "observability": "*/15 * * * *",
+    "reflection": "0 2 * * *"
+  },
+  "artifacts": {
+    "reliability": "/workspace/admin/reliability.json",
+    "compliance": "/workspace/admin/compliance.json",
+    "metrics": "/workspace/admin/metrics.jsx",
+    "intentLog": "/workspace/docs/intent-log.md",
+    "sprint": "/workspace/roadmap/current-sprint.md",
+    "nextSteps": "/workspace/auto/next-steps.md",
+    "sbom": "/workspace/security/sbom.json"
+  },
+  "thresholds": {
+    "costOverrunPercent": 10,
+    "regressionCount": 3,
+    "duplicationThreshold": 30
+  }
+}

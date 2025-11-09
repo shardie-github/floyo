@@ -1,0 +1,22 @@
+{
+  "name": "@hardonia/unified-agent",
+  "version": "1.0.0",
+  "description": "Unified Background + Composer Agent System for Hardonia repositories",
+  "type": "module",
+  "main": "index.ts",
+  "bin": {
+    "unified-agent": "./cli.ts"
+  },
+  "scripts": {
+    "run": "tsx cli.ts run",
+    "status": "tsx cli.ts status"
+  },
+  "dependencies": {
+    "commander": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

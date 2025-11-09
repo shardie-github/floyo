@@ -25,6 +25,8 @@
     "wiring:report": "node -e \"console.log(JSON.stringify(require('./reports/connectivity/connectivity.json'), null, 2))\"",
     "agent:run": "tsx agent-engine/cli.ts",
     "agent:test": "tsx agent-engine/cli.ts",
+    "unified-agent:run": "tsx unified-agent/cli.ts run",
+    "unified-agent:status": "tsx unified-agent/cli.ts status",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
