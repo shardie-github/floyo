@@ -3123,6 +3123,10 @@ async def get_audit_logs(
 from backend.growth import RetentionEngine, ViralGrowthEngine, GrowthAnalytics
 from backend.monetization import SubscriptionManager, UsageTracker, BillingManager, PricingCalculator
 from backend.enterprise import SSOManager, EnterpriseAdmin, ComplianceManager, EcosystemManager
+from backend.stripe_integration import StripeIntegration
+from backend.retention_campaigns import RetentionCampaignService
+from backend.analytics_dashboard import AnalyticsDashboard
+from backend.usage_limit_middleware import UsageLimitMiddleware
 
 # Growth Engine Endpoints (Weeks 5-8)
 
@@ -3337,6 +3341,137 @@ async def get_ltv_cac(
         raise HTTPException(status_code=403, detail="Admin access required")
     ltv_cac = PricingCalculator.calculate_ltv_cac(db)
     return ltv_cac
+
+
+# Stripe Integration Endpoints
+@app.post("/api/billing/stripe/subscribe")
+async def create_stripe_subscription(
+    plan_id: UUID,
+    payment_method_id: Optional[str] = None,
+    billing_cycle: str = "monthly",
+    organization_id: Optional[UUID] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a Stripe subscription."""
+    try:
+        result = StripeIntegration.create_subscription(
+            db=db,
+            user_id=current_user.id,
+            plan_id=plan_id,
+            payment_method_id=payment_method_id,
+            billing_cycle=billing_cycle,
+            organization_id=organization_id
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error creating Stripe subscription: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/billing/stripe/subscription/{subscription_id}/cancel")
+async def cancel_stripe_subscription(
+    subscription_id: UUID,
+    cancel_immediately: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Cancel a Stripe subscription."""
+    try:
+        result = StripeIntegration.cancel_subscription(
+            db=db,
+            subscription_id=subscription_id,
+            user_id=current_user.id,
+            cancel_immediately=cancel_immediately
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error canceling Stripe subscription: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# Analytics Dashboard Endpoints
+@app.get("/api/analytics/dashboard")
+async def get_analytics_dashboard(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get comprehensive analytics dashboard (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    dashboard = AnalyticsDashboard.get_comprehensive_dashboard(db, days)
+    return dashboard
+
+
+@app.get("/api/analytics/activation-metrics")
+async def get_activation_metrics(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get activation metrics."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    metrics = AnalyticsDashboard.get_activation_metrics(db, days)
+    return metrics
+
+
+@app.get("/api/analytics/retention-cohorts")
+async def get_retention_cohorts(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get retention cohort data."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    cohorts = AnalyticsDashboard.get_retention_cohorts(db)
+    return cohorts
+
+
+@app.get("/api/analytics/conversion-funnel")
+async def get_conversion_funnel(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get conversion funnel metrics."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    funnel = AnalyticsDashboard.get_conversion_funnel(db, days)
+    return funnel
+
+
+@app.get("/api/analytics/revenue-metrics")
+async def get_revenue_metrics(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get revenue metrics."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    metrics = AnalyticsDashboard.get_revenue_metrics(db, days)
+    return metrics
+
+
+# Retention Campaign Endpoints
+@app.post("/api/growth/retention/process-campaigns")
+async def process_retention_campaigns(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Process retention campaigns (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    results = RetentionCampaignService.process_retention_campaigns(db)
+    return results
 
 # Enterprise Endpoints (Weeks 13-16)
 @app.get("/api/enterprise/organizations/{org_id}/stats")

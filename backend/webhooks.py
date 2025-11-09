@@ -66,6 +66,16 @@ async def stripe_webhook(
         
         logger.info(f"Processing Stripe webhook: {event_type}")
         
+        # Process webhook using StripeIntegration (new comprehensive handler)
+        try:
+            from backend.stripe_integration import StripeIntegration
+            result = StripeIntegration.process_webhook(event_data, db)
+            if result.get("processed"):
+                logger.info(f"Stripe webhook processed: {result.get('message')}")
+        except Exception as e:
+            logger.warning(f"StripeIntegration webhook handler failed, falling back to legacy handler: {e}")
+        
+        # Legacy handler (keep for backward compatibility)
         # Handle different event types
         if event_type == "payment_intent.succeeded":
             payment_intent = event_data.get("data", {}).get("object", {})

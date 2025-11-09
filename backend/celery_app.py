@@ -13,6 +13,7 @@ celery_app = Celery(
         'backend.ml.training_job',
         'backend.workflow_scheduler',
         'backend.retention_job',
+        'backend.retention_campaign_job',
     ]
 )
 
@@ -39,7 +40,7 @@ celery_app.conf.beat_schedule = {
     },
     # Retention campaigns (daily)
     'send-retention-campaigns': {
-        'task': 'backend.retention_job.send_daily_retention_campaigns',
+        'task': 'retention_campaigns.process',
         'schedule': crontab(hour=10, minute=0),  # 10 AM daily
     },
     # Workflow execution (every minute)

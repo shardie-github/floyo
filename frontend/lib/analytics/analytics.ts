@@ -2,7 +2,7 @@
  * Analytics Service
  * 
  * Comprehensive analytics tracking for user behavior, conversions, and engagement.
- * Taps into: "I want to understand my users"
+ * Integrates with PostHog for production analytics.
  */
 
 export interface AnalyticsEvent {
@@ -15,8 +15,16 @@ export interface AnalyticsEvent {
 class AnalyticsService {
   private events: AnalyticsEvent[] = [];
   private flushInterval: NodeJS.Timeout;
+  private posthog: any = null;
+  private userId: string | null = null;
+  private initialized = false;
 
   constructor() {
+    // Initialize PostHog if available
+    if (typeof window !== 'undefined') {
+      this.initPostHog();
+    }
+
     // Flush events every 30 seconds
     this.flushInterval = setInterval(() => {
       this.flush();
@@ -24,16 +32,93 @@ class AnalyticsService {
   }
 
   /**
+   * Initialize PostHog integration
+   */
+  private initPostHog(): void {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      // PostHog is loaded via PostHogProvider component
+      // We'll access it via window.posthog if available
+      if ((window as any).posthog) {
+        this.posthog = (window as any).posthog;
+        this.initialized = true;
+      }
+    } catch (error) {
+      console.warn('PostHog not available:', error);
+    }
+  }
+
+  /**
+   * Initialize analytics (called by provider)
+   */
+  init(): void {
+    this.initPostHog();
+  }
+
+  /**
+   * Identify user
+   */
+  identify(userId: string, properties?: Record<string, unknown>): void {
+    this.userId = userId;
+    
+    if (this.posthog) {
+      this.posthog.identify(userId, properties);
+    }
+
+    // Also track in our backend
+    this.track({
+      name: 'user_identified',
+      userId,
+      properties,
+    });
+  }
+
+  /**
+   * Set user properties
+   */
+  setUserProperties(properties: Record<string, unknown>): void {
+    if (this.posthog && this.userId) {
+      this.posthog.setPersonProperties(properties);
+    }
+
+    // Track in backend
+    this.track({
+      name: 'user_properties_set',
+      userId: this.userId || undefined,
+      properties,
+    });
+  }
+
+  /**
    * Track event
    */
   track(event: AnalyticsEvent): void {
-    this.events.push({
+    const eventData = {
       ...event,
-      timestamp: new Date().toISOString(),
-    });
+      timestamp: event.timestamp || new Date().toISOString(),
+      userId: event.userId || this.userId || undefined,
+    };
+
+    // Track in PostHog
+    if (this.posthog) {
+      this.posthog.capture(event.name, {
+        ...eventData.properties,
+        timestamp: eventData.timestamp,
+      });
+    }
+
+    // Also queue for backend
+    this.events.push(eventData);
 
     // Flush immediately for important events
-    if (event.name.startsWith('conversion_') || event.name.startsWith('error_')) {
+    if (
+      event.name.startsWith('conversion_') ||
+      event.name.startsWith('error_') ||
+      event.name === 'user_activated' ||
+      event.name === 'workflow_created' ||
+      event.name === 'subscription_created'
+    ) {
       this.flush();
     }
   }
@@ -42,6 +127,13 @@ class AnalyticsService {
    * Track page view
    */
   pageView(path: string, properties?: Record<string, unknown>): void {
+    if (this.posthog) {
+      this.posthog.capture('$pageview', {
+        $current_url: path,
+        ...properties,
+      });
+    }
+
     this.track({
       name: 'page_view',
       properties: {
@@ -65,6 +157,27 @@ class AnalyticsService {
   }
 
   /**
+   * Track activation (first workflow created)
+   */
+  trackActivation(activationType: string, properties?: Record<string, unknown>): void {
+    this.track({
+      name: 'user_activated',
+      properties: {
+        activation_type: activationType,
+        activated_at: new Date().toISOString(),
+        ...properties,
+      },
+    });
+
+    // Set user property
+    this.setUserProperties({
+      activated: true,
+      activated_at: new Date().toISOString(),
+      activation_type: activationType,
+    });
+  }
+
+  /**
    * Track engagement
    */
   engagement(action: string, properties?: Record<string, unknown>): void {
@@ -84,6 +197,19 @@ class AnalyticsService {
         message: error.message,
         stack: error.stack,
         ...context,
+      },
+    });
+  }
+
+  /**
+   * Track retention cohort
+   */
+  trackRetentionCohort(cohortDay: number, properties?: Record<string, unknown>): void {
+    this.track({
+      name: `retention_cohort_${cohortDay}`,
+      properties: {
+        cohort_day: cohortDay,
+        ...properties,
       },
     });
   }
@@ -134,6 +260,14 @@ class AnalyticsService {
 }
 
 export const analytics = new AnalyticsService();
+
+// Helper function for tracking events
+export function trackEvent(
+  name: string,
+  properties?: Record<string, unknown>
+): void {
+  analytics.track({ name, properties });
+}
 
 // Setup unload flush
 if (typeof window !== 'undefined') {
