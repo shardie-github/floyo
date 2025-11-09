@@ -1,0 +1,209 @@
+name: PR Auto-Comments
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  performance-diff:
+    name: Performance Diff Comment
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.state == 'open'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and measure
+        run: |
+          npm run build
+          # Measure bundle sizes
+          if [ -d "frontend/.next" ]; then
+            find frontend/.next -name "*.js" -type f -exec ls -lh {} \; | \
+              awk '{print $5, $9}' | sort -hr > current-bundle-sizes.txt
+          fi
+
+      - name: Get base branch bundle sizes
+        run: |
+          git checkout ${{ github.base_ref }} || git checkout main
+          npm ci
+          npm run build
+          if [ -d "frontend/.next" ]; then
+            find frontend/.next -name "*.js" -type f -exec ls -lh {} \; | \
+              awk '{print $5, $9}' | sort -hr > base-bundle-sizes.txt
+          fi
+          git checkout ${{ github.head_ref }}
+
+      - name: Comment bundle size diff
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            let comment = '## 📦 Bundle Size Diff\n\n';
+            
+            try {
+              const current = fs.existsSync('current-bundle-sizes.txt') 
+                ? fs.readFileSync('current-bundle-sizes.txt', 'utf-8').split('\n').filter(l => l)
+                : [];
+              const base = fs.existsSync('base-bundle-sizes.txt')
+                ? fs.readFileSync('base-bundle-sizes.txt', 'utf-8').split('\n').filter(l => l)
+                : [];
+              
+              if (current.length > 0 && base.length > 0) {
+                comment += '| File | Current | Base | Change |\n';
+                comment += '|------|---------|------|-------|\n';
+                
+                // Compare top 5 bundles
+                for (let i = 0; i < Math.min(5, current.length, base.length); i++) {
+                  const [currSize, currFile] = current[i].split(' ', 2);
+                  const [baseSize, baseFile] = base[i].split(' ', 2);
+                  
+                  // Simple comparison (would need proper parsing in production)
+                  comment += `| ${currFile || 'N/A'} | ${currSize || 'N/A'} | ${baseSize || 'N/A'} | - |\n`;
+                }
+              } else {
+                comment += '⚠️  Could not compare bundle sizes\n';
+              }
+            } catch (error) {
+              comment += `⚠️  Error comparing bundles: ${error.message}\n`;
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  security-scan:
+    name: Security Scan Comment
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.state == 'open'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: |
+          npm audit --audit-level=moderate --json > audit-results.json || true
+
+      - name: Comment security findings
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            let comment = '## 🔒 Security Scan Results\n\n';
+            
+            try {
+              const audit = JSON.parse(fs.readFileSync('audit-results.json', 'utf-8'));
+              const vulnerabilities = audit.vulnerabilities || {};
+              
+              const critical = Object.values(vulnerabilities).filter(v => v.severity === 'critical').length;
+              const high = Object.values(vulnerabilities).filter(v => v.severity === 'high').length;
+              const moderate = Object.values(vulnerabilities).filter(v => v.severity === 'moderate').length;
+              
+              if (critical > 0 || high > 0) {
+                comment += `❌ **Critical:** ${critical} | **High:** ${high}\n`;
+                comment += `⚠️  **Moderate:** ${moderate}\n\n`;
+                comment += 'Please review and address critical/high vulnerabilities before merging.\n';
+              } else if (moderate > 0) {
+                comment += `⚠️  **Moderate:** ${moderate} vulnerabilities found\n`;
+                comment += 'Consider addressing moderate vulnerabilities.\n';
+              } else {
+                comment += '✅ No critical or high vulnerabilities found\n';
+              }
+            } catch (error) {
+              comment += `⚠️  Error running security scan: ${error.message}\n`;
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  type-coverage-diff:
+    name: Type Coverage Diff Comment
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.state == 'open'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check type coverage (current)
+        run: |
+          npm run type-check 2>&1 | tee typecheck-current.txt || true
+          CURRENT_ERRORS=$(grep -c "error TS" typecheck-current.txt || echo "0")
+          echo "current_errors=$CURRENT_ERRORS" >> $GITHUB_ENV
+
+      - name: Check type coverage (base)
+        run: |
+          git checkout ${{ github.base_ref }} || git checkout main
+          npm ci
+          npm run type-check 2>&1 | tee typecheck-base.txt || true
+          BASE_ERRORS=$(grep -c "error TS" typecheck-base.txt || echo "0")
+          echo "base_errors=$BASE_ERRORS" >> $GITHUB_ENV
+          git checkout ${{ github.head_ref }}
+
+      - name: Comment type coverage diff
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const currentErrors = parseInt(process.env.CURRENT_ERRORS || '0');
+            const baseErrors = parseInt(process.env.BASE_ERRORS || '0');
+            const diff = currentErrors - baseErrors;
+            
+            let comment = '## 📊 Type Coverage Diff\n\n';
+            comment += `| Metric | Current | Base | Change |\n`;
+            comment += `|--------|---------|------|--------|\n`;
+            comment += `| Type Errors | ${currentErrors} | ${baseErrors} | ${diff > 0 ? '+' : ''}${diff} |\n`;
+            
+            if (diff > 0) {
+              comment += '\n⚠️  Type errors increased. Please review.\n';
+            } else if (diff < 0) {
+              comment += '\n✅ Type errors decreased. Great work!\n';
+            } else {
+              comment += '\n✅ No change in type errors.\n';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

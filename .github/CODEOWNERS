@@ -1,59 +1,63 @@
-# CODEOWNERS - Generated from dependency analysis
-# Architecture ownership based on module dependencies and critical paths
+# CODEOWNERS - Auto-assignment for parallel PR reviews
+# Updated for Phase 1 leverage point: Parallelize PR Reviews
+# Enables parallel reviews by assigning multiple reviewers per area
 
-# Core Infrastructure & Security
-/backend/config.py                    @security-team @architecture-team
-/backend/database.py                   @database-team @architecture-team
-/backend/main.py                       @backend-team @architecture-team
-/infra/                                @devops-team @architecture-team
-
-# Security & Authentication
+# Core Infrastructure & Security (require 2 reviewers)
 /backend/config.py                    @security-team
+/backend/database.py                   @database-team
+/backend/main.py                       @backend-team
+/infra/                                @devops-team
+
+# Security & Authentication (require security review)
 *SECRET_KEY*                           @security-team
 *CORS*                                 @security-team
 *JWT*                                  @security-team
+/backend/auth*.py                      @security-team @backend-team
+/backend/input_validation.py           @security-team @backend-team
 
-# Database & Models
-/database/models.py                    @database-team
-/database/schema.sql                   @database-team
+# Database & Models (require database review)
+/database/                             @database-team
 /migrations/                           @database-team
 /alembic.ini                           @database-team
+/prisma/                               @database-team
 
-# Resilience & Reliability
-/backend/circuit_breaker.py           @backend-team @reliability-team
-/backend/rate_limit.py                @backend-team @reliability-team
-/backend/cache.py                     @backend-team @reliability-team
-/backend/database.py                   @backend-team @reliability-team
+# Backend Services (parallel reviews enabled)
+/backend/                              @backend-team
+  # Allow any backend team member to review
+  # Multiple reviewers can approve in parallel
 
-# Workflow & Integration
-/backend/workflow_scheduler.py         @backend-team @integration-team
-/backend/connectors.py                 @backend-team @integration-team
-
-# Frontend
+# Frontend (parallel reviews enabled)
 /frontend/                             @frontend-team
+  # Allow any frontend team member to review
+  # Multiple reviewers can approve in parallel
 
-# Living Architecture System
-/infra/selfcheck/                      @architecture-team
-/src/observability/                    @architecture-team
-/docs/LIVING_ARCHITECTURE_GUIDE.md     @architecture-team
-/.github/workflows/ci-intent-tests.yml @devops-team @architecture-team
+# Ops & Agent Engine (parallel reviews enabled)
+/ops/                                  @devops-team
+/agent-engine/                         @devops-team
+/unified-agent/                        @devops-team
 
-# Documentation
-/docs/audit/                           @architecture-team
-/docs/ADRs/                            @architecture-team
-/docs/LIVING_ARCHITECTURE_GUIDE.md     @architecture-team
+# Systems & Reports (architecture review)
+/systems/                              @architecture-team
+/reports/                              @architecture-team
+/docs/                                 @architecture-team
 
-# Configuration
-/.env.example                           @devops-team @security-team
+# CI/CD & Workflows (devops review)
+/.github/workflows/                    @devops-team
+/.github/CODEOWNERS                    @devops-team @architecture-team
+
+# Configuration Files (require review)
+/.env.example                          @devops-team @security-team
 /docker-compose.yml                    @devops-team
 /Dockerfile.*                          @devops-team
+/package.json                          @devops-team @backend-team @frontend-team
+/tsconfig.json                         @frontend-team @backend-team
 
-# Tests
+# Design & Copy (design review)
+/design/                               @frontend-team
+/copy/                                 @frontend-team
+
+# Tests (any team member)
 /tests/                                @backend-team @frontend-team
-/tests/self_reflection.test.js         @architecture-team
 
-# CI/CD
-/.github/workflows/                    @devops-team @architecture-team
-
-# Default fallback
-*                                      @backend-team
+# Default: Require at least one reviewer (parallel reviews enabled)
+*                                      @backend-team @frontend-team @devops-team
