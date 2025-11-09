@@ -1,0 +1,78 @@
+graph TB
+    subgraph "Frontend"
+        FE[Frontend App]
+        FE_COMP[Components]
+        FE_HOOKS[Hooks]
+        FE_LIB[Lib/Utils]
+        FE_API[API Client]
+    end
+
+    subgraph "Backend"
+        BE_API[API Routes]
+        BE_DB[Database Layer]
+        BE_AUTH[Auth Service]
+        BE_VALID[Validation]
+    end
+
+    subgraph "Infrastructure"
+        SUPABASE[Supabase]
+        VERCEL[Vercel]
+        GITHUB[GitHub Actions]
+    end
+
+    subgraph "Ops Layer"
+        OPS_CLI[Ops CLI]
+        OPS_UTILS[Ops Utils]
+        OPS_AGENTS[Agents]
+    end
+
+    subgraph "Agent Engine"
+        AGENT_CORE[Agent Core]
+        AGENT_TOOLS[Tools]
+        AGENT_MCP[MCP Client]
+    end
+
+    %% Frontend dependencies
+    FE --> FE_COMP
+    FE --> FE_HOOKS
+    FE --> FE_LIB
+    FE_COMP --> FE_LIB
+    FE_HOOKS --> FE_API
+    FE_API --> BE_API
+
+    %% Backend dependencies
+    BE_API --> BE_AUTH
+    BE_API --> BE_VALID
+    BE_API --> BE_DB
+    BE_DB --> SUPABASE
+    BE_AUTH --> SUPABASE
+
+    %% Infrastructure dependencies
+    FE --> VERCEL
+    BE_API --> SUPABASE
+    GITHUB --> VERCEL
+    GITHUB --> SUPABASE
+
+    %% Ops dependencies
+    OPS_CLI --> OPS_UTILS
+    OPS_CLI --> OPS_AGENTS
+    OPS_UTILS --> SUPABASE
+    OPS_AGENTS --> AGENT_CORE
+
+    %% Agent dependencies
+    AGENT_CORE --> AGENT_TOOLS
+    AGENT_CORE --> AGENT_MCP
+    AGENT_TOOLS --> BE_API
+
+    %% Styling
+    classDef frontend fill:#e1f5ff
+    classDef backend fill:#fff4e1
+    classDef infra fill:#f0f0f0
+    classDef ops fill:#e8f5e9
+    classDef agent fill:#f3e5f5
+
+    class FE,FE_COMP,FE_HOOKS,FE_LIB,FE_API frontend
+    class BE_API,BE_DB,BE_AUTH,BE_VALID backend
+    class SUPABASE,VERCEL,GITHUB infra
+    class OPS_CLI,OPS_UTILS,OPS_AGENTS ops
+    class AGENT_CORE,AGENT_TOOLS,AGENT_MCP agent

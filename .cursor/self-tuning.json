@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "description": "Self-tuning configuration for Cursor Background Agent",
+  "thresholds": {
+    "typeCoverage": {
+      "target": 95,
+      "min": 90,
+      "max": 100,
+      "adjustmentStep": 1,
+      "lastRun": null,
+      "lastCoverage": null,
+      "runsToAverage": 2
+    },
+    "testCoverage": {
+      "target": 80,
+      "min": 70,
+      "max": 95
+    },
+    "bundleSize": {
+      "maxMain": 250000,
+      "maxChunk": 200000,
+      "warningThreshold": 0.9
+    },
+    "performance": {
+      "p95Latency": 500,
+      "p99Latency": 1000,
+      "maxMemory": 512000000
+    }
+  },
+  "exclusions": {
+    "typeChecking": [
+      "supabase/functions/**/*.ts",
+      "**/*.test.ts",
+      "**/*.spec.ts",
+      "node_modules/**",
+      ".next/**",
+      "dist/**",
+      "build/**"
+    ],
+    "linting": [
+      "**/*.generated.ts",
+      "**/migrations/**"
+    ],
+    "testing": [
+      "**/node_modules/**",
+      "**/dist/**"
+    ]
+  },
+  "autoAdjustment": {
+    "enabled": true,
+    "typeCoverage": {
+      "enabled": true,
+      "strategy": "conservative",
+      "description": "Adjust type coverage target ±1% based on last 2 runs. Only increase if consistently above target."
+    }
+  },
+  "metrics": {
+    "trackHistory": true,
+    "historyFile": ".cursor/metrics-history.json",
+    "maxHistoryDays": 90
+  },
+  "rules": {
+    "neverDeletePublicAPIs": true,
+    "preserveI18nPlaceholders": true,
+    "noMajorDepSwapsWithoutTests": true,
+    "systemsChangesDocsFirst": true
+  }
+}

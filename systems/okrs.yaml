@@ -1,0 +1,172 @@
+# OKRs - Objectives and Key Results
+# Quarterly Objectives aligned with SLOs
+
+version: "1.0"
+quarter: "Q1 2024"
+updated: "2024-01-01"
+
+objectives:
+  - id: "reliability"
+    title: "Achieve 99.9% Uptime and Reduce MTTR"
+    description: "Improve system reliability and incident response time"
+    key_results:
+      - metric: "uptime_percentage"
+        target: 99.9
+        current: 99.5
+        unit: "percent"
+        source: "observability/metrics_log"
+      - metric: "mttr"
+        target: 30
+        current: 60
+        unit: "minutes"
+        source: "incidents/mttr"
+      - metric: "p95_latency"
+        target: 500
+        current: 750
+        unit: "milliseconds"
+        source: "observability/api_latency"
+      - metric: "error_rate"
+        target: 0.1
+        current: 0.3
+        unit: "percent"
+        source: "observability/error_rate"
+    slos:
+      - "Uptime: 99.9% (3 nines)"
+      - "MTTR: <30 minutes"
+      - "p95 Latency: <500ms"
+    owner: "Tech Lead"
+    status: "in_progress"
+
+  - id: "velocity"
+    title: "Reduce Lead Time by 60%"
+    description: "Ship features faster without sacrificing quality"
+    key_results:
+      - metric: "lead_time"
+        target: 2
+        current: 5.5
+        unit: "hours"
+        source: "vsm/lead_time"
+      - metric: "cycle_time"
+        target: 1.25
+        current: 1.75
+        unit: "hours"
+        source: "vsm/cycle_time"
+      - metric: "deployment_frequency"
+        target: 5
+        current: 2
+        unit: "deployments_per_day"
+        source: "ci/deployment_frequency"
+      - metric: "change_failure_rate"
+        target: 5
+        current: 8
+        unit: "percent"
+        source: "deployments/failure_rate"
+    slos:
+      - "Lead Time: <2 hours"
+      - "Cycle Time: <1.25 hours"
+      - "Deployment Frequency: >5/day"
+    owner: "Tech Lead"
+    status: "in_progress"
+
+  - id: "performance"
+    title: "Reduce p95 API Latency by 25%"
+    description: "Improve API performance and user experience"
+    key_results:
+      - metric: "p95_api_latency"
+        target: 375
+        current: 500
+        unit: "milliseconds"
+        source: "observability/api_latency"
+      - metric: "p99_api_latency"
+        target: 750
+        current: 1000
+        unit: "milliseconds"
+        source: "observability/api_latency"
+      - metric: "slowest_routes_count"
+        target: 5
+        current: 10
+        unit: "routes"
+        source: "observability/slow_routes"
+      - metric: "bundle_size_main"
+        target: 225
+        current: 250
+        unit: "kilobytes"
+        source: "build/bundle_size"
+    slos:
+      - "p95 Latency: <500ms (target: <375ms)"
+      - "p99 Latency: <1000ms (target: <750ms)"
+    owner: "Tech Lead"
+    status: "in_progress"
+
+  - id: "quality"
+    title: "Reduce Rework by 55%"
+    description: "Improve code quality and reduce technical debt"
+    key_results:
+      - metric: "rework_percentage"
+        target: 3.5
+        current: 8
+        unit: "percent"
+        source: "vsm/rework"
+      - metric: "test_coverage"
+        target: 85
+        current: 75
+        unit: "percent"
+        source: "tests/coverage"
+      - metric: "type_coverage"
+        target: 95
+        current: 92
+        unit: "percent"
+        source: "typescript/coverage"
+      - metric: "technical_debt_ratio"
+        target: 3
+        current: 5
+        unit: "percent"
+        source: "code_analysis/debt_ratio"
+    slos:
+      - "Rework: <3.5%"
+      - "Test Coverage: >80%"
+      - "Type Coverage: >95%"
+    owner: "Tech Lead"
+    status: "in_progress"
+
+  - id: "security"
+    title: "Zero Security Incidents"
+    description: "Maintain security posture and compliance"
+    key_results:
+      - metric: "security_incidents"
+        target: 0
+        current: 0
+        unit: "count"
+        source: "security/incidents"
+      - metric: "vulnerability_remediation_time"
+        target: 7
+        current: 14
+        unit: "days"
+        source: "security/vulnerabilities"
+      - metric: "dependency_vulnerabilities"
+        target: 0
+        current: 27
+        unit: "count"
+        source: "npm/audit"
+      - metric: "secrets_rotation_frequency"
+        target: 20
+        current: 30
+        unit: "days"
+        source: "ops/secrets_rotation"
+    slos:
+      - "Security Incidents: 0"
+      - "Vulnerability Remediation: <7 days"
+    owner: "Security Lead"
+    status: "in_progress"
+
+# Measurement
+measurement:
+  frequency: "weekly"
+  dashboard: "systems/scorecard.md"
+  history: "systems/history/"
+
+# Review
+review:
+  frequency: "weekly"
+  format: "standup_update"
+  quarterly_review: "end_of_quarter"

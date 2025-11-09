@@ -1,0 +1,53 @@
+graph LR
+    subgraph "Feature Throughput Loop"
+        FT1[Feature Development] -->|"Faster"| FT2[More Features]
+        FT2 -->|"Higher Velocity"| FT3[More PRs]
+        FT3 -->|"More Reviews Needed"| FT4[Review Bottleneck]
+        FT4 -->|"Slower"| FT1
+        FT1 -.->|"Quality Gates"| FT5[Higher Quality]
+        FT5 -.->|"Less Rework"| FT1
+    end
+
+    subgraph "Incident Response Loop"
+        IR1[Error Occurs] -->|"Detected"| IR2[Error Alert]
+        IR2 -->|"Fast Response"| IR3[Quick Fix]
+        IR3 -->|"Deployed"| IR4[Error Resolved]
+        IR4 -.->|"Learning"| IR5[Better Monitoring]
+        IR5 -.->|"Faster Detection"| IR2
+        IR4 -.->|"Prevention"| IR6[Better Guards]
+        IR6 -.->|"Fewer Errors"| IR1
+    end
+
+    subgraph "Tech Debt Loop"
+        TD1[Tech Debt Accumulates] -->|"Slows Development"| TD2[Lower Velocity]
+        TD2 -->|"Pressure"| TD3[Skip Refactoring]
+        TD3 -->|"More Debt"| TD1
+        TD1 -.->|"Allocated Time"| TD4[Refactoring]
+        TD4 -.->|"Reduced Debt"| TD1
+    end
+
+    subgraph "Telemetry-Driven Fixes Loop"
+        TF1[Telemetry Collected] -->|"Analyzed"| TF2[Issues Identified]
+        TF2 -->|"Prioritized"| TF3[Fixes Implemented]
+        TF3 -->|"Deployed"| TF4[Better Metrics]
+        TF4 -.->|"More Data"| TF1
+        TF3 -.->|"Improved System"| TF5[Better Performance]
+        TF5 -.->|"Better UX"| TF6[More Usage]
+        TF6 -.->|"More Telemetry"| TF1
+    end
+
+    %% Reinforcing loops (R)
+    FT2 -.->|"R1: Velocity Growth"| FT3
+    IR3 -.->|"R2: Response Speed"| IR4
+    TD3 -.->|"R3: Debt Spiral"| TD1
+    TF3 -.->|"R4: Improvement Cycle"| TF5
+
+    %% Balancing loops (B)
+    FT4 -.->|"B1: Capacity Constraint"| FT1
+    IR6 -.->|"B2: Prevention"| IR1
+    TD4 -.->|"B3: Debt Reduction"| TD1
+    TF2 -.->|"B4: Prioritization"| TF3
+
+    %% Styling
+    classDef reinforcing fill:#ffebee
+    classDef balancing fill:#e3f2fd

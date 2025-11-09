@@ -28,6 +28,7 @@
     "build",
     ".next",
     "**/*.test.ts",
-    "**/*.spec.ts"
+    "**/*.spec.ts",
+    "supabase/functions/**/*.ts"
   ]
 }

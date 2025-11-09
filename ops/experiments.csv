@@ -1,0 +1,6 @@
+name,hypothesis,metric,owner,start,end,guardrails,rollback
+Pre-merge Preview Validation,Adding pre-merge validation checks will reduce CI rework by 50%,CI rework percentage,Tech Lead,2024-01-20,2024-02-03,Fail builds if checks fail; gradual rollout with warnings first,Disable pre-merge checks; rely on CI only
+CI Concurrency Tuning,Increasing CI concurrency will reduce CI wait time by 30%,CI wait time,DevOps,2024-01-20,2024-02-03,Monitor resource usage; set max concurrency limits,Reduce concurrency to previous levels
+Auto-comment Performance Diffs,Adding auto-comments on PRs will reduce feedback latency by 75%,Feedback latency,Tech Lead,2024-01-27,2024-02-10,Can disable per-repo; start with warnings only,Disable auto-comments; manual reviews only
+Canary Deployment for API,Canary deployment will reduce deploy rework by 50%,Deploy rework percentage,DevOps,2024-02-10,2024-02-24,Start with 10% traffic; auto-rollback on threshold breach,Disable canary; use blue-green deployment
+Parallel PR Reviews,Enabling parallel reviews will reduce PR review time by 50%,PR review wait time,Tech Lead,2024-01-20,2024-02-03,Maintain review quality standards; monitor review quality,Remove CODEOWNERS; revert to sequential reviews

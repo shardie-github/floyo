@@ -1,8 +1,5 @@
 
-> floyo-frontend@1.0.0 type-check
+> floyo-monorepo@1.0.0 type-check
 > tsc --noEmit
 
-components/Dashboard.tsx(275,16): error TS1005: '...' expected.
-components/Dashboard.tsx(356,10): error TS17008: JSX element 'div' has no corresponding closing tag.
-components/Dashboard.tsx(427,15): error TS1005: ')' expected.
-components/Dashboard.tsx(432,12): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+ops/commands/doctor.ts(403,1): error TS1005: '}' expected.
