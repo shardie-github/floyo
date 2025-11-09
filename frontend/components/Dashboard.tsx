@@ -4,15 +4,31 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { statsAPI, suggestionsAPI, patternsAPI, eventsAPI, sampleDataAPI } from '@/lib/api'
-import { SuggestionsList } from './SuggestionsList'
-import { StatsCards } from './StatsCards'
-import { PatternsList } from './PatternsList'
-import { EventsList } from './EventsList'
+// Dynamic imports for heavy components to reduce initial bundle size
+import dynamic from 'next/dynamic'
+
+const SuggestionsList = dynamic(() => import('./SuggestionsList').then(m => ({ default: m.SuggestionsList })), {
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-32 rounded" />,
+})
+const StatsCards = dynamic(() => import('./StatsCards').then(m => ({ default: m.StatsCards })), {
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-24 rounded" />,
+})
+const PatternsList = dynamic(() => import('./PatternsList').then(m => ({ default: m.PatternsList })), {
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-32 rounded" />,
+})
+const EventsList = dynamic(() => import('./EventsList').then(m => ({ default: m.EventsList })), {
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-32 rounded" />,
+})
+const PatternChart = dynamic(() => import('./PatternChart').then(m => ({ default: m.PatternChart })), {
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded" />,
+})
+const EventTimeline = dynamic(() => import('./EventTimeline').then(m => ({ default: m.EventTimeline })), {
+  loading: () => <div className="animate-pulse bg-gray-200 dark:bg-gray-700 h-64 rounded" />,
+})
+
 import { DarkModeToggle } from './DarkModeToggle'
 import { EventFilters } from './EventFilters'
 import { Pagination } from './Pagination'
-import { PatternChart } from './PatternChart'
-import { EventTimeline } from './EventTimeline'
 import { EmptyState } from './EmptyState'
 import { NotificationCenter } from './NotificationCenter'
 import { useNotifications } from './NotificationProvider'
@@ -63,39 +79,63 @@ export function Dashboard() {
     queryFn: () => eventsAPI.list(eventSkip, eventLimit, eventFilters),
   })
 
+  // Memoize mutation callbacks
+  const handleGenerateSuccess = useCallback(async () => {
+    const { safeInvalidateQueries } = await import('@/lib/race-condition-guards')
+    safeInvalidateQueries(queryClient, ['suggestions'], { debounceMs: 100 })
+    safeInvalidateQueries(queryClient, ['stats'], { debounceMs: 100 })
+  }, [queryClient])
+
   const generateSuggestionsMutation = useMutation({
     mutationFn: suggestionsAPI.generate,
-    onSuccess: async () => {
-      // Use safe invalidation to prevent race conditions
-      const { safeInvalidateQueries } = await import('@/lib/race-condition-guards')
-      safeInvalidateQueries(queryClient, ['suggestions'], { debounceMs: 100 })
-      safeInvalidateQueries(queryClient, ['stats'], { debounceMs: 100 })
-    },
+    onSuccess: handleGenerateSuccess,
   })
+  
+  // Memoize event handlers
+  const handleNotificationToggle = useCallback(() => {
+    setShowNotificationCenter(prev => !prev)
+  }, [])
+  
+  const handleLogout = useCallback(() => {
+    logout()
+  }, [logout])
 
-  const suggestions = suggestionsData?.items || []
-  const patterns = patternsData?.items || []
-  const events = eventsData?.items || []
+  // Memoize derived data to prevent unnecessary re-renders
+  const suggestions = useMemo(() => suggestionsData?.items || [], [suggestionsData?.items])
+  const patterns = useMemo(() => patternsData?.items || [], [patternsData?.items])
+  const events = useMemo(() => eventsData?.items || [], [eventsData?.items])
+  
+  // Memoize loading states
+  const isLoading = useMemo(() => 
+    statsLoading || suggestionsLoading || patternsLoading || eventsLoading,
+    [statsLoading, suggestionsLoading, patternsLoading, eventsLoading]
+  )
+
+  // Memoize WebSocket message handler
+  const handleWebSocketMessage = useCallback((message: Record<string, unknown>) => {
+    if (message.type === 'event') {
+      const { safeInvalidateQueries } = require('@/lib/race-condition-guards')
+      safeInvalidateQueries(queryClient, ['events'], { debounceMs: 100 })
+      safeInvalidateQueries(queryClient, ['stats'], { debounceMs: 100 })
+    } else if (message.type === 'suggestion') {
+      const { safeInvalidateQueries } = require('@/lib/race-condition-guards')
+      safeInvalidateQueries(queryClient, ['suggestions'], { debounceMs: 100 })
+    }
+  }, [queryClient])
 
   // Set up WebSocket connection for realtime updates with race condition protection
   useEffect(() => {
     // Import WebSocketManager dynamically to avoid SSR issues
     const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws';
-    import('@/lib/race-condition-guards').then(({ WebSocketManager, safeInvalidateQueries }) => {
-      const wsManager = new WebSocketManager(
+    let wsManager: { disconnect: () => void } | null = null;
+    
+    import('@/lib/race-condition-guards').then(({ WebSocketManager }) => {
+      wsManager = new WebSocketManager(
         WS_URL,
         {
           maxReconnectAttempts: 5,
           baseReconnectDelay: 1000,
-          onMessage: (message) => {
-            // Use safe invalidation to prevent race conditions
-            if (message.type === 'event') {
-              safeInvalidateQueries(queryClient, ['events'], { debounceMs: 100 })
-              safeInvalidateQueries(queryClient, ['stats'], { debounceMs: 100 })
-            } else if (message.type === 'suggestion') {
-              safeInvalidateQueries(queryClient, ['suggestions'], { debounceMs: 100 })
-            }
-          },
+          onMessage: handleWebSocketMessage,
           onError: (error) => {
             if (process.env.NODE_ENV === 'development') {
               console.error('WebSocket error:', error)
@@ -105,16 +145,18 @@ export function Dashboard() {
       )
       
       wsManager.connect()
-
-      return () => {
-        wsManager.disconnect()
-      }
     }).catch((error) => {
       if (process.env.NODE_ENV === 'development') {
         console.error('Failed to initialize WebSocket:', error)
       }
     })
-  }, [queryClient])
+
+    return () => {
+      if (wsManager) {
+        wsManager.disconnect()
+      }
+    }
+  }, [handleWebSocketMessage])
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
@@ -127,7 +169,7 @@ export function Dashboard() {
             </div>
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => setShowNotificationCenter(true)}
+                onClick={handleNotificationToggle}
                 className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
                 aria-label="Notifications"
               >
@@ -138,7 +180,7 @@ export function Dashboard() {
               <DarkModeToggle />
               <span className="text-sm text-gray-700 dark:text-gray-300">{user?.email}</span>
               <button
-                onClick={logout}
+                onClick={handleLogout}
                 className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-3 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2"
                 aria-label="Logout"
               >

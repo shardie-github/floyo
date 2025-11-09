@@ -9,6 +9,7 @@ import prisma from '@/lib/db/prisma';
 import { getUserId } from '@/lib/auth-utils';
 import { createErrorResponse, withErrorHandler } from '@/lib/api/error-handler';
 import { ValidationError } from '@/src/lib/errors';
+import { PrivacyService } from '@/lib/services/privacy-service';
 
 // Check kill-switch
 const PRIVACY_KILL_SWITCH = process.env.PRIVACY_KILL_SWITCH === 'true';
@@ -50,103 +51,73 @@ type TelemetryEventInput = z.infer<typeof TelemetryEventSchema>;
 
 // POST /api/privacy/telemetry
 export const POST = withErrorHandler(async (request: NextRequest) => {
-    // Check kill-switch
-    if (PRIVACY_KILL_SWITCH) {
-      return NextResponse.json(
-        { success: false, reason: 'kill_switch_active' },
-        { status: 503 }
-      );
-    }
+  // Check kill-switch
+  if (PRIVACY_KILL_SWITCH) {
+    return NextResponse.json(
+      { success: false, reason: 'kill_switch_active' },
+      { status: 503 }
+    );
+  }
 
-    const userId = await getUserId(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  const userId = await getUserId(request);
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-    // Check if user has monitoring enabled
-    const prefs = await prisma.privacyPrefs.findUnique({
-      where: { userId },
+  const privacyService = new PrivacyService();
+
+  // Check if user has monitoring enabled
+  if (!(await privacyService.checkMonitoringEnabled(userId))) {
+    return NextResponse.json(
+      { success: false, reason: 'monitoring_disabled' },
+      { status: 403 }
+    );
+  }
+
+  const body = await request.json();
+  const parseResult = TelemetryEventSchema.safeParse(body);
+  if (!parseResult.success) {
+    throw new ValidationError('Invalid telemetry event data', {
+      fields: parseResult.error.flatten().fieldErrors,
     });
+  }
+  const data: TelemetryEventInput = parseResult.data;
 
-    if (!prefs || !prefs.monitoringEnabled || !prefs.consentGiven) {
-      return NextResponse.json(
-        { success: false, reason: 'monitoring_disabled' },
-        { status: 403 }
-      );
-    }
+  // Check if app is allowed
+  if (!(await privacyService.isAppAllowed(userId, data.appId))) {
+    return NextResponse.json(
+      { success: false, reason: 'app_not_allowed' },
+      { status: 403 }
+    );
+  }
 
-    // Check if app is allowed
-    const _app = await prisma.appAllowlist.findUnique({
-      where: {
-        userId_appId: {
-          userId,
-          appId: '', // Will be set from body
-        },
-      },
-    });
+  // Check signal toggle
+  if (!(await privacyService.isSignalEnabled(userId, data.eventType))) {
+    return NextResponse.json(
+      { success: false, reason: 'signal_disabled' },
+      { status: 403 }
+    );
+  }
 
-    const body = await request.json();
-    const parseResult = TelemetryEventSchema.safeParse(body);
-    if (!parseResult.success) {
-      throw new ValidationError('Invalid telemetry event data', {
-        fields: parseResult.error.flatten().fieldErrors,
-      });
-    }
-    const data: TelemetryEventInput = parseResult.data;
+  // Apply sampling rate
+  const samplingRate = await privacyService.getSamplingRate(userId, data.eventType);
+  if (Math.random() > samplingRate) {
+    return NextResponse.json({ success: false, reason: 'sampled_out' });
+  }
 
-    // Re-check app with actual appId
-    const allowedApp = await prisma.appAllowlist.findUnique({
-      where: {
-        userId_appId: {
-          userId,
-          appId: data.appId,
-        },
-      },
-    });
+  // Redact metadata
+  const redactedMetadata = data.metadata ? redactMetadata(data.metadata) : null;
 
-    if (!allowedApp || !allowedApp.enabled || allowedApp.scope === 'none') {
-      return NextResponse.json(
-        { success: false, reason: 'app_not_allowed' },
-        { status: 403 }
-      );
-    }
+  // Create event
+  const event = await prisma.telemetryEvent.create({
+    data: {
+      userId,
+      appId: data.appId,
+      eventType: data.eventType,
+      durationMs: data.durationMs,
+      metadataRedactedJson: redactedMetadata,
+    },
+  });
 
-    // Check signal toggle
-    const signalToggle = await prisma.signalToggle.findUnique({
-      where: {
-        userId_signalKey: {
-          userId,
-          signalKey: data.eventType,
-        },
-      },
-    });
-
-    if (signalToggle && !signalToggle.enabled) {
-      return NextResponse.json(
-        { success: false, reason: 'signal_disabled' },
-        { status: 403 }
-      );
-    }
-
-    // Apply sampling rate
-    const samplingRate = signalToggle?.samplingRate ?? 1.0;
-    if (Math.random() > samplingRate) {
-      return NextResponse.json({ success: false, reason: 'sampled_out' });
-    }
-
-    // Redact metadata
-    const redactedMetadata = data.metadata ? redactMetadata(data.metadata) : null;
-
-    // Create event
-    const event = await prisma.telemetryEvent.create({
-      data: {
-        userId,
-        appId: data.appId,
-        eventType: data.eventType,
-        durationMs: data.durationMs,
-        metadataRedactedJson: redactedMetadata,
-      },
-    });
-
-    return NextResponse.json({ success: true, eventId: event.id });
+  return NextResponse.json({ success: true, eventId: event.id });
 });

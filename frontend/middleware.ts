@@ -1,142 +1,130 @@
-import createMiddleware from 'next-intl/middleware';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { locales, defaultLocale } from './lib/i18n';
+import { shouldRouteToCanary } from '@/lib/flags';
 
-const ADMIN_PATHS = [/^\/admin(\/.*)?$/];
+// Simple user ID extraction for middleware (doesn't require full auth)
+function getUserIdFromRequest(request: NextRequest): string | undefined {
+  // Try to get from cookie or header
+  const authHeader = request.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    // In production, decode JWT token here
+    // For now, return undefined (canary will work for authenticated users via API routes)
+    return undefined;
+  }
+  // Check cookie
+  const sessionCookie = request.cookies.get('session');
+  if (sessionCookie?.value) {
+    // In production, decode session token here
+    return undefined;
+  }
+  return undefined;
+}
+
 const CSP_MODE = (process.env.CSP_MODE || 'balanced') as 'strict' | 'balanced' | 'loose';
 const REVALIDATE_SECONDS = parseInt(process.env.REVALIDATE_SECONDS || '60', 10);
 const PREVIEW_REQUIRE_AUTH = process.env.PREVIEW_REQUIRE_AUTH !== 'false';
 
-// Create i18n middleware
-const intlMiddleware = createMiddleware({
-  locales,
-  defaultLocale,
-  localePrefix: 'as-needed',
-});
+// CSP policies
+const CSP_POLICIES = {
+  strict: {
+    'default-src': ["'self'"],
+    'script-src': ["'self'", "'unsafe-inline'"],
+    'style-src': ["'self'", "'unsafe-inline'"],
+    'img-src': ["'self'", 'data:', 'https:'],
+    'font-src': ["'self'", 'data:'],
+    'connect-src': ["'self'"],
+  },
+  balanced: {
+    'default-src': ["'self'"],
+    'script-src': ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net'],
+    'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+    'img-src': ["'self'", 'data:', 'https:'],
+    'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
+    'connect-src': ["'self'", 'https://api.vercel.app'],
+  },
+  loose: {
+    'default-src': ["'self'"],
+    'script-src': ["'self'", "'unsafe-inline'", 'https:'],
+    'style-src': ["'self'", "'unsafe-inline'", 'https:'],
+    'img-src': ["'self'", 'data:', 'https:'],
+    'font-src': ["'self'", 'https:', 'data:'],
+    'connect-src': ["'self'", 'https:'],
+  },
+};
 
-export function middleware(req: NextRequest) {
-  const url = req.nextUrl;
-  
-  // Apply i18n middleware first and get response
-  const intlResponse = intlMiddleware(req);
-  
-  // Get response (intlMiddleware returns NextResponse or void)
-  const res = intlResponse instanceof NextResponse 
-    ? intlResponse.clone() 
-    : NextResponse.next();
-  
-  // Security headers
-  res.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
-  res.headers.set('X-Frame-Options', 'SAMEORIGIN');
-  res.headers.set('X-Content-Type-Options', 'nosniff');
-  res.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.headers.set('X-DNS-Prefetch-Control', 'on');
-  res.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-  
-  // Content-Security-Policy based on CSP_MODE
-  let csp: string;
-  if (CSP_MODE === 'strict') {
-    csp = [
-      "default-src 'self'",
-      "script-src 'self'",
-      "style-src 'self'",
-      "img-src 'self' data:",
-      "font-src 'self' data:",
-      "connect-src 'self'",
-      "frame-ancestors 'self'",
-      "form-action 'self'",
-      "base-uri 'self'"
-    ].join('; ');
-  } else if (CSP_MODE === 'balanced') {
-    csp = [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
-      "style-src 'self' 'unsafe-inline' https:",
-      "img-src 'self' data: https:",
-      "font-src 'self' data: https:",
-      "connect-src 'self' https:",
-      "frame-ancestors 'self'",
-      "form-action 'self'",
-      "base-uri 'self'"
-    ].join('; ');
-  } else { // loose
-    csp = [
-      "default-src 'self' *",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' *",
-      "style-src 'self' 'unsafe-inline' *",
-      "img-src 'self' data: *",
-      "font-src 'self' data: *",
-      "connect-src 'self' *",
-      "frame-ancestors 'self'",
-      "form-action 'self'",
-      "base-uri 'self'"
-    ].join('; ');
-  }
-  res.headers.set('Content-Security-Policy', csp);
-  
-  // Preview protection & admin basic auth
-  const isPreview = url.host.includes('-git-') || url.host.includes('-vercel.app') || process.env.VERCEL_ENV === 'preview';
-  const needsAdminGuard = ADMIN_PATHS.some(rx => rx.test(url.pathname));
-  
-  if (needsAdminGuard) {
-    const authHeader = req.headers.get('authorization') || '';
-    const adminAuth = process.env.ADMIN_BASIC_AUTH || '';
-    
-    if (adminAuth) {
-      // Admin auth is configured - require Basic Auth
-      if (!authHeader.startsWith('Basic ')) {
-        return new NextResponse('Unauthorized', {
-          status: 401,
-          headers: {
-            'WWW-Authenticate': 'Basic realm="Admin"',
-            ...Object.fromEntries(res.headers.entries()),
-          },
-        });
-      }
-      
-      // Verify credentials
-      try {
-        const encoded = authHeader.split(' ')[1];
-        const decoded = Buffer.from(encoded, 'base64').toString('utf-8');
-        const [username, password] = decoded.split(':');
-        const providedAuth = `${username}:${password}`;
-        
-        if (providedAuth !== adminAuth) {
-          return new NextResponse('Unauthorized', {
-            status: 401,
-            headers: {
-              'WWW-Authenticate': 'Basic realm="Admin"',
-              ...Object.fromEntries(res.headers.entries()),
-            },
-          });
+function getCSPHeader(): string {
+  const policy = CSP_POLICIES[CSP_MODE];
+  return Object.entries(policy)
+    .map(([directive, sources]) => `${directive} ${sources.join(' ')}`)
+    .join('; ');
+}
+
+export async function middleware(request: NextRequest) {
+  const url = request.nextUrl.clone();
+  const pathname = url.pathname;
+
+  // Canary routing for checkout module
+  if (pathname.startsWith('/checkout') || pathname.startsWith('/api/checkout')) {
+    try {
+      const userId = getUserIdFromRequest(request);
+      if (userId) {
+        const routeToCanary = await shouldRouteToCanary(userId, 'checkout');
+        if (routeToCanary && process.env.CANARY_PREVIEW_URL) {
+          // Route to canary preview URL
+          const canaryUrl = new URL(pathname, process.env.CANARY_PREVIEW_URL);
+          canaryUrl.search = url.search;
+          return NextResponse.rewrite(canaryUrl);
         }
-      } catch (e) {
-        return new NextResponse('Unauthorized', {
-          status: 401,
-          headers: {
-            'WWW-Authenticate': 'Basic realm="Admin"',
-            ...Object.fromEntries(res.headers.entries()),
-          },
-        });
       }
-    } else if (isPreview && PREVIEW_REQUIRE_AUTH) {
-      // No admin auth configured but preview requires protection
-      return new NextResponse('Protected in preview', {
+    } catch (error) {
+      // Fail silently, continue with normal routing
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Canary routing error:', error);
+      }
+    }
+  }
+
+  // Preview protection
+  const isPreview = url.host.includes('-git-') || 
+                   url.host.includes('-vercel.app') || 
+                   process.env.VERCEL_ENV === 'preview';
+
+  if (isPreview && PREVIEW_REQUIRE_AUTH) {
+    const adminAuth = process.env.ADMIN_BASIC_AUTH || '';
+    const authHeader = request.headers.get('authorization');
+
+    if (adminAuth && authHeader !== `Basic ${adminAuth}`) {
+      return new NextResponse('Authentication required', {
         status: 401,
-        headers: Object.fromEntries(res.headers.entries()),
+        headers: {
+          'WWW-Authenticate': 'Basic realm="Preview Access"',
+        },
       });
     }
   }
+
+  // Security headers
+  const response = NextResponse.next();
   
-  // Add tiny preview banner header (frontend can render if present)
-  if (isPreview) {
-    res.headers.set('X-Preview-Env', 'true');
+  // CSP
+  response.headers.set('Content-Security-Policy', getCSPHeader());
+  
+  // Security headers
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Cache control for static assets
+  if (pathname.startsWith('/_next/static/') || pathname.startsWith('/assets/')) {
+    response.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
   }
-  
-  return res;
+
+  return response;
 }
 
 export const config = {
-  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)',
+  ],
 };

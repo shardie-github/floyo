@@ -5,32 +5,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import prisma from '@/lib/db/prisma';
 import { getUserId, checkMfaElevation } from '@/lib/auth-utils';
 import { createS3Export, createLocalExport } from '@/lib/storage-export';
 import { createExportToken } from '@/lib/export-tokens';
 import { createErrorResponse, withErrorHandler } from '@/lib/api/error-handler';
 import { ValidationError, AuthorizationError } from '@/src/lib/errors';
+import { PrivacyService } from '@/lib/services/privacy-service';
 
 const ExportFormatSchema = z.enum(['json', 'csv']);
-
-async function logTransparencyAction(
-  userId: string,
-  action: string,
-  resource?: string,
-  resourceId?: string,
-  metadata?: Record<string, unknown>
-) {
-  await prisma.privacyTransparencyLog.create({
-    data: {
-      userId,
-      action,
-      resource,
-      resourceId,
-      metadata: metadata || {},
-    },
-  });
-}
 
 // POST /api/privacy/export
 export const POST = withErrorHandler(async (request: NextRequest) => {
@@ -54,30 +36,8 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   }
   const format = formatResult.data;
 
-    // Collect all user data
-    const [prefs, apps, signals, events, logs] = await Promise.all([
-      prisma.privacyPrefs.findUnique({ where: { userId } }),
-      prisma.appAllowlist.findMany({ where: { userId } }),
-      prisma.signalToggle.findMany({ where: { userId } }),
-      prisma.telemetryEvent.findMany({
-        where: { userId },
-        orderBy: { timestamp: 'desc' },
-      }),
-      prisma.privacyTransparencyLog.findMany({
-        where: { userId },
-        orderBy: { timestamp: 'desc' },
-      }),
-    ]);
-
-    const exportData = {
-      exportedAt: new Date().toISOString(),
-      userId,
-      preferences: prefs,
-      apps,
-      signals,
-      events,
-      transparencyLog: logs,
-    };
+  const privacyService = new PrivacyService();
+  const exportData = await privacyService.exportUserData(userId, format);
 
     // Create export (S3 if configured, otherwise local)
     const useS3 = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
@@ -102,7 +62,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
     // Store export token
     await createExportToken(userId, exportResult.exportId, exportResult.expiresAt, format);
 
-    await logTransparencyAction(
+    await privacyService.logTransparencyAction(
       userId,
       'export_requested',
       'data_export',
@@ -172,27 +132,6 @@ export const GET = withErrorHandler(async (request: NextRequest, { params }: { p
 });
 
 async function getExportDataFromDb(userId: string) {
-  const [prefs, apps, signals, events, logs] = await Promise.all([
-    prisma.privacyPrefs.findUnique({ where: { userId } }),
-    prisma.appAllowlist.findMany({ where: { userId } }),
-    prisma.signalToggle.findMany({ where: { userId } }),
-    prisma.telemetryEvent.findMany({
-      where: { userId },
-      orderBy: { timestamp: 'desc' },
-    }),
-    prisma.privacyTransparencyLog.findMany({
-      where: { userId },
-      orderBy: { timestamp: 'desc' },
-    }),
-  ]);
-
-  return {
-    exportedAt: new Date().toISOString(),
-    userId,
-    preferences: prefs,
-    apps,
-    signals,
-    events,
-    transparencyLog: logs,
-  };
+  const privacyService = new PrivacyService();
+  return privacyService.exportUserData(userId, 'json');
 }
