@@ -27,6 +27,7 @@ import { benchmark } from './commands/benchmark.js';
 import { lintfix } from './commands/lintfix.js';
 import { docs } from './commands/docs.js';
 import { changelog } from './commands/changelog.js';
+import { orchestrate } from './commands/orchestrate.js';
 
 program
   .name('ops')
@@ -140,6 +141,21 @@ program
   .option('--since <tag>', 'Generate since tag')
   .action(async (options) => {
     await changelog(options);
+  });
+
+program
+  .command('orchestrate')
+  .description('Run reliability, financial, and security orchestrator')
+  .option('--full', 'Run full orchestrator cycle', false)
+  .option('--dependencies', 'Check dependency health only', false)
+  .option('--costs', 'Forecast costs and track reliability only', false)
+  .option('--security', 'Run security and compliance audit only', false)
+  .option('--uptime', 'Monitor uptime and health only', false)
+  .option('--errors', 'Triage errors only', false)
+  .option('--dashboards', 'Generate dashboards only', false)
+  .option('--auto-pr', 'Create auto-PRs for safe fixes', false)
+  .action(async (options) => {
+    await orchestrate(options);
   });
 
 program.parse(process.argv);

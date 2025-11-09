@@ -19,6 +19,7 @@
     "ops:lintfix": "npm run ops lintfix",
     "ops:docs": "npm run ops docs",
     "ops:changelog": "npm run ops changelog",
+    "ops:orchestrate": "npm run ops orchestrate",
     "wiring:run": "tsx tools/wiring/harness.ts",
     "wiring:doctor": "tsx tools/wiring/wire_doctor.ts",
     "wiring:report": "node -e \"console.log(JSON.stringify(require('./reports/connectivity/connectivity.json'), null, 2))\"",
