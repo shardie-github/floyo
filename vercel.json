@@ -25,6 +25,10 @@
     {
       "path": "/api/privacy/cron/cleanup",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/metrics/collect",
+      "schedule": "0 */6 * * *"
     }
   ]
 }
