@@ -1,0 +1,77 @@
+# Alert Notification Utility
+
+## Overview
+This utility is used by the Hardonia Ops Agent to send alerts when regressions persist for 3 cycles.
+
+## Webhook Configuration
+
+Webhooks are configured via environment variables (secret names only, never echo values):
+
+- `RELIABILITY_ALERT_WEBHOOK` - For reliability/performance alerts
+- `SECURITY_ALERT_WEBHOOK` - For security incidents
+- `COST_ALERT_WEBHOOK` - For budget overruns
+
+## Usage
+
+### From Agent Scripts
+
+```typescript
+import { notify } from './ops/utils/notify';
+
+// Reliability alert
+await notify('reliability', {
+  title: 'Performance Regression Detected',
+  message: 'API P95 latency exceeded SLO for 3 cycles',
+  severity: 'warning',
+  link: '/admin/metrics'
+});
+
+// Security alert
+await notify('security', {
+  title: 'Security Issue Detected',
+  message: 'Critical vulnerability found',
+  severity: 'critical',
+  link: '/admin/compliance'
+});
+
+// Cost alert
+await notify('cost', {
+  title: 'Budget Overrun',
+  message: 'Vercel spend exceeded $50 threshold',
+  severity: 'warning',
+  link: '/admin/cost'
+});
+```
+
+## Implementation
+
+See `ops/utils/notify.ts` for the actual implementation. The utility:
+
+1. Reads webhook URLs from environment variables
+2. Formats alert payload (JSON)
+3. Sends POST request to webhook
+4. Logs alert (never logs secret values)
+5. Handles errors gracefully
+
+## Alert Payload Format
+
+```json
+{
+  "title": "Alert Title",
+  "message": "Detailed message",
+  "severity": "info|warning|critical",
+  "timestamp": "2024-01-01T00:00:00Z",
+  "link": "/admin/metrics",
+  "source": "hardonia-ops-agent"
+}
+```
+
+## Integration Points
+
+- Agent runner workflow (`.github/workflows/agent-runner.yml`)
+- Weekly maintenance workflow (`.github/workflows/weekly-maint.yml`)
+- Performance report generation
+- Security compliance checks
+
+---
+*This utility is used by the Hardonia Ops Agent. Never echo secret values.*

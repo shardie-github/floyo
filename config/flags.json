@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "flags": {
+    "canary_example": {
+      "enabled": false,
+      "env": "staging",
+      "description": "Example canary flag for testing"
+    },
+    "canary_perf_test": {
+      "enabled": false,
+      "env": "staging",
+      "description": "Performance testing canary flag"
+    },
+    "canary_feature_new_api": {
+      "enabled": false,
+      "env": "staging",
+      "description": "New API endpoint canary flag"
+    }
+  },
+  "defaults": {
+    "enabled": false,
+    "env": "staging"
+  }
+}
