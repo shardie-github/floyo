@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "slo": {
+    "ttfb_ms": 200,
+    "api_p95_ms": 400,
+    "lcp_s": 2.5,
+    "uptime_pct": 99.9
+  },
+  "budgets": {
+    "vercel_usd": 50,
+    "supabase_usd": 35,
+    "expo_usd": 15
+  },
+  "webhooks": {
+    "reliability": "RELIABILITY_ALERT_WEBHOOK",
+    "security": "SECURITY_ALERT_WEBHOOK",
+    "cost": "COST_ALERT_WEBHOOK"
+  },
+  "branches": {
+    "default": "main"
+  },
+  "labels": [
+    "auto/security",
+    "auto/perf",
+    "auto/docs",
+    "auto/maint"
+  ],
+  "schedule": {
+    "cron_light": "5 */12 * * *",
+    "cron_heavy": "15 3 * * 1"
+  },
+  "regression_threshold": {
+    "cycles_before_alert": 3,
+    "percentage_change_threshold": 10
+  },
+  "migration": {
+    "canary_flag": "MIGRATION_CANARY",
+    "require_canary_for_destructive": true
+  },
+  "backup": {
+    "check_enabled": true,
+    "metadata_location": "ops/snapshots/"
+  }
+}

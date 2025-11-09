@@ -51,6 +51,31 @@
 - [ ] Manual testing performed
 - [ ] Self-reflection tests pass (`npm test -- self_reflection`)
 
+## SLO Impact Assessment
+
+- [ ] **TTFB Impact:** Estimated change to Time to First Byte (target: ≤200ms)
+- [ ] **API P95 Impact:** Estimated change to API P95 latency (target: ≤400ms)
+- [ ] **LCP Impact:** Estimated change to Largest Contentful Paint (target: ≤2.5s)
+- [ ] **Uptime Impact:** Risk to uptime SLO (target: ≥99.9%)
+- [ ] Performance tested locally
+- [ ] Metrics baseline captured
+
+## Risk Assessment
+
+- [ ] **Rollback Plan:** Steps to rollback if issues occur
+- [ ] **Data Risk:** Potential for data loss or corruption
+- [ ] **Security Risk:** Security implications reviewed
+- [ ] **Dependency Risk:** New dependencies assessed
+- [ ] **Breaking Changes:** Breaking changes documented
+
+## Rollback Procedure
+
+**If this PR causes issues, rollback by:**
+1. [ ] Revert commit: `git revert <commit-hash>`
+2. [ ] Or restore from snapshot: `ops restore <snapshot>`
+3. [ ] Verify rollback: `ops doctor`
+4. [ ] Check metrics: `/admin/metrics`
+
 ## Checklist
 
 - [ ] Code follows project style guidelines
@@ -60,6 +85,8 @@
 - [ ] No new warnings generated
 - [ ] Tests pass locally
 - [ ] CI checks pass
+- [ ] SLO impact assessed (see above)
+- [ ] Rollback plan documented (see above)
 
 ## Related Issues
 
