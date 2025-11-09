@@ -4,74 +4,40 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { z } from 'zod';
 import { getUserId, checkMfaElevation } from '@/lib/auth-utils';
 import { createS3Export, createLocalExport } from '@/lib/storage-export';
 import { createExportToken } from '@/lib/export-tokens';
+import { createErrorResponse, withErrorHandler } from '@/lib/api/error-handler';
+import { ValidationError, AuthorizationError } from '@/src/lib/errors';
+import { PrivacyService } from '@/lib/services/privacy-service';
 
-const prisma = new PrismaClient();
-
-async function logTransparencyAction(
-  userId: string,
-  action: string,
-  resource?: string,
-  resourceId?: string,
-  metadata?: any
-) {
-  await prisma.privacyTransparencyLog.create({
-    data: {
-      userId,
-      action,
-      resource,
-      resourceId,
-      metadata: metadata || {},
-    },
-  });
-}
+const ExportFormatSchema = z.enum(['json', 'csv']);
 
 // POST /api/privacy/export
-export async function POST(request: NextRequest) {
-  try {
-    const userId = await getUserId(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const POST = withErrorHandler(async (request: NextRequest) => {
+  const userId = await getUserId(request);
+  if (!userId) {
+    throw new AuthorizationError('Authentication required');
+  }
 
-    const sessionToken = request.headers.get('x-mfa-session-token');
-    if (!userId || !(await checkMfaElevation(userId, sessionToken))) {
-      return NextResponse.json(
-        { error: 'MFA required to export data' },
-        { status: 403 }
-      );
-    }
+  const sessionToken = request.headers.get('x-mfa-session-token');
+  if (!(await checkMfaElevation(userId, sessionToken))) {
+    throw new AuthorizationError('MFA required to export data', { resource: 'export' });
+  }
 
-    const { searchParams } = new URL(request.url);
-    const format = (searchParams.get('format') || 'json') as 'json' | 'csv';
+  const { searchParams } = new URL(request.url);
+  const formatParam = searchParams.get('format') || 'json';
+  const formatResult = ExportFormatSchema.safeParse(formatParam);
+  if (!formatResult.success) {
+    throw new ValidationError('Invalid format parameter', {
+      fields: { format: ['Must be "json" or "csv"'] },
+    });
+  }
+  const format = formatResult.data;
 
-    // Collect all user data
-    const [prefs, apps, signals, events, logs] = await Promise.all([
-      prisma.privacyPrefs.findUnique({ where: { userId } }),
-      prisma.appAllowlist.findMany({ where: { userId } }),
-      prisma.signalToggle.findMany({ where: { userId } }),
-      prisma.telemetryEvent.findMany({
-        where: { userId },
-        orderBy: { timestamp: 'desc' },
-      }),
-      prisma.privacyTransparencyLog.findMany({
-        where: { userId },
-        orderBy: { timestamp: 'desc' },
-      }),
-    ]);
-
-    const exportData = {
-      exportedAt: new Date().toISOString(),
-      userId,
-      preferences: prefs,
-      apps,
-      signals,
-      events,
-      transparencyLog: logs,
-    };
+  const privacyService = new PrivacyService();
+  const exportData = await privacyService.exportUserData(userId, format);
 
     // Create export (S3 if configured, otherwise local)
     const useS3 = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
@@ -96,7 +62,7 @@ export async function POST(request: NextRequest) {
     // Store export token
     await createExportToken(userId, exportResult.exportId, exportResult.expiresAt, format);
 
-    await logTransparencyAction(
+    await privacyService.logTransparencyAction(
       userId,
       'export_requested',
       'data_export',
@@ -110,36 +76,33 @@ export async function POST(request: NextRequest) {
       expiresAt: exportResult.expiresAt.toISOString(),
       format,
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
+});
 
 // GET /api/privacy/export/:token (serves the actual export)
-export async function GET(request: NextRequest, { params }: { params: { token: string } }) {
-  try {
-    const userId = await getUserId(request);
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = withErrorHandler(async (request: NextRequest, { params }: { params: { token: string } }) => {
+  const userId = await getUserId(request);
+  if (!userId) {
+    throw new AuthorizationError('Authentication required');
+  }
 
-    const { searchParams } = new URL(request.url);
-    const expires = parseInt(searchParams.get('expires') || '0');
+  const { searchParams } = new URL(request.url);
+  const expires = parseInt(searchParams.get('expires') || '0');
 
-    if (Date.now() > expires) {
-      return NextResponse.json({ error: 'Export link expired' }, { status: 410 });
-    }
+  if (Date.now() > expires) {
+    throw new ValidationError('Export link expired', {}, { resource: 'export', resourceId: params.token });
+  }
 
-    // Validate export token
-    const { validateExportToken, getExportTokenInfo } = await import('@/lib/export-tokens');
-    const isValid = await validateExportToken(params.token, userId);
-    
-    if (!isValid) {
-      return NextResponse.json({ error: 'Invalid or expired export token' }, { status: 403 });
-    }
+  // Validate export token
+  const { validateExportToken, getExportTokenInfo } = await import('@/lib/export-tokens');
+  const isValid = await validateExportToken(params.token, userId);
+  
+  if (!isValid) {
+    throw new AuthorizationError('Invalid or expired export token', { resource: 'export', resourceId: params.token });
+  }
 
-    const tokenInfo = await getExportTokenInfo(params.token, userId);
-    const format = (tokenInfo?.format || 'json') as 'json' | 'csv';
+  const tokenInfo = await getExportTokenInfo(params.token, userId);
+  const formatResult = ExportFormatSchema.safeParse(tokenInfo?.format || 'json');
+  const format = formatResult.success ? formatResult.data : 'json';
 
     // Try to get from S3 first, fallback to database
     const useS3 = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
@@ -166,33 +129,9 @@ export async function GET(request: NextRequest, { params }: { params: { token: s
         'Content-Disposition': `attachment; filename="${filename}"`,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}
+});
 
 async function getExportDataFromDb(userId: string) {
-  const [prefs, apps, signals, events, logs] = await Promise.all([
-    prisma.privacyPrefs.findUnique({ where: { userId } }),
-    prisma.appAllowlist.findMany({ where: { userId } }),
-    prisma.signalToggle.findMany({ where: { userId } }),
-    prisma.telemetryEvent.findMany({
-      where: { userId },
-      orderBy: { timestamp: 'desc' },
-    }),
-    prisma.privacyTransparencyLog.findMany({
-      where: { userId },
-      orderBy: { timestamp: 'desc' },
-    }),
-  ]);
-
-  return {
-    exportedAt: new Date().toISOString(),
-    userId,
-    preferences: prefs,
-    apps,
-    signals,
-    events,
-    transparencyLog: logs,
-  };
+  const privacyService = new PrivacyService();
+  return privacyService.exportUserData(userId, 'json');
 }

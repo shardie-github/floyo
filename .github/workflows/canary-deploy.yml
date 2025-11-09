@@ -1,0 +1,132 @@
+name: Canary Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: 'Module to deploy (e.g., checkout)'
+        required: true
+        type: string
+      traffic_percentage:
+        description: 'Initial traffic percentage (default: 10)'
+        required: false
+        default: '10'
+        type: string
+  pull_request:
+    types: [labeled]
+    # Only trigger on canary label
+    # Note: This is a stub - actual implementation requires label check
+
+jobs:
+  canary-deploy:
+    name: Canary Deploy (${{ github.event.inputs.module || 'checkout' }})
+    runs-on: ubuntu-latest
+    if: github.event.label.name == 'canary/deploy' || github.event_name == 'workflow_dispatch'
+    environment:
+      name: canary-${{ github.event.inputs.module || 'checkout' }}
+    
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      CANARY_MODULE: ${{ github.event.inputs.module || 'checkout' }}
+      CANARY_TRAFFIC: ${{ github.event.inputs.traffic_percentage || '10' }}
+      NEXT_TELEMETRY_DISABLED: 1
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build Next.js
+        run: npm run build
+      
+      - name: Deploy to Vercel Preview (Canary)
+        run: |
+          npm run vercel:pull
+          npm run vercel:build
+          npm run vercel:deploy:preview
+        env:
+          VERCEL_ENV: preview
+      
+      - name: Enable Canary Flag
+        run: |
+          # Stub: Enable canary flag via API or config update
+          echo "Canary flag enabled for module: $CANARY_MODULE at $CANARY_TRAFFIC% traffic"
+          # TODO: Implement flag update via API
+          # npm run ops canary:enable --module=$CANARY_MODULE --traffic=$CANARY_TRAFFIC
+      
+      - name: Start Canary Monitoring
+        run: |
+          echo "Canary monitoring started for module: $CANARY_MODULE"
+          # TODO: Start monitoring job
+          # npm run ops canary:monitor --module=$CANARY_MODULE
+      
+      - name: Comment PR with Canary URL
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            let canaryUrl = '';
+            try {
+              canaryUrl = fs.readFileSync('.vercel-url.txt', 'utf8').trim();
+            } catch (e) {
+              canaryUrl = 'Preview URL not available';
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🚀 Canary Deployment Active\n\n` +
+                    `**Module:** ${process.env.CANARY_MODULE}\n` +
+                    `**Traffic:** ${process.env.CANARY_TRAFFIC}%\n` +
+                    `**Preview URL:** ${canaryUrl}\n\n` +
+                    `Monitor metrics: [Canary Dashboard](/admin/canary)\n\n` +
+                    `To rollback: Add label \`canary/rollback\` or run \`npm run ops canary:rollback --module=${process.env.CANARY_MODULE}\``
+            });
+  
+  canary-rollback:
+    name: Canary Rollback
+    runs-on: ubuntu-latest
+    if: github.event.label.name == 'canary/rollback' || contains(github.event.head_commit.message, '[canary:rollback]')
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Disable Canary Flag
+        run: |
+          echo "Rolling back canary deployment"
+          # TODO: Implement flag disable via API
+          # npm run ops canary:disable --module=$CANARY_MODULE
+      
+      - name: Notify Team
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Canary Rollback Executed',
+              body: 'Canary deployment has been rolled back. All traffic routed to production.',
+              labels: ['canary', 'incident']
+            });

@@ -121,6 +121,74 @@ Analysis of system constraints and leverage points reveals 5 high-impact actions
 
 **Rollback:** Disable canary, use blue-green deployment
 
+## Top Bottleneck + 3 Experiments
+
+### Top Bottleneck: PR Review Queue
+
+**Current State:**
+- 2 PRs waiting, 1h avg wait time
+- Blocks feature delivery
+- Highest queue length in value stream
+
+**Experiment 1: Parallel PR Reviews**
+
+**Hypothesis:** Enabling parallel reviews will reduce PR review wait time by 50%
+
+**Metric:** PR review wait time (target: <30min from 1h)
+
+**Owner:** DevOps Team
+
+**2-Week Target:** Reduce wait time to 30min, queue length to <1 PR
+
+**Implementation:**
+- ✅ CODEOWNERS file already exists
+- Enable parallel reviews in GitHub settings
+- Set review time SLA: <30min
+
+**Rollback:** Disable parallel reviews, revert to sequential
+
+---
+
+### Experiment 2: Pre-merge Validation Checks
+
+**Hypothesis:** Pre-merge checks will reduce CI rework by 50%
+
+**Metric:** CI rework % (target: <5% from 10%)
+
+**Owner:** DevOps Team
+
+**2-Week Target:** Reduce CI rework to 5%, defect escape rate to <2%
+
+**Implementation:**
+- Add type checking to pre-commit hooks
+- Add test coverage checks (fail if <80%)
+- Add UX copy linting (ban phrases check)
+- Add bundle size checks (fail if >threshold)
+
+**Rollback:** Disable pre-merge checks, rely on CI only
+
+---
+
+### Experiment 3: Canary Deployment for Checkout Module
+
+**Hypothesis:** Canary deployment will reduce deploy rework by 50%
+
+**Metric:** Deploy rework % (target: <1% from 2%)
+
+**Owner:** DevOps Team
+
+**2-Week Target:** Reduce deploy rework to 1%, canary success rate >95%
+
+**Implementation:**
+- Implement canary harness (see ops/canary-harness.md)
+- Start with 10% traffic, gradually increase
+- Monitor error rates and latency
+- Auto-rollback on threshold breach
+
+**Rollback:** Disable canary, use blue-green deployment
+
+---
+
 ## Additional Leverage Points
 
 ### 6. Error Taxonomy & Guards (Reduce Feedback Rework)
