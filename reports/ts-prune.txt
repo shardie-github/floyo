@@ -1,0 +1,277 @@
+agent-engine/index.ts:19 - AgentEngineConfig (used in module)
+frontend/middleware.ts:4 - default
+frontend/middleware.ts:10 - config
+frontend/playwright.config.ts:6 - default
+frontend/tailwind.config.ts:3 - default
+scripts/load-env-dynamic.ts:174 - loadEnvironmentVariables (used in module)
+scripts/load-env-dynamic.ts:215 - getEnvVar
+scripts/load-env-dynamic.ts:226 - validateRequiredEnvVars
+scripts/load-env-dynamic.ts:269 - loadFromEnvFile (used in module)
+scripts/load-env-dynamic.ts:269 - loadFromGitHub (used in module)
+scripts/load-env-dynamic.ts:269 - loadFromVercel (used in module)
+scripts/load-env-dynamic.ts:269 - loadFromSupabase (used in module)
+scripts/supabase-migrate-all.ts:341 - setupSupabase (used in module)
+scripts/supabase-migrate-all.ts:341 - SetupResult (used in module)
+scripts/supabase-migrate-all.ts:341 - MigrationResult (used in module)
+scripts/verify-migrations.ts:311 - verifyAll (used in module)
+scripts/verify-migrations.ts:311 - VerificationResult (used in module)
+tools/data-aggregate.ts:45 - execute (used in module)
+tools/data-aggregate.ts:10 - toolSchema (used in module)
+tools/data-aggregate.ts:147 - default
+tools/shopify.ts:230 - execute (used in module)
+tools/shopify.ts:11 - toolSchema (used in module)
+tools/shopify.ts:273 - default
+unified-agent/index.ts:5 - UnifiedAgentOrchestrator
+unified-agent/index.ts:6 - RepoContextDetector
+unified-agent/index.ts:6 - RepoContext
+unified-agent/index.ts:6 - OperatingMode
+unified-agent/index.ts:7 - ReliabilityAgent
+unified-agent/index.ts:7 - ReliabilityMetrics
+unified-agent/index.ts:8 - CostAgent
+unified-agent/index.ts:8 - CostMetrics
+unified-agent/index.ts:9 - SecurityAgent
+unified-agent/index.ts:9 - SecurityMetrics
+unified-agent/index.ts:10 - DocumentationAgent
+unified-agent/index.ts:10 - DocumentationUpdate
+unified-agent/index.ts:11 - PlanningAgent
+unified-agent/index.ts:11 - SprintPlan
+unified-agent/index.ts:11 - TodoItem
+unified-agent/index.ts:12 - ObservabilityAgent
+unified-agent/index.ts:12 - MetricsSnapshot
+unified-agent/index.ts:13 - ReflectionAgent
+unified-agent/index.ts:13 - ReflectionReport
+unified-agent/orchestrator.ts:17 - AgentConfig (used in module)
+unified-agent/orchestrator.ts:29 - AgentRunResult (used in module)
+agent-engine/core/types.ts:33 - ToolCall
+agent-engine/core/types.ts:72 - Insight (used in module)
+agent-engine/mcp/client.ts:9 - MCPMessage (used in module)
+agent-engine/mcp/client.ts:18 - MCPClient
+frontend/app/analytics-provider.tsx:6 - AnalyticsProvider
+frontend/app/headers.ts:48 - headers
+frontend/app/layout.tsx:60 - default
+frontend/app/layout.tsx:17 - metadata
+frontend/app/layout.tsx:53 - viewport
+frontend/app/page.tsx:11 - default (used in module)
+frontend/app/providers.tsx:12 - Providers
+frontend/components/AccessibilityHelpers.tsx:10 - AriaLive
+frontend/components/AccessibilityHelpers.tsx:30 - FocusTrap
+frontend/components/AnalyticsDashboard.tsx:18 - AnalyticsDashboard
+frontend/components/DarkModeToggle.tsx:6 - DarkModeToggle
+frontend/components/Dashboard.tsx:26 - Dashboard
+frontend/components/EmptyState.tsx:21 - EmptyState
+frontend/components/ErrorBoundary.tsx:15 - ErrorBoundary
+frontend/components/EventFilters.tsx:22 - EventFilters
+frontend/components/EventsList.tsx:10 - EventsList
+frontend/components/EventTimeline.tsx:12 - EventTimeline
+frontend/components/I18nProvider.tsx:20 - I18nProvider
+frontend/components/I18nProvider.tsx:40 - useI18n
+frontend/components/InstallPrompt.tsx:7 - InstallPrompt
+frontend/components/LoadingSkeleton.tsx:3 - LoadingSkeleton
+frontend/components/LoadingSkeleton.tsx:13 - EventSkeleton
+frontend/components/LoadingSkeleton.tsx:28 - CardSkeleton
+frontend/components/LoadingStates.tsx:11 - ProgressBar (used in module)
+frontend/components/LoadingStates.tsx:45 - LoadingState
+frontend/components/LoadingStates.tsx:72 - LoadingButton
+frontend/components/LoginForm.tsx:8 - LoginForm
+frontend/components/MobileOptimized.tsx:8 - useIsMobile (used in module)
+frontend/components/MobileOptimized.tsx:27 - MobileContainer
+frontend/components/MobileOptimized.tsx:40 - TouchButton
+frontend/components/MobileOptimized.tsx:71 - SwipeableContainer
+frontend/components/MonitoringDashboard.tsx:29 - MonitoringDashboard
+frontend/components/NotificationCenter.tsx:11 - NotificationCenter
+frontend/components/NotificationProvider.tsx:20 - NotificationProvider
+frontend/components/NotificationProvider.tsx:134 - useNotifications (used in module)
+frontend/components/NotificationProvider.tsx:5 - Notification (used in module)
+frontend/components/OfflineIndicator.tsx:6 - OfflineIndicator
+frontend/components/OnboardingFlow.tsx:19 - OnboardingFlow
+frontend/components/Pagination.tsx:10 - Pagination
+frontend/components/PatternChart.tsx:10 - PatternChart
+frontend/components/PatternsList.tsx:10 - PatternsList
+frontend/components/PerformanceHUD.tsx:29 - PerformanceHUD
+frontend/components/PrivacyConsentWizard.tsx:17 - PrivacyConsentWizard
+frontend/components/PrivacyHUD.tsx:11 - PrivacyHUD
+frontend/components/ProductTour.tsx:13 - ProductTour
+frontend/components/ProductTour.tsx:60 - defaultTourSteps
+frontend/components/ServiceWorkerRegistration.tsx:5 - ServiceWorkerRegistration
+frontend/components/ServiceWorkerUpdate.tsx:6 - ServiceWorkerUpdate
+frontend/components/StatsCards.tsx:9 - StatsCards
+frontend/components/SuggestionsList.tsx:20 - SuggestionsList
+frontend/components/TelemetryBeacon.tsx:10 - TelemetryBeacon
+frontend/components/ThemeProvider.tsx:15 - ThemeProvider
+frontend/components/ThemeProvider.tsx:74 - useTheme
+frontend/components/ThemeToggle.tsx:6 - ThemeToggle
+frontend/components/WebVitalsTracker.tsx:6 - WebVitalsTracker
+frontend/components/WorkflowBuilder.tsx:42 - WorkflowBuilder
+frontend/hooks/useAnalytics.ts:9 - useAnalytics
+frontend/hooks/useAnalytics.ts:27 - useActivationTracking
+frontend/hooks/useAnalytics.ts:50 - useOnboardingTracking
+frontend/hooks/useAuth.ts:4 - useAuth
+frontend/hooks/useDarkMode.ts:5 - useDarkMode
+frontend/hooks/useInstallPrompt.ts:8 - useInstallPrompt
+frontend/hooks/useKeyboardShortcuts.ts:18 - useKeyboardShortcuts
+frontend/hooks/useKeyboardShortcuts.ts:5 - KeyboardShortcut (used in module)
+frontend/hooks/useKeyboardShortcuts.ts:43 - COMMON_SHORTCUTS
+frontend/hooks/usePasswordValidation.ts:7 - validatePassword
+frontend/hooks/usePasswordValidation.ts:57 - getPasswordStrengthColor
+frontend/hooks/usePasswordValidation.ts:1 - PasswordValidationResult (used in module)
+frontend/hooks/useServiceWorkerUpdate.ts:3 - useServiceWorkerUpdate
+ops/utils/ai-guardrails.ts:49 - safeLLMCall
+ops/utils/ai-guardrails.ts:116 - createOfflineFallback
+ops/utils/auto-pr.ts:10 - SafeFix (used in module)
+ops/utils/auto-pr.ts:19 - PRResult (used in module)
+ops/utils/billing.ts:17 - handleStripeWebhook
+ops/utils/billing.ts:101 - createCheckoutSession
+ops/utils/billing.ts:10 - StripeWebhookEvent (used in module)
+ops/utils/compliance.ts:21 - generateDataInventory
+ops/utils/compliance.ts:52 - exportUserData
+ops/utils/compliance.ts:89 - deleteUserData
+ops/utils/compliance.ts:109 - redactLogs
+ops/utils/compliance.ts:115 - checkCookieConsent
+ops/utils/compliance.ts:120 - checkDoNotTrack
+ops/utils/compliance.ts:12 - DataInventory (used in module)
+ops/utils/cost-caps.ts:41 - checkCostQuota
+ops/utils/cost-caps.ts:87 - throttleRequest
+ops/utils/cost-caps.ts:93 - simulateCosts
+ops/utils/cost-caps.ts:131 - sendCostAlert
+ops/utils/cost-intelligence.ts:10 - CostForecast (used in module)
+ops/utils/cost-intelligence.ts:26 - ReliabilityTrends (used in module)
+ops/utils/dependency-health.ts:10 - DependencyReport (used in module)
+ops/utils/env.ts:44 - requireEnv (used in module)
+ops/utils/env.ts:61 - getEnv
+ops/utils/env.ts:70 - isProduction
+ops/utils/env.ts:40 - Env (used in module)
+ops/utils/envrc.ts:8 - ensureEnvrc
+ops/utils/error-triage.ts:10 - ErrorTriageReport (used in module)
+ops/utils/growth.ts:17 - trackUTM
+ops/utils/growth.ts:71 - generateCohortReport (used in module)
+ops/utils/growth.ts:134 - generateGrowthReport
+ops/utils/growth.ts:9 - UTMParams (used in module)
+ops/utils/notify.ts:29 - notify
+ops/utils/notify.ts:67 - isWebhookConfigured (used in module)
+ops/utils/notify.ts:75 - getConfiguredWebhooks
+ops/utils/observability.ts:27 - recordMetric (used in module)
+ops/utils/observability.ts:36 - recordLatency
+ops/utils/observability.ts:40 - recordError
+ops/utils/observability.ts:44 - recordCost
+ops/utils/observability.ts:48 - calculateKPIs (used in module)
+ops/utils/observability.ts:81 - generateDashboardHTML (used in module)
+ops/utils/observability.ts:200 - saveDashboard
+ops/utils/quiet-mode.ts:28 - getQuietModeConfig
+ops/utils/quiet-mode.ts:32 - enableQuietMode (used in module)
+ops/utils/quiet-mode.ts:44 - disableQuietMode (used in module)
+ops/utils/quiet-mode.ts:48 - shouldSkipAnalytics (used in module)
+ops/utils/quiet-mode.ts:52 - shouldSkipNonEssentialAPIs (used in module)
+ops/utils/quiet-mode.ts:56 - shouldSkipWebhooks
+ops/utils/quiet-mode.ts:60 - shouldShowMaintenanceBanner (used in module)
+ops/utils/quiet-mode.ts:64 - getMaintenanceBannerMessage
+ops/utils/quiet-mode.ts:69 - testQuietMode
+ops/utils/quiet-mode.ts:10 - QuietModeConfig (used in module)
+ops/utils/security-compliance.ts:11 - SecurityComplianceReport (used in module)
+ops/utils/supabase-setup.ts:16 - setupSupabase
+ops/utils/supabase-setup.ts:40 - validateRLSPolicies
+ops/utils/supabase-setup.ts:89 - validateIndexes
+ops/utils/uptime-monitor.ts:8 - UptimeReport (used in module)
+tools/wiring/harness.ts:574 - WiringHarness (used in module)
+tools/wiring/wire_doctor.ts:308 - WireDoctor (used in module)
+unified-agent/core/observability-agent.ts:9 - TelemetryData (used in module)
+unified-agent/core/repo-context.ts:9 - RepoType (used in module)
+supabase/functions/_shared/guardrails.ts:12 - createGuardrails
+frontend/app/admin/layout.tsx:47 - default
+frontend/app/help/page.tsx:34 - default
+frontend/app/integrations/page.tsx:10 - default
+frontend/app/offline/page.tsx:1 - default
+frontend/app/providers/consent-provider.tsx:21 - ConsentProvider
+frontend/app/providers/consent-provider.tsx:114 - useConsent
+frontend/app/status/page.tsx:12 - default
+frontend/app/trust/page.tsx:7 - default
+frontend/components/homepage/Features.tsx:23 - Features
+frontend/components/homepage/Hero.tsx:6 - Hero
+frontend/components/homepage/Testimonials.tsx:23 - Testimonials
+frontend/components/integrations/Cloudinary.tsx:6 - CloudinaryIntegration
+frontend/components/integrations/Cloudinary.tsx:15 - CldImage
+frontend/components/integrations/Cloudinary.tsx:15 - CldUploadWidget
+frontend/components/integrations/ConsentBanner.tsx:7 - ConsentBanner
+frontend/components/integrations/ConsentGate.tsx:6 - default
+frontend/components/integrations/hCaptcha.tsx:11 - HCaptchaIntegration
+frontend/components/integrations/index.ts:2 - VercelAnalyticsIntegration
+frontend/components/integrations/index.ts:3 - SentryIntegration
+frontend/components/integrations/index.ts:4 - PostHogIntegration
+frontend/components/integrations/index.ts:5 - CloudinaryIntegration
+frontend/components/integrations/index.ts:5 - CldImage
+frontend/components/integrations/index.ts:5 - CldVideo
+frontend/components/integrations/index.ts:5 - CldUploadWidget
+frontend/components/integrations/index.ts:6 - LottiePlayerIntegration
+frontend/components/integrations/index.ts:7 - LenisSmoothScrollIntegration
+frontend/components/integrations/index.ts:8 - HCaptchaIntegration
+frontend/components/integrations/index.ts:9 - ConsentGate
+frontend/components/integrations/index.ts:10 - IntegrationsLoader
+frontend/components/integrations/IntegrationsLoader.tsx:15 - IntegrationsLoader
+frontend/components/integrations/LenisSmoothScroll.tsx:5 - LenisSmoothScrollIntegration
+frontend/components/integrations/LottiePlayer.tsx:11 - LottiePlayerIntegration
+frontend/components/integrations/PostHog.tsx:11 - PostHogIntegration
+frontend/components/integrations/Sentry.tsx:5 - SentryIntegration
+frontend/components/integrations/VercelAnalytics.tsx:15 - VercelAnalyticsIntegration
+frontend/components/motion/FadeIn.tsx:5 - default
+frontend/components/privacy/ConsentPanel.tsx:2 - default
+frontend/components/reco/RecoDrawer.tsx:4 - default
+frontend/components/ui/button.tsx:28 - ButtonProps (used in module)
+frontend/components/ui/button.tsx:34 - Button (used in module)
+frontend/src/lib/flags.ts:39 - isFlagEnabled (used in module)
+frontend/src/lib/flags.ts:69 - getEnabledFlags
+frontend/src/lib/flags.ts:77 - getFlagMetadata
+frontend/src/lib/flags.ts:85 - getAllFlags
+tools/testing/fixtures/synthetic.ts:12 - SyntheticUser (used in module)
+tools/testing/fixtures/synthetic.ts:22 - PartnerSandbox (used in module)
+tools/testing/fixtures/synthetic.ts:29 - PaywallVariant (used in module)
+tools/testing/fixtures/synthetic.ts:37 - SyntheticUsers
+tools/testing/fixtures/synthetic.ts:67 - PartnerSandboxes
+tools/testing/fixtures/synthetic.ts:76 - PaywallVariants
+tools/testing/fixtures/synthetic.ts:93 - SampleCatalogSKUs
+tools/testing/fixtures/synthetic.ts:99 - ReferralCodes
+tools/testing/fixtures/synthetic.ts:104 - Coupons
+frontend/app/account/audit-log/page.tsx:13 - default
+frontend/app/account/export/page.tsx:6 - default
+frontend/app/admin/metrics/page.tsx:55 - default
+frontend/app/admin/performance/page.tsx:14 - default
+frontend/app/api/feedback/route.ts:7 - POST
+frontend/app/api/feedback/route.ts:5 - runtime
+frontend/app/api/health/route.ts:3 - GET
+frontend/app/api/health/route.ts:1 - config
+frontend/app/api/ingest/route.ts:21 - POST
+frontend/app/api/metrics/route.ts:47 - GET
+frontend/app/api/metrics/route.ts:4 - runtime
+frontend/app/api/metrics/route.ts:5 - dynamic
+frontend/app/api/telemetry/route.ts:10 - POST
+frontend/app/api/telemetry/route.ts:95 - OPTIONS
+frontend/app/api/telemetry/route.ts:4 - runtime
+frontend/app/api/wiring-status/route.ts:11 - GET
+frontend/app/dashboard/trust/page.tsx:42 - default
+frontend/app/privacy/onboarding/page.tsx:11 - default
+frontend/app/privacy/policy/page.tsx:9 - default
+frontend/app/settings/privacy/page.tsx:14 - default
+frontend/app/admin/(console)/wiring/page.tsx:35 - default
+frontend/app/api/audit/me/route.ts:7 - GET
+frontend/app/api/audit/me/route.ts:5 - runtime
+frontend/app/api/metrics/collect/route.ts:10 - GET
+frontend/app/api/metrics/collect/route.ts:4 - runtime
+frontend/app/api/privacy/apps/route.ts:46 - GET
+frontend/app/api/privacy/apps/route.ts:65 - POST
+frontend/app/api/privacy/consent/route.ts:43 - POST
+frontend/app/api/privacy/consent/route.ts:109 - GET
+frontend/app/api/privacy/delete/route.ts:31 - POST
+frontend/app/api/privacy/export/route.ts:34 - POST
+frontend/app/api/privacy/export/route.ts:120 - GET
+frontend/app/api/privacy/log/route.ts:13 - GET
+frontend/app/api/privacy/signals/route.ts:45 - GET
+frontend/app/api/privacy/signals/route.ts:64 - POST
+frontend/app/api/privacy/telemetry/route.ts:50 - POST
+frontend/app/api/reco/floyo/route.ts:4 - POST
+frontend/app/api/reco/floyo/route.ts:3 - runtime
+frontend/app/api/telemetry/ingest/route.ts:3 - POST
+frontend/app/api/telemetry/ingest/route.ts:2 - runtime
+frontend/app/api/telemetry/tti/route.ts:24 - POST
+frontend/app/api/telemetry/tti/route.ts:10 - runtime
+frontend/app/api/privacy/cron/cleanup/route.ts:13 - POST
+frontend/app/api/privacy/cron/cleanup/route.ts:33 - GET
+frontend/app/api/privacy/mfa/check/route.ts:12 - GET
+frontend/app/api/privacy/mfa/verify/route.ts:14 - POST
