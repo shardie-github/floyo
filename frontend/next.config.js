@@ -127,6 +127,7 @@ const nextConfig = {
   
   // Image optimization
   images: {
+    domains: ['images.unsplash.com', 'cdn.shopify.com'],
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
@@ -237,6 +238,9 @@ const nextConfig = {
     optimizeCss: true,
     optimizePackageImports: ['@mui/material', '@mui/icons-material', 'lodash'],
   },
+  
+  // ISR revalidation default (can be overridden per route)
+  revalidate: parseInt(process.env.REVALIDATE_SECONDS || '60', 10),
 }
 
 // [CRUX+HARDEN:BEGIN:analyzer]
