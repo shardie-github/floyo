@@ -156,7 +156,7 @@ export class SecurityAgent {
     // Run npm audit if applicable
     if (context.packageManager === 'npm' || context.packageManager === 'yarn' || context.packageManager === 'pnpm') {
       try {
-        const auditCommand =
+        const _auditCommand =
           context.packageManager === 'yarn'
             ? 'yarn audit --json'
             : context.packageManager === 'pnpm'

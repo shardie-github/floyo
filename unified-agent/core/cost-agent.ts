@@ -142,18 +142,18 @@ ${metrics.recommendations.length > 0
     return report;
   }
 
-  private estimateVercelCost(context: RepoContext): number {
+  private estimateVercelCost(_context: RepoContext): number {
     // Basic estimation based on typical usage
     // In production, would fetch from Vercel API
     return 20; // $20/month estimate
   }
 
-  private estimateSupabaseCost(context: RepoContext): number {
+  private estimateSupabaseCost(_context: RepoContext): number {
     // Basic estimation
     return 25; // $25/month estimate
   }
 
-  private estimateExpoCost(context: RepoContext): number {
+  private estimateExpoCost(_context: RepoContext): number {
     // Basic estimation
     return 0; // Expo free tier
   }
@@ -174,7 +174,7 @@ ${metrics.recommendations.length > 0
 
   private generateRecommendations(
     metrics: CostMetrics,
-    context: RepoContext
+    _context: RepoContext
   ): void {
     // Suggest caching if high Vercel costs
     if (metrics.monthlySpend.vercel && metrics.monthlySpend.vercel > 50) {

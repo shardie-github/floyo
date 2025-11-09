@@ -144,7 +144,7 @@ export class ObservabilityAgent {
   /**
    * Check for regressions (3 consecutive)
    */
-  checkRegressions(threshold: number = 3): boolean {
+  checkRegressions(_threshold: number = 3): boolean {
     // Would check historical snapshots
     // For now, return false
     return false;

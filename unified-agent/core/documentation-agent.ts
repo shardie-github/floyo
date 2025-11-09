@@ -3,7 +3,7 @@
  * Auto-updates README, CHANGELOG, and architecture docs
  */
 
-import { writeFileSync, existsSync, readFileSync, appendFileSync } from 'fs';
+import { writeFileSync, existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { execSync } from 'child_process';
 import type { RepoContext } from './repo-context.js';

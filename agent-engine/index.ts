@@ -78,7 +78,7 @@ export class AgentEngine {
     steps: WorkflowStep[],
     timeout?: number
   ): Promise<WorkflowResult> {
-    const startTime = Date.now();
+    const _startTime = Date.now();
 
     // Verify context exists
     const context = this.contextManager.getContext(contextId);

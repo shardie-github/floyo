@@ -43,7 +43,7 @@ export class PlanningAgent {
   /**
    * Extract TODOs and generate sprint plan
    */
-  async generateSprintPlan(context: RepoContext): Promise<SprintPlan> {
+  async generateSprintPlan(_context: RepoContext): Promise<SprintPlan> {
     const plan: SprintPlan = {
       timestamp: new Date().toISOString(),
       todos: [],

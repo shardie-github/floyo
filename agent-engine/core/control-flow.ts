@@ -175,8 +175,8 @@ export class ControlFlowEngine {
    * Get cached result (fallback layer)
    */
   private async getCachedResult(
-    toolName: string,
-    params: Record<string, any>
+    _toolName: string,
+    _params: Record<string, any>
   ): Promise<ToolResult | null> {
     // In production, this would query a cache (Redis, etc.)
     // For now, return null (no cache)
