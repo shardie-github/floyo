@@ -3123,6 +3123,19 @@ async def get_audit_logs(
 from backend.growth import RetentionEngine, ViralGrowthEngine, GrowthAnalytics
 from backend.monetization import SubscriptionManager, UsageTracker, BillingManager, PricingCalculator
 from backend.enterprise import SSOManager, EnterpriseAdmin, ComplianceManager, EcosystemManager
+from backend.stripe_integration import StripeIntegration
+from backend.retention_campaigns import RetentionCampaignService
+from backend.analytics_dashboard import AnalyticsDashboard
+from backend.usage_limit_middleware import UsageLimitMiddleware
+from backend.operational_alignment import OperationalAlignment, OperationalMetrics
+from backend.kpi_alerts import KPIAlertSystem
+from backend.data_quality import DataQualityMonitor
+from backend.automated_reporting import AutomatedReporting
+from backend.autonomous_engine import AutonomousEngine
+from backend.self_healing import SelfHealingEngine
+from backend.self_optimization import SelfOptimizationEngine
+from backend.autonomous_orchestrator import AutonomousOrchestrator
+from backend.ml_feedback_loop import MLFeedbackLoop
 
 # Growth Engine Endpoints (Weeks 5-8)
 
@@ -3337,6 +3350,451 @@ async def get_ltv_cac(
         raise HTTPException(status_code=403, detail="Admin access required")
     ltv_cac = PricingCalculator.calculate_ltv_cac(db)
     return ltv_cac
+
+
+# Stripe Integration Endpoints
+@app.post("/api/billing/stripe/subscribe")
+async def create_stripe_subscription(
+    plan_id: UUID,
+    payment_method_id: Optional[str] = None,
+    billing_cycle: str = "monthly",
+    organization_id: Optional[UUID] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Create a Stripe subscription."""
+    try:
+        result = StripeIntegration.create_subscription(
+            db=db,
+            user_id=current_user.id,
+            plan_id=plan_id,
+            payment_method_id=payment_method_id,
+            billing_cycle=billing_cycle,
+            organization_id=organization_id
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error creating Stripe subscription: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/billing/stripe/subscription/{subscription_id}/cancel")
+async def cancel_stripe_subscription(
+    subscription_id: UUID,
+    cancel_immediately: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Cancel a Stripe subscription."""
+    try:
+        result = StripeIntegration.cancel_subscription(
+            db=db,
+            subscription_id=subscription_id,
+            user_id=current_user.id,
+            cancel_immediately=cancel_immediately
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error canceling Stripe subscription: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# Analytics Dashboard Endpoints
+@app.get("/api/analytics/dashboard")
+async def get_analytics_dashboard(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get comprehensive analytics dashboard (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    dashboard = AnalyticsDashboard.get_comprehensive_dashboard(db, days)
+    return dashboard
+
+
+@app.get("/api/analytics/activation-metrics")
+async def get_activation_metrics(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get activation metrics."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    metrics = AnalyticsDashboard.get_activation_metrics(db, days)
+    return metrics
+
+
+@app.get("/api/analytics/retention-cohorts")
+async def get_retention_cohorts(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get retention cohort data."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    cohorts = AnalyticsDashboard.get_retention_cohorts(db)
+    return cohorts
+
+
+@app.get("/api/analytics/conversion-funnel")
+async def get_conversion_funnel(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get conversion funnel metrics."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    funnel = AnalyticsDashboard.get_conversion_funnel(db, days)
+    return funnel
+
+
+@app.get("/api/analytics/revenue-metrics")
+async def get_revenue_metrics(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get revenue metrics."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    metrics = AnalyticsDashboard.get_revenue_metrics(db, days)
+    return metrics
+
+
+# Retention Campaign Endpoints
+@app.post("/api/growth/retention/process-campaigns")
+async def process_retention_campaigns(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Process retention campaigns (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    results = RetentionCampaignService.process_retention_campaigns(db)
+    return results
+
+
+# Operational Alignment & KPI Tracking Endpoints
+@app.get("/api/operational/alignment-score")
+async def get_alignment_score(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get operational alignment score (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    score = OperationalAlignment.calculate_alignment_score(db, days)
+    return score
+
+
+@app.get("/api/operational/kpi-status")
+async def get_kpi_status(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get KPI status vs targets (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    status = OperationalAlignment.get_kpi_status(db, days)
+    return status
+
+
+@app.get("/api/operational/priority-actions")
+async def get_priority_actions(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get prioritized actions based on KPI gaps (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    actions = OperationalAlignment.get_priority_actions(db, days)
+    return {"actions": actions, "count": len(actions)}
+
+
+@app.get("/api/operational/real-time-metrics")
+async def get_real_time_metrics(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get real-time operational metrics (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    metrics = OperationalMetrics.get_real_time_metrics(db)
+    return metrics
+
+
+@app.get("/api/operational/system-health")
+async def get_system_health(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get system health indicators (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    health = OperationalMetrics.get_system_health(db)
+    return health
+
+
+@app.get("/api/operational/kpi-alerts")
+async def check_kpi_alerts(
+    days: int = 30,
+    send_email: bool = False,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Check KPI alerts (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    alerts = KPIAlertSystem.check_and_alert(db, days, send_email)
+    return alerts
+
+
+@app.get("/api/operational/data-quality")
+async def check_data_quality(
+    days: int = 7,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Check data quality (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    quality = DataQualityMonitor.check_data_quality(db, days)
+    return quality
+
+
+@app.get("/api/operational/daily-report")
+async def get_daily_report(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get daily business report (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    report = AutomatedReporting.generate_daily_report(db)
+    return report
+
+
+@app.get("/api/operational/weekly-report")
+async def get_weekly_report(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get weekly business report (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    report = AutomatedReporting.generate_weekly_report(db)
+    return report
+
+
+@app.post("/api/operational/send-daily-report")
+async def send_daily_report_email(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send daily report via email (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    success = AutomatedReporting.send_daily_report_email(db)
+    return {"sent": success, "message": "Daily report sent" if success else "Failed to send report"}
+
+
+@app.post("/api/operational/send-weekly-report")
+async def send_weekly_report_email(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Send weekly report via email (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    success = AutomatedReporting.send_weekly_report_email(db)
+    return {"sent": success, "message": "Weekly report sent" if success else "Failed to send report"}
+
+
+# Autonomous Engine Endpoints
+@app.get("/api/autonomous/system-state")
+async def get_autonomous_system_state(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get autonomous system state analysis (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    state = AutonomousEngine.analyze_system_state(db)
+    return state
+
+
+@app.post("/api/autonomous/auto-remediate")
+async def auto_remediate_issues(
+    dry_run: bool = True,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Auto-remediate detected issues (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    results = AutonomousEngine.auto_remediate(db, dry_run)
+    return results
+
+
+@app.post("/api/autonomous/self-optimize")
+async def self_optimize_system(
+    optimization_type: str = "all",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Self-optimize system (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    optimizations = AutonomousEngine.self_optimize(db, optimization_type)
+    return optimizations
+
+
+@app.post("/api/autonomous/run-cycle")
+async def run_autonomous_cycle(
+    dry_run: bool = True,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Run complete autonomous cycle (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    cycle_results = AutonomousOrchestrator.run_full_cycle(db, dry_run)
+    return cycle_results
+
+
+@app.get("/api/autonomous/decisions")
+async def get_autonomous_decisions(
+    decision_type: str = "resource_allocation",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get autonomous decisions (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    decisions = AutonomousEngine.autonomous_decision_engine(db, decision_type)
+    return decisions
+
+
+@app.get("/api/autonomous/learning")
+async def get_continuous_learning(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get continuous learning insights (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    learning = AutonomousEngine.continuous_learning(db)
+    return learning
+
+
+@app.post("/api/autonomous/self-heal")
+async def trigger_self_healing(
+    dry_run: bool = True,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Trigger self-healing (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    healing_results = SelfHealingEngine.auto_heal(db, dry_run)
+    return healing_results
+
+
+@app.get("/api/autonomous/optimization-opportunities")
+async def get_optimization_opportunities(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get optimization opportunities (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    optimizations = SelfOptimizationEngine.comprehensive_optimization(db)
+    return optimizations
+
+
+@app.post("/api/autonomous/monitor-and-respond")
+async def monitor_and_respond(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Continuous monitoring and autonomous response (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    response = AutonomousOrchestrator.monitor_and_respond(db)
+    return response
+
+
+# ML Feedback Loop Endpoints
+@app.get("/api/ml/feedback")
+async def get_ml_feedback(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get ML feedback data (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    feedback = MLFeedbackLoop.collect_feedback(db, days)
+    return feedback
+
+
+@app.get("/api/ml/optimize-thresholds")
+async def optimize_ml_thresholds(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Optimize ML confidence thresholds (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    optimization = MLFeedbackLoop.optimize_ml_thresholds(db)
+    return optimization
+
+
+@app.get("/api/ml/suggestion-quality")
+async def get_suggestion_quality(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get suggestion quality metrics (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    quality = MLFeedbackLoop.track_suggestion_quality(db)
+    return quality
 
 # Enterprise Endpoints (Weeks 13-16)
 @app.get("/api/enterprise/organizations/{org_id}/stats")

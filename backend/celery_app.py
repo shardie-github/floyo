@@ -13,6 +13,10 @@ celery_app = Celery(
         'backend.ml.training_job',
         'backend.workflow_scheduler',
         'backend.retention_job',
+        'backend.retention_campaign_job',
+        'backend.automated_reporting_job',
+        'backend.kpi_alerts_job',
+        'backend.autonomous_orchestrator_job',
     ]
 )
 
@@ -39,8 +43,33 @@ celery_app.conf.beat_schedule = {
     },
     # Retention campaigns (daily)
     'send-retention-campaigns': {
-        'task': 'backend.retention_job.send_daily_retention_campaigns',
+        'task': 'retention_campaigns.process',
         'schedule': crontab(hour=10, minute=0),  # 10 AM daily
+    },
+    # Daily business report (daily at 9 AM)
+    'send-daily-report': {
+        'task': 'backend.automated_reporting.send_daily_report_task',
+        'schedule': crontab(hour=9, minute=0),  # 9 AM daily
+    },
+    # Weekly business report (Monday at 9 AM)
+    'send-weekly-report': {
+        'task': 'backend.automated_reporting.send_weekly_report_task',
+        'schedule': crontab(hour=9, minute=0, day_of_week=1),  # Monday 9 AM
+    },
+    # KPI alerts check (every 6 hours)
+    'check-kpi-alerts': {
+        'task': 'backend.kpi_alerts.check_alerts_task',
+        'schedule': crontab(hour='*/6', minute=0),  # Every 6 hours
+    },
+    # Autonomous cycle (every 4 hours)
+    'autonomous-cycle': {
+        'task': 'autonomous_orchestrator.run_cycle',
+        'schedule': crontab(hour='*/4', minute=0),  # Every 4 hours
+    },
+    # Autonomous monitoring (every hour)
+    'autonomous-monitoring': {
+        'task': 'autonomous_orchestrator.monitor',
+        'schedule': crontab(hour='*/1', minute=30),  # Every hour at :30
     },
     # Workflow execution (every minute)
     'check-workflow-schedules': {
