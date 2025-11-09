@@ -10,7 +10,7 @@ interface ComponentStatus {
 }
 
 export default function Status() {
-  const [components, setComponents] = useState<ComponentStatus[]>([
+  const [components] = useState<ComponentStatus[]>([
     { name: 'API', status: 'operational' },
     { name: 'Database', status: 'operational' },
     { name: 'Frontend', status: 'operational' },

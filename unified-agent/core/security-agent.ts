@@ -156,12 +156,8 @@ export class SecurityAgent {
     // Run npm audit if applicable
     if (context.packageManager === 'npm' || context.packageManager === 'yarn' || context.packageManager === 'pnpm') {
       try {
-        const _auditCommand =
-          context.packageManager === 'yarn'
-            ? 'yarn audit --json'
-            : context.packageManager === 'pnpm'
-            ? 'pnpm audit --json'
-            : 'npm audit --json';
+        // In production, would run audit command based on package manager
+        // const auditCommand = context.packageManager === 'yarn' ? 'yarn audit --json' : ...
         
         // In production, would parse audit output
         // For now, simulate

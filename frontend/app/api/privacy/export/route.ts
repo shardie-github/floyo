@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import crypto from 'crypto';
 import { getUserId, checkMfaElevation } from '@/lib/auth-utils';
 import { createS3Export, createLocalExport } from '@/lib/storage-export';
 import { createExportToken } from '@/lib/export-tokens';

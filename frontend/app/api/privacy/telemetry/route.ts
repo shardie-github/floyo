@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if app is allowed
-    const app = await prisma.appAllowlist.findUnique({
+    const _app = await prisma.appAllowlist.findUnique({
       where: {
         userId_appId: {
           userId,

@@ -8,8 +8,6 @@ import { PrismaClient } from '@prisma/client';
 import { getUserId, createMfaSession } from '@/lib/auth-utils';
 import { verifyTotp } from '@/lib/totp-utils';
 
-const prisma = new PrismaClient();
-
 // POST /api/privacy/mfa/verify
 export async function POST(request: NextRequest) {
   try {

@@ -40,7 +40,7 @@ interface GuardianEvent {
 }
 
 export default function TrustDashboardPage() {
-  const router = useRouter();
+  const _router = useRouter();
   const [summary, setSummary] = useState<TrustSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<GuardianEvent | null>(null);

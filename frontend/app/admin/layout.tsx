@@ -9,7 +9,6 @@
  */
 
 import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
 
 async function checkAdminAccess(): Promise<boolean> {
   // On Vercel, use Access Controls (configured in dashboard)

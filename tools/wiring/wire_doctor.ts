@@ -127,8 +127,6 @@ class WireDoctor {
   private async checkEnvBindings(): Promise<void> {
     console.log('Checking environment variable bindings...');
     
-    // Check if .env.example exists for reference
-    const _envExample = path.join(this.workspace, '.env.example');
     const mainPy = path.join(this.workspace, 'backend/main.py');
     
     if (!fs.existsSync(mainPy)) return;
@@ -156,10 +154,7 @@ class WireDoctor {
     console.log('Checking consent gating for analytics/ads...');
     
     // This would check frontend code for consent gates
-    const _consentFiles = [
-      path.join(this.workspace, 'frontend/components'),
-      path.join(this.workspace, 'frontend/app'),
-    ];
+    // Frontend components and app directories would be scanned
 
     this.diagnoses.push({
       issue: 'Consent gating requires frontend review',

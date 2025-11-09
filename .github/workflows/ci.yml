@@ -11,9 +11,10 @@ on:
 
 # CI Concurrency Tuning - Phase 1 Leverage Point
 # Increase concurrency and prioritize critical PRs
+# Race condition protection: Only cancel if PR is still open
 concurrency:
   group: ci-${{ github.ref }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.state == 'open' }}
 
 jobs:
   matrix:
