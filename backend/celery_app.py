@@ -16,6 +16,7 @@ celery_app = Celery(
         'backend.retention_campaign_job',
         'backend.automated_reporting_job',
         'backend.kpi_alerts_job',
+        'backend.autonomous_orchestrator_job',
     ]
 )
 
@@ -59,6 +60,16 @@ celery_app.conf.beat_schedule = {
     'check-kpi-alerts': {
         'task': 'backend.kpi_alerts.check_alerts_task',
         'schedule': crontab(hour='*/6', minute=0),  # Every 6 hours
+    },
+    # Autonomous cycle (every 4 hours)
+    'autonomous-cycle': {
+        'task': 'autonomous_orchestrator.run_cycle',
+        'schedule': crontab(hour='*/4', minute=0),  # Every 4 hours
+    },
+    # Autonomous monitoring (every hour)
+    'autonomous-monitoring': {
+        'task': 'autonomous_orchestrator.monitor',
+        'schedule': crontab(hour='*/1', minute=30),  # Every hour at :30
     },
     # Workflow execution (every minute)
     'check-workflow-schedules': {
