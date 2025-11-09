@@ -1,0 +1,70 @@
+name: Expo EAS Build & Submit
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build (ios, android, all)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - ios
+          - android
+          - all
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EAS_NO_VCS: 1
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Setup Expo CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      
+      - name: EAS Build
+        run: |
+          PLATFORM=${PLATFORM:-${{ github.event.inputs.platform || 'all' }}
+          PROFILE=${PROFILE:-${{ github.event.inputs.profile || 'production' }}
+          eas build --platform $PLATFORM --profile $PROFILE --non-interactive
+        env:
+          PLATFORM: ${{ github.event.inputs.platform }}
+          PROFILE: ${{ github.event.inputs.profile }}
+      
+      - name: EAS Submit (iOS)
+        if: github.event.inputs.platform == 'ios' || github.event.inputs.platform == 'all' || startsWith(github.ref, 'refs/tags/v')
+        run: eas submit -p ios --latest --non-interactive
+      
+      - name: EAS Submit (Android)
+        if: github.event.inputs.platform == 'android' || github.event.inputs.platform == 'all' || startsWith(github.ref, 'refs/tags/v')
+        run: eas submit -p android --latest --non-interactive

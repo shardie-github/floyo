@@ -4,6 +4,23 @@
   "framework": "nextjs",
   "installCommand": "npm ci",
   "devCommand": "cd frontend && npm run dev",
+  "rootDirectory": "frontend",
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "edge"
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        }
+      ]
+    }
+  ],
   "crons": [
     {
       "path": "/api/privacy/cron/cleanup",
