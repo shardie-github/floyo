@@ -21,12 +21,6 @@
       ]
     }
   ],
-  "rewrites": [
-    {
-      "source": "/api/health",
-      "destination": "/api/health"
-    }
-  ],
   "crons": [
     {
       "path": "/api/privacy/cron/cleanup",
