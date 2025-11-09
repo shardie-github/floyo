@@ -21,6 +21,7 @@ import { InstallPrompt } from './InstallPrompt'
 import { ServiceWorkerUpdate } from './ServiceWorkerUpdate'
 import { OfflineIndicator } from './OfflineIndicator'
 import { LoadingButton, ProgressBar } from './LoadingStates'
+import { LoadingSkeleton } from './LoadingSkeleton'
 import { getErrorMessage } from '@/lib/errorMessages'
 
 export function Dashboard() {
@@ -219,65 +220,67 @@ export function Dashboard() {
           ) : suggestions.length > 0 ? (
             <SuggestionsList suggestions={suggestions} />
           ) : (
-            <EmptyState
-              variant="suggestions"
-              title="No suggestions yet"
-              description="Start tracking your file usage to get personalized integration suggestions."
-              action={{
-                label: "Generate Suggestions",
-                onClick: () => generateSuggestionsMutation.mutate()
-              }}
-              secondaryAction={{
-                label: "Try Sample Data",
-                onClick: async () => {
-                  setIsGeneratingSampleData(true)
-                  setSampleDataProgress(0)
-                  try {
-                    // Simulate progress
-                    const progressInterval = setInterval(() => {
-                      setSampleDataProgress((prev) => {
-                        if (prev === null || prev >= 90) {
-                          clearInterval(progressInterval)
-                          return prev
-                        }
-                        return prev + 10
-                      })
-                    }, 200)
+            <>
+              <EmptyState
+                variant="suggestions"
+                title="No suggestions yet"
+                description="Start tracking your file usage to get personalized integration suggestions."
+                action={{
+                  label: "Generate Suggestions",
+                  onClick: () => generateSuggestionsMutation.mutate()
+                }}
+                secondaryAction={{
+                  label: "Try Sample Data",
+                  onClick: async () => {
+                    setIsGeneratingSampleData(true)
+                    setSampleDataProgress(0)
+                    try {
+                      // Simulate progress
+                      const progressInterval = setInterval(() => {
+                        setSampleDataProgress((prev) => {
+                          if (prev === null || prev >= 90) {
+                            clearInterval(progressInterval)
+                            return prev
+                          }
+                          return prev + 10
+                        })
+                      }, 200)
 
-                    const result = await sampleDataAPI.generate()
-                    clearInterval(progressInterval)
-                    setSampleDataProgress(100)
+                      const result = await sampleDataAPI.generate()
+                      clearInterval(progressInterval)
+                      setSampleDataProgress(100)
 
-                    if (result.success) {
+                      if (result.success) {
+                        addNotification({
+                          type: 'success',
+                          message: `Generated ${result.events_generated} events, ${result.patterns_generated} patterns, and ${result.suggestions_generated} suggestions!`,
+                        })
+                        queryClient.invalidateQueries({ queryKey: ['suggestions'] })
+                        queryClient.invalidateQueries({ queryKey: ['events'] })
+                        queryClient.invalidateQueries({ queryKey: ['patterns'] })
+                      }
+                      setTimeout(() => {
+                        setSampleDataProgress(null)
+                        setIsGeneratingSampleData(false)
+                      }, 1000)
+                    } catch (error) {
+                      const errorMsg = getErrorMessage(error)
                       addNotification({
-                        type: 'success',
-                        message: `Generated ${result.events_generated} events, ${result.patterns_generated} patterns, and ${result.suggestions_generated} suggestions!`,
+                        type: 'error',
+                        message: errorMsg.message,
                       })
-                      queryClient.invalidateQueries({ queryKey: ['suggestions'] })
-                      queryClient.invalidateQueries({ queryKey: ['events'] })
-                      queryClient.invalidateQueries({ queryKey: ['patterns'] })
-                    }
-                    setTimeout(() => {
                       setSampleDataProgress(null)
                       setIsGeneratingSampleData(false)
-                    }, 1000)
-                  } catch (error) {
-                    const errorMsg = getErrorMessage(error)
-                    addNotification({
-                      type: 'error',
-                      message: errorMsg.message,
-                    })
-                    setSampleDataProgress(null)
-                    setIsGeneratingSampleData(false)
+                    }
                   }
-                }
-              }}
+                }}
+              />
               {sampleDataProgress !== null && (
                 <div className="mt-4">
                   <ProgressBar progress={sampleDataProgress} label="Generating sample data..." />
                 </div>
               )}
-            />
+            </>
           )}
         </div>
 
@@ -376,60 +379,63 @@ export function Dashboard() {
                 )}
               </>
             ) : (
-              <EmptyState
-                variant="events"
-                title="No events yet"
-                description="Events will appear here as you track file operations."
-                action={{
-                  label: "Try Sample Data",
-                  onClick: async () => {
-                    setIsGeneratingSampleData(true)
-                    setSampleDataProgress(0)
-                    try {
-                      const progressInterval = setInterval(() => {
-                        setSampleDataProgress((prev) => {
-                          if (prev === null || prev >= 90) {
-                            clearInterval(progressInterval)
-                            return prev
-                          }
-                          return prev + 10
-                        })
-                      }, 200)
+              <>
+                <EmptyState
+                  variant="events"
+                  title="No events yet"
+                  description="Events will appear here as you track file operations."
+                  action={{
+                    label: "Try Sample Data",
+                    onClick: async () => {
+                      setIsGeneratingSampleData(true)
+                      setSampleDataProgress(0)
+                      try {
+                        const progressInterval = setInterval(() => {
+                          setSampleDataProgress((prev) => {
+                            if (prev === null || prev >= 90) {
+                              clearInterval(progressInterval)
+                              return prev
+                            }
+                            return prev + 10
+                          })
+                        }, 200)
 
-                      const result = await sampleDataAPI.generate()
-                      clearInterval(progressInterval)
-                      setSampleDataProgress(100)
+                        const result = await sampleDataAPI.generate()
+                        clearInterval(progressInterval)
+                        setSampleDataProgress(100)
 
-                      if (result.success) {
+                        if (result.success) {
+                          addNotification({
+                            type: 'success',
+                            message: `Generated ${result.events_generated} events, ${result.patterns_generated} patterns!`,
+                          })
+                          queryClient.invalidateQueries({ queryKey: ['events'] })
+                          queryClient.invalidateQueries({ queryKey: ['patterns'] })
+                        }
+                        setTimeout(() => {
+                          setSampleDataProgress(null)
+                          setIsGeneratingSampleData(false)
+                        }, 1000)
+                      } catch (error) {
+                        const errorMsg = getErrorMessage(error)
                         addNotification({
-                          type: 'success',
-                          message: `Generated ${result.events_generated} events, ${result.patterns_generated} patterns!`,
+                          type: 'error',
+                          message: errorMsg.message,
                         })
-                        queryClient.invalidateQueries({ queryKey: ['events'] })
-                        queryClient.invalidateQueries({ queryKey: ['patterns'] })
-                      }
-                      setTimeout(() => {
                         setSampleDataProgress(null)
                         setIsGeneratingSampleData(false)
-                      }, 1000)
-                    } catch (error) {
-                      const errorMsg = getErrorMessage(error)
-                      addNotification({
-                        type: 'error',
-                        message: errorMsg.message,
-                      })
-                      setSampleDataProgress(null)
-                      setIsGeneratingSampleData(false)
+                      }
                     }
-                  }
-                }}
-              />
-              {sampleDataProgress !== null && (
-                <div className="mt-4">
-                  <ProgressBar progress={sampleDataProgress} label="Generating sample data..." />
-                </div>
-              )}
-          )}
+                  }}
+                />
+                {sampleDataProgress !== null && (
+                  <div className="mt-4">
+                    <ProgressBar progress={sampleDataProgress} label="Generating sample data..." />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </main>
       
