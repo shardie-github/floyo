@@ -1,0 +1,221 @@
+{
+  "name": "Finance Automation & Growth ETL Pipeline",
+  "description": "Zapier/Make.com blueprint for no-code ETL automation fallback",
+  "version": "1.0",
+  "created": "2025-01-15",
+  "timezone": "America/Toronto",
+  
+  "triggers": [
+    {
+      "name": "Daily Schedule Trigger",
+      "type": "schedule",
+      "schedule": "01:10 AM America/Toronto",
+      "description": "Triggered daily at 01:10 AM to run ETL pipeline"
+    },
+    {
+      "name": "Shopify New Order",
+      "type": "webhook",
+      "source": "shopify",
+      "event": "orders/create",
+      "description": "Real-time order ingestion (alternative to scheduled pull)"
+    },
+    {
+      "name": "Meta Ads Webhook",
+      "type": "webhook",
+      "source": "meta",
+      "event": "ad_insights_update",
+      "description": "Real-time ad performance updates (if available)"
+    }
+  ],
+  
+  "actions": [
+    {
+      "step": 1,
+      "name": "Pull Meta Ads Data",
+      "app": "http",
+      "method": "GET",
+      "url": "https://graph.facebook.com/v18.0/{ad_account_id}/insights",
+      "headers": {
+        "Authorization": "Bearer {meta_token}"
+      },
+      "params": {
+        "fields": "spend,impressions,clicks,conversions,campaign_id,campaign_name",
+        "time_range": {
+          "since": "{yesterday_date}",
+          "until": "{yesterday_date}"
+        }
+      },
+      "error_handling": "retry_with_backoff",
+      "max_retries": 3
+    },
+    
+    {
+      "step": 2,
+      "name": "Pull TikTok Ads Data",
+      "app": "http",
+      "method": "GET",
+      "url": "https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/",
+      "headers": {
+        "Access-Token": "{tiktok_token}"
+      },
+      "params": {
+        "advertiser_id": "{tiktok_advertiser_id}",
+        "start_date": "{yesterday_date}",
+        "end_date": "{yesterday_date}",
+        "fields": "[\"spend\",\"impressions\",\"clicks\",\"conversions\",\"campaign_id\",\"campaign_name\"]"
+      },
+      "error_handling": "retry_with_backoff",
+      "max_retries": 3
+    },
+    
+    {
+      "step": 3,
+      "name": "Pull Shopify Orders",
+      "app": "shopify",
+      "action": "find_orders",
+      "params": {
+        "created_at_min": "{yesterday_start}",
+        "created_at_max": "{yesterday_end}",
+        "limit": 250
+      },
+      "error_handling": "retry_with_backoff",
+      "max_retries": 3
+    },
+    
+    {
+      "step": 4,
+      "name": "Transform Meta Data",
+      "app": "code",
+      "language": "javascript",
+      "code": "// Transform Meta ads data to Supabase format\nconst transformed = inputData.map(item => ({\n  source: 'meta',\n  external_id: `${item.campaign_id}_${item.date}`,\n  date: item.date,\n  amount: parseFloat(item.spend),\n  impressions: parseInt(item.impressions) || 0,\n  clicks: parseInt(item.clicks) || 0,\n  conversions: parseInt(item.conversions) || 0,\n  campaign_id: item.campaign_id,\n  campaign_name: item.campaign_name\n}));\nreturn transformed;"
+    },
+    
+    {
+      "step": 5,
+      "name": "Transform TikTok Data",
+      "app": "code",
+      "language": "javascript",
+      "code": "// Transform TikTok ads data to Supabase format\nconst transformed = inputData.map(item => ({\n  source: 'tiktok',\n  external_id: `${item.campaign_id}_${item.date}`,\n  date: item.date,\n  amount: parseFloat(item.spend),\n  impressions: parseInt(item.impressions) || 0,\n  clicks: parseInt(item.clicks) || 0,\n  conversions: parseInt(item.conversions) || 0,\n  campaign_id: item.campaign_id,\n  campaign_name: item.campaign_name\n}));\nreturn transformed;"
+    },
+    
+    {
+      "step": 6,
+      "name": "Transform Shopify Orders",
+      "app": "code",
+      "language": "javascript",
+      "code": "// Transform Shopify orders to Supabase format\nconst transformed = inputData.map(order => ({\n  external_order_id: order.id.toString(),\n  source: 'shopify',\n  customer_email: order.email,\n  order_date: order.created_at,\n  total_amount: parseFloat(order.total_price),\n  subtotal: parseFloat(order.subtotal_price),\n  tax_amount: parseFloat(order.total_tax || '0'),\n  shipping_amount: parseFloat(order.total_shipping_price_set?.shop_money?.amount || '0'),\n  currency: order.currency || 'USD',\n  status: order.financial_status === 'paid' ? 'paid' : 'pending'\n}));\nreturn transformed;"
+    },
+    
+    {
+      "step": 7,
+      "name": "Upsert to Supabase - Spend",
+      "app": "http",
+      "method": "POST",
+      "url": "{supabase_url}/rest/v1/spend",
+      "headers": {
+        "apikey": "{supabase_service_role_key}",
+        "Authorization": "Bearer {supabase_service_role_key}",
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates"
+      },
+      "body": "{transformed_spend_data}",
+      "error_handling": "retry_with_backoff"
+    },
+    
+    {
+      "step": 8,
+      "name": "Upsert to Supabase - Orders",
+      "app": "http",
+      "method": "POST",
+      "url": "{supabase_url}/rest/v1/orders",
+      "headers": {
+        "apikey": "{supabase_service_role_key}",
+        "Authorization": "Bearer {supabase_service_role_key}",
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates"
+      },
+      "body": "{transformed_orders_data}",
+      "error_handling": "retry_with_backoff"
+    },
+    
+    {
+      "step": 9,
+      "name": "Compute Daily Metrics",
+      "app": "http",
+      "method": "POST",
+      "url": "{supabase_url}/rest/v1/rpc/compute_daily_metrics",
+      "headers": {
+        "apikey": "{supabase_service_role_key}",
+        "Authorization": "Bearer {supabase_service_role_key}",
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "target_date": "{yesterday_date}"
+      },
+      "description": "Note: This requires a Supabase function. Alternatively, call external API endpoint."
+    },
+    
+    {
+      "step": 10,
+      "name": "Send Notification on Success",
+      "app": "slack",
+      "action": "send_message",
+      "channel": "#finance-automation",
+      "message": "✅ ETL pipeline completed successfully for {yesterday_date}",
+      "condition": "if_all_steps_succeeded"
+    },
+    
+    {
+      "step": 11,
+      "name": "Send Alert on Failure",
+      "app": "slack",
+      "action": "send_message",
+      "channel": "#finance-automation",
+      "message": "❌ ETL pipeline failed at step {failed_step}. Error: {error_message}",
+      "condition": "if_any_step_failed"
+    }
+  ],
+  
+  "variables": {
+    "supabase_url": "https://your-project.supabase.co",
+    "supabase_service_role_key": "your-service-role-key",
+    "meta_token": "your-meta-token",
+    "meta_ad_account_id": "act_123456789",
+    "tiktok_token": "your-tiktok-token",
+    "tiktok_advertiser_id": "1234567890",
+    "shopify_store": "your-store-name",
+    "shopify_api_key": "your-shopify-api-key",
+    "shopify_password": "your-shopify-password"
+  },
+  
+  "notes": [
+    "This is a blueprint/template. Actual implementation requires:",
+    "1. Setting up Zapier/Make.com account",
+    "2. Configuring API credentials in Zapier/Make.com",
+    "3. Creating Supabase RPC function for compute_daily_metrics (or use external API)",
+    "4. Testing each step individually before enabling full automation",
+    "5. Setting up error monitoring and alerts",
+    "6. Consider rate limits and API quotas"
+  ],
+  
+  "alternative_approaches": [
+    {
+      "name": "Supabase Edge Functions",
+      "description": "Use Supabase Edge Functions instead of Zapier for better integration",
+      "pros": ["Better performance", "Lower cost", "Direct database access"],
+      "cons": ["Requires code deployment", "Less no-code friendly"]
+    },
+    {
+      "name": "GitHub Actions",
+      "description": "Use GitHub Actions scheduled workflows (already implemented)",
+      "pros": ["Free for public repos", "Version controlled", "Integrated with codebase"],
+      "cons": ["Requires GitHub", "Less real-time"]
+    },
+    {
+      "name": "Cron + Scripts",
+      "description": "Use traditional cron jobs with ETL scripts",
+      "pros": ["Full control", "No external dependencies"],
+      "cons": ["Requires server", "Manual monitoring"]
+    }
+  ]
+}
