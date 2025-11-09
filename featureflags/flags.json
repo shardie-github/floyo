@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Feature Flags Configuration",
+  "description": "Feature flags for growth experiments and feature rollouts",
+  "version": "1.0.0",
+  "flags": [
+    {
+      "key": "onboarding_v2",
+      "name": "Onboarding Flow V2",
+      "description": "Simplified 3-step onboarding flow with progress indicators",
+      "type": "experiment",
+      "experiment_slug": "onboarding-v2",
+      "default_value": false,
+      "rollout_percentage": 0,
+      "target_audience": "all",
+      "environments": {
+        "development": true,
+        "staging": true,
+        "production": false
+      },
+      "metadata": {
+        "owner": "growth-team",
+        "created_at": "2025-01-XX",
+        "expires_at": "2025-03-XX"
+      }
+    },
+    {
+      "key": "referral_program",
+      "name": "Referral Program",
+      "description": "Enable referral program with $25 credit incentives",
+      "type": "feature",
+      "default_value": false,
+      "rollout_percentage": 0,
+      "target_audience": "all",
+      "environments": {
+        "development": true,
+        "staging": true,
+        "production": false
+      },
+      "metadata": {
+        "owner": "growth-team",
+        "created_at": "2025-01-XX"
+      }
+    },
+    {
+      "key": "email_winback",
+      "name": "Email Win-Back Campaign",
+      "description": "Automated email campaigns for at-risk customers",
+      "type": "experiment",
+      "experiment_slug": "email-winback",
+      "default_value": false,
+      "rollout_percentage": 0,
+      "target_audience": "at_risk_customers",
+      "environments": {
+        "development": true,
+        "staging": true,
+        "production": false
+      },
+      "metadata": {
+        "owner": "growth-team",
+        "created_at": "2025-01-XX",
+        "expires_at": "2025-03-XX"
+      }
+    },
+    {
+      "key": "upsell_v2",
+      "name": "Upsell Flow V2",
+      "description": "Optimized in-app upsell prompts at optimal moments",
+      "type": "experiment",
+      "experiment_slug": "upsell-optimization",
+      "default_value": false,
+      "rollout_percentage": 0,
+      "target_audience": "active_users",
+      "environments": {
+        "development": true,
+        "staging": true,
+        "production": false
+      },
+      "metadata": {
+        "owner": "growth-team",
+        "created_at": "2025-01-XX",
+        "expires_at": "2025-03-XX"
+      }
+    },
+    {
+      "key": "refund_prevention",
+      "name": "Refund Prevention Flow",
+      "description": "Proactive customer success outreach and self-service tools",
+      "type": "feature",
+      "default_value": false,
+      "rollout_percentage": 0,
+      "target_audience": "all",
+      "environments": {
+        "development": true,
+        "staging": true,
+        "production": false
+      },
+      "metadata": {
+        "owner": "customer-success",
+        "created_at": "2025-01-XX"
+      }
+    }
+  ],
+  "environments": {
+    "development": {
+      "default_rollout": 100,
+      "allow_override": true
+    },
+    "staging": {
+      "default_rollout": 50,
+      "allow_override": true
+    },
+    "production": {
+      "default_rollout": 0,
+      "allow_override": false
+    }
+  },
+  "rollout_strategy": {
+    "gradual": {
+      "steps": [0, 10, 25, 50, 100],
+      "duration_days": 7,
+      "monitor_metrics": ["error_rate", "conversion_rate", "support_tickets"]
+    },
+    "canary": {
+      "percentage": 5,
+      "duration_hours": 24,
+      "success_criteria": {
+        "error_rate": "< 0.1%",
+        "support_tickets": "< 2x baseline"
+      }
+    }
+  },
+  "notes": [
+    "Flags are managed via feature flag service (LaunchDarkly, Flagsmith, or custom)",
+    "Production flags require approval from growth team lead",
+    "Experiments expire after 90 days unless extended",
+    "Monitor flag performance in analytics dashboard"
+  ]
+}

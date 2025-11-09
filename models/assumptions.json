@@ -1,0 +1,254 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Financial Model Assumptions",
+  "description": "Typed assumptions for finance model scenarios",
+  "type": "object",
+  "properties": {
+    "scenarios": {
+      "type": "object",
+      "description": "Financial scenario definitions",
+      "properties": {
+        "base": {
+          "type": "object",
+          "properties": {
+            "cogs_percent": {
+              "type": "number",
+              "description": "Cost of goods sold as percentage of revenue",
+              "default": 0.35,
+              "minimum": 0,
+              "maximum": 1
+            },
+            "cac_initial": {
+              "type": "number",
+              "description": "Initial customer acquisition cost",
+              "default": 150,
+              "minimum": 0
+            },
+            "cac_improvement_rate": {
+              "type": "number",
+              "description": "Monthly CAC improvement (reduction) percentage",
+              "default": 0.033,
+              "minimum": 0,
+              "maximum": 1
+            },
+            "ltv": {
+              "type": "number",
+              "description": "Lifetime value per customer",
+              "default": 600,
+              "minimum": 0
+            },
+            "churn_rate": {
+              "type": "number",
+              "description": "Monthly customer churn rate",
+              "default": 0.05,
+              "minimum": 0,
+              "maximum": 1
+            },
+            "refund_rate": {
+              "type": "number",
+              "description": "Refund rate as percentage of revenue",
+              "default": 0.02,
+              "minimum": 0,
+              "maximum": 1
+            },
+            "revenue_growth_rate": {
+              "type": "number",
+              "description": "Monthly revenue growth rate",
+              "default": 0.25,
+              "minimum": 0
+            }
+          }
+        },
+        "optimistic": {
+          "type": "object",
+          "properties": {
+            "cogs_percent": {
+              "type": "number",
+              "default": 0.30,
+              "description": "Lower COGS due to scale efficiencies"
+            },
+            "cac_initial": {
+              "type": "number",
+              "default": 120,
+              "description": "Better conversion rates"
+            },
+            "cac_improvement_rate": {
+              "type": "number",
+              "default": 0.042,
+              "description": "Faster optimization"
+            },
+            "ltv": {
+              "type": "number",
+              "default": 800,
+              "description": "Higher retention and upsells"
+            },
+            "churn_rate": {
+              "type": "number",
+              "default": 0.03,
+              "description": "Better product-market fit"
+            },
+            "refund_rate": {
+              "type": "number",
+              "default": 0.01,
+              "description": "Higher customer satisfaction"
+            },
+            "revenue_growth_rate": {
+              "type": "number",
+              "default": 0.30,
+              "description": "Stronger demand"
+            }
+          }
+        },
+        "conservative": {
+          "type": "object",
+          "properties": {
+            "cogs_percent": {
+              "type": "number",
+              "default": 0.40,
+              "description": "Higher unit costs"
+            },
+            "cac_initial": {
+              "type": "number",
+              "default": 180,
+              "description": "Tougher acquisition"
+            },
+            "cac_improvement_rate": {
+              "type": "number",
+              "default": 0.028,
+              "description": "Slower optimization"
+            },
+            "ltv": {
+              "type": "number",
+              "default": 500,
+              "description": "Lower retention"
+            },
+            "churn_rate": {
+              "type": "number",
+              "default": 0.07,
+              "description": "Higher churn"
+            },
+            "refund_rate": {
+              "type": "number",
+              "default": 0.03,
+              "description": "More refunds"
+            },
+            "revenue_growth_rate": {
+              "type": "number",
+              "default": 0.20,
+              "description": "Slower growth"
+            }
+          }
+        }
+      }
+    },
+    "operating_expenses": {
+      "type": "object",
+      "description": "Operating expense structure",
+      "properties": {
+        "sales_marketing_pct": {
+          "type": "number",
+          "description": "Sales & Marketing as % of revenue",
+          "default": 0.40,
+          "minimum": 0,
+          "maximum": 1
+        },
+        "product_dev_pct": {
+          "type": "number",
+          "description": "Product Development as % of revenue",
+          "default": 0.24,
+          "minimum": 0,
+          "maximum": 1
+        },
+        "general_admin_pct": {
+          "type": "number",
+          "description": "General & Admin as % of revenue",
+          "default": 0.16,
+          "minimum": 0,
+          "maximum": 1
+        },
+        "fixed_costs_base": {
+          "type": "number",
+          "description": "Base fixed costs per month",
+          "default": 40000,
+          "minimum": 0
+        },
+        "fixed_costs_growth_rate": {
+          "type": "number",
+          "description": "Monthly growth in fixed costs",
+          "default": 0.05,
+          "minimum": 0
+        }
+      }
+    },
+    "cash": {
+      "type": "object",
+      "description": "Cash flow assumptions",
+      "properties": {
+        "initial_balance": {
+          "type": "number",
+          "description": "Starting cash balance",
+          "default": 500000,
+          "minimum": 0
+        },
+        "collection_period_days": {
+          "type": "number",
+          "description": "Days to collect revenue",
+          "default": 0,
+          "minimum": 0
+        },
+        "payment_period_days": {
+          "type": "number",
+          "description": "Days to pay expenses",
+          "default": 30,
+          "minimum": 0
+        }
+      }
+    },
+    "confidence_levels": {
+      "type": "object",
+      "description": "Confidence ratings for assumptions",
+      "properties": {
+        "revenue_growth": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "default": "medium",
+          "description": "Confidence in revenue growth assumptions"
+        },
+        "cac_ltv": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "default": "medium",
+          "description": "Confidence in CAC/LTV ratios"
+        },
+        "churn": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "default": "high",
+          "description": "Confidence in churn assumptions"
+        },
+        "cogs": {
+          "type": "string",
+          "enum": ["high", "medium", "low"],
+          "default": "high",
+          "description": "Confidence in COGS assumptions"
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "Assumptions based on industry benchmarks for SaaS/tech companies",
+        "CAC improvements assume ongoing optimization of marketing channels",
+        "LTV assumes 12-month average customer lifetime",
+        "Churn rates may vary significantly by customer segment",
+        "COGS includes payment processing, hosting, and direct service costs",
+        "Operating expenses scale with revenue but include fixed base costs",
+        "Cash runway calculated assuming no new funding"
+      ]
+    }
+  },
+  "required": ["scenarios", "operating_expenses", "cash"]
+}

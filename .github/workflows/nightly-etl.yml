@@ -1,0 +1,115 @@
+name: Nightly ETL
+
+on:
+  schedule:
+    # Run at 01:10 America/Toronto (06:10 UTC) daily
+    - cron: '10 6 * * *'
+  workflow_dispatch:
+    # Allow manual trigger
+    inputs:
+      date:
+        description: 'Date to process (YYYY-MM-DD, defaults to yesterday)'
+        required: false
+        type: string
+      days:
+        description: 'Number of days to process'
+        required: false
+        type: string
+        default: '1'
+      dry_run:
+        description: 'Dry run mode (no writes)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  TZ: America/Toronto
+  NODE_VERSION: '20'
+
+jobs:
+  run-etl:
+    name: Run ETL Pipeline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Load environment variables
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> $GITHUB_ENV
+          echo "META_ACCESS_TOKEN=${{ secrets.META_ACCESS_TOKEN }}" >> $GITHUB_ENV
+          echo "META_AD_ACCOUNT_ID=${{ secrets.META_AD_ACCOUNT_ID }}" >> $GITHUB_ENV
+          echo "TIKTOK_ACCESS_TOKEN=${{ secrets.TIKTOK_ACCESS_TOKEN }}" >> $GITHUB_ENV
+          echo "TIKTOK_ADVERTISER_ID=${{ secrets.TIKTOK_ADVERTISER_ID }}" >> $GITHUB_ENV
+          echo "SHOPIFY_API_KEY=${{ secrets.SHOPIFY_API_KEY }}" >> $GITHUB_ENV
+          echo "SHOPIFY_PASSWORD=${{ secrets.SHOPIFY_PASSWORD }}" >> $GITHUB_ENV
+          echo "SHOPIFY_STORE=${{ secrets.SHOPIFY_STORE }}" >> $GITHUB_ENV
+          echo "INITIAL_CASH_BALANCE=${{ secrets.INITIAL_CASH_BALANCE || '500000' }}" >> $GITHUB_ENV
+
+      - name: Pull Meta Ads Data
+        id: meta_ads
+        continue-on-error: true
+        run: |
+          tsx scripts/etl/pull_ads_meta.ts --cron --days ${{ github.event.inputs.days || '1' }} ${{ github.event.inputs.dry_run && '--dry-run' || '' }}
+        env:
+          DATE: ${{ github.event.inputs.date }}
+
+      - name: Pull TikTok Ads Data
+        id: tiktok_ads
+        continue-on-error: true
+        run: |
+          tsx scripts/etl/pull_ads_tiktok.ts --cron --days ${{ github.event.inputs.days || '1' }} ${{ github.event.inputs.dry_run && '--dry-run' || '' }}
+        env:
+          DATE: ${{ github.event.inputs.date }}
+
+      - name: Pull Shopify Orders
+        id: shopify_orders
+        continue-on-error: true
+        run: |
+          tsx scripts/etl/pull_shopify_orders.ts --cron --days ${{ github.event.inputs.days || '1' }} ${{ github.event.inputs.dry_run && '--dry-run' || '' }}
+        env:
+          DATE: ${{ github.event.inputs.date }}
+
+      - name: Compute Daily Metrics
+        id: compute_metrics
+        run: |
+          tsx scripts/etl/compute_metrics.ts --cron --days ${{ github.event.inputs.days || '1' }} ${{ github.event.inputs.dry_run && '--dry-run' || '' }}
+        env:
+          DATE: ${{ github.event.inputs.date }}
+
+      - name: ETL Summary
+        if: always()
+        run: |
+          echo "## ETL Pipeline Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Meta Ads | ${{ steps.meta_ads.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| TikTok Ads | ${{ steps.tiktok_ads.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Shopify Orders | ${{ steps.shopify_orders.outcome }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Compute Metrics | ${{ steps.compute_metrics.outcome }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `ETL Pipeline Failed - ${new Date().toISOString()}`,
+              body: `ETL pipeline failed. Check workflow run: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+              labels: ['bug', 'etl']
+            });

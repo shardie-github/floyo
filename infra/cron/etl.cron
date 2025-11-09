@@ -1,0 +1,30 @@
+# Finance Automation ETL Cron Schedule
+# Timezone: America/Toronto
+# 
+# Installation:
+#   1. Copy this file to your server
+#   2. Update paths and environment variables
+#   3. Run: crontab -e
+#   4. Add: @daily /path/to/run-etl.sh
+#
+# Or use systemd timer (recommended):
+#   See: /infra/systemd/etl-daily.timer
+
+# Set timezone
+TZ=America/Toronto
+
+# Run at 01:10 AM daily (10 minutes after midnight)
+# Cron format: minute hour day month weekday
+10 1 * * * /usr/bin/node /path/to/project/scripts/etl/compute_metrics.ts --cron >> /var/log/etl.log 2>&1
+
+# Alternative: Run individual ETL scripts sequentially
+# 10 1 * * * /usr/bin/node /path/to/project/scripts/etl/pull_ads_meta.ts --cron >> /var/log/etl-meta.log 2>&1
+# 15 1 * * * /usr/bin/node /path/to/project/scripts/etl/pull_ads_tiktok.ts --cron >> /var/log/etl-tiktok.log 2>&1
+# 20 1 * * * /usr/bin/node /path/to/project/scripts/etl/pull_shopify_orders.ts --cron >> /var/log/etl-shopify.log 2>&1
+# 25 1 * * * /usr/bin/node /path/to/project/scripts/etl/compute_metrics.ts --cron >> /var/log/etl-metrics.log 2>&1
+
+# Weekly metrics refresh (Sundays at 2 AM)
+# 0 2 * * 0 /usr/bin/node /path/to/project/scripts/etl/compute_metrics.ts --days 7 --cron >> /var/log/etl-weekly.log 2>&1
+
+# Monthly report generation (1st of month at 3 AM)
+# 0 3 1 * * /usr/bin/node /path/to/project/scripts/etl/compute_metrics.ts --days 30 --cron >> /var/log/etl-monthly.log 2>&1

@@ -1,0 +1,265 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Zapier/Make.com Automation Blueprint",
+  "description": "No-code automation fallback for ETL pipeline",
+  "version": "1.0.0",
+  "automations": [
+    {
+      "name": "Daily Metrics Sync - Meta Ads",
+      "trigger": {
+        "type": "schedule",
+        "frequency": "daily",
+        "time": "01:10",
+        "timezone": "America/Toronto"
+      },
+      "steps": [
+        {
+          "step": 1,
+          "action": "http_request",
+          "method": "GET",
+          "url": "https://graph.facebook.com/v18.0/{{ad_account_id}}/insights",
+          "headers": {
+            "Authorization": "Bearer {{meta_access_token}}"
+          },
+          "params": {
+            "fields": "date_start,campaign_id,campaign_name,spend,impressions,clicks",
+            "time_range": "{\"since\":\"{{yesterday}}\",\"until\":\"{{yesterday}}\"}",
+            "level": "ad"
+          }
+        },
+        {
+          "step": 2,
+          "action": "data_transform",
+          "transform": "map_fields",
+          "mapping": {
+            "date": "date_start",
+            "channel": "meta_ads",
+            "campaign_id": "campaign_id",
+            "campaign_name": "campaign_name",
+            "amount": "spend",
+            "impressions": "impressions",
+            "clicks": "clicks"
+          }
+        },
+        {
+          "step": 3,
+          "action": "supabase_insert",
+          "table": "spend",
+          "data": "{{transformed_data}}"
+        }
+      ]
+    },
+    {
+      "name": "Daily Metrics Sync - TikTok Ads",
+      "trigger": {
+        "type": "schedule",
+        "frequency": "daily",
+        "time": "01:15",
+        "timezone": "America/Toronto"
+      },
+      "steps": [
+        {
+          "step": 1,
+          "action": "http_request",
+          "method": "POST",
+          "url": "https://business-api.tiktok.com/open_api/v1.3/report/integrated/get/",
+          "headers": {
+            "Access-Token": "{{tiktok_access_token}}",
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "advertiser_id": "{{advertiser_id}}",
+            "start_date": "{{yesterday}}",
+            "end_date": "{{yesterday}}",
+            "dimensions": ["stat_time_day", "campaign_id", "campaign_name"],
+            "metrics": ["spend", "impressions", "clicks"]
+          }
+        },
+        {
+          "step": 2,
+          "action": "data_transform",
+          "transform": "map_fields",
+          "mapping": {
+            "date": "stat_time_day",
+            "channel": "tiktok_ads",
+            "campaign_id": "campaign_id",
+            "campaign_name": "campaign_name",
+            "amount": "spend",
+            "impressions": "impressions",
+            "clicks": "clicks"
+          }
+        },
+        {
+          "step": 3,
+          "action": "supabase_insert",
+          "table": "spend",
+          "data": "{{transformed_data}}"
+        }
+      ]
+    },
+    {
+      "name": "Daily Metrics Sync - Shopify Orders",
+      "trigger": {
+        "type": "schedule",
+        "frequency": "daily",
+        "time": "01:20",
+        "timezone": "America/Toronto"
+      },
+      "steps": [
+        {
+          "step": 1,
+          "action": "http_request",
+          "method": "GET",
+          "url": "https://{{shopify_api_key}}:{{shopify_password}}@{{shopify_store}}.myshopify.com/admin/api/2024-01/orders.json",
+          "params": {
+            "status": "any",
+            "created_at_min": "{{yesterday}}T00:00:00Z",
+            "created_at_max": "{{yesterday}}T23:59:59Z",
+            "limit": "250"
+          }
+        },
+        {
+          "step": 2,
+          "action": "data_transform",
+          "transform": "map_fields",
+          "mapping": {
+            "order_id": "name",
+            "customer_email": "email",
+            "status": "financial_status",
+            "total": "total_price",
+            "subtotal": "subtotal_price",
+            "tax": "total_tax",
+            "refund_amount": "refunds[0].transactions[0].amount",
+            "source": "shopify"
+          }
+        },
+        {
+          "step": 3,
+          "action": "supabase_insert",
+          "table": "orders",
+          "data": "{{transformed_data}}"
+        }
+      ]
+    },
+    {
+      "name": "Compute Daily Metrics",
+      "trigger": {
+        "type": "schedule",
+        "frequency": "daily",
+        "time": "01:30",
+        "timezone": "America/Toronto"
+      },
+      "steps": [
+        {
+          "step": 1,
+          "action": "supabase_query",
+          "query": "SELECT * FROM orders WHERE DATE(order_date) = '{{yesterday}}'"
+        },
+        {
+          "step": 2,
+          "action": "supabase_query",
+          "query": "SELECT * FROM spend WHERE date = '{{yesterday}}'"
+        },
+        {
+          "step": 3,
+          "action": "code_python",
+          "code": "# Calculate metrics\nrevenue = sum([order['total'] for order in orders if order['status'] in ['paid', 'fulfilled']])\nspend_total = sum([s['amount'] for s in spend])\nnew_customers = len(set([o['customer_email'] for o in orders]))\ncac = spend_total / new_customers if new_customers > 0 else 0\n# ... more calculations"
+        },
+        {
+          "step": 4,
+          "action": "supabase_insert",
+          "table": "metrics_daily",
+          "data": "{{computed_metrics}}"
+        }
+      ]
+    },
+    {
+      "name": "Alert: Low Runway",
+      "trigger": {
+        "type": "supabase_webhook",
+        "event": "INSERT",
+        "table": "metrics_daily",
+        "condition": "runway_months < 6"
+      },
+      "steps": [
+        {
+          "step": 1,
+          "action": "slack_send_message",
+          "channel": "#finance-alerts",
+          "message": "⚠️ Cash runway below 6 months: {{runway_months}} months"
+        },
+        {
+          "step": 2,
+          "action": "email_send",
+          "to": "finance@example.com",
+          "subject": "Cash Runway Alert",
+          "body": "Runway has dropped to {{runway_months}} months. Review financial plan."
+        }
+      ]
+    },
+    {
+      "name": "Alert: High CAC",
+      "trigger": {
+        "type": "supabase_webhook",
+        "event": "INSERT",
+        "table": "metrics_daily",
+        "condition": "cac > 200"
+      },
+      "steps": [
+        {
+          "step": 1,
+          "action": "slack_send_message",
+          "channel": "#growth-alerts",
+          "message": "⚠️ CAC exceeded $200: ${{cac}}"
+        }
+      ]
+    },
+    {
+      "name": "Weekly Finance Report",
+      "trigger": {
+        "type": "schedule",
+        "frequency": "weekly",
+        "day": "monday",
+        "time": "09:00",
+        "timezone": "America/Toronto"
+      },
+      "steps": [
+        {
+          "step": 1,
+          "action": "supabase_query",
+          "query": "SELECT * FROM metrics_daily WHERE date >= CURRENT_DATE - INTERVAL '7 days' ORDER BY date"
+        },
+        {
+          "step": 2,
+          "action": "generate_report",
+          "template": "weekly_finance_report",
+          "data": "{{metrics_data}}"
+        },
+        {
+          "step": 3,
+          "action": "email_send",
+          "to": "finance@example.com",
+          "subject": "Weekly Finance Report",
+          "body": "{{report_html}}",
+          "attachments": ["{{report_pdf}}"]
+        }
+      ]
+    }
+  ],
+  "variables": {
+    "yesterday": "{{moment().subtract(1, 'days').format('YYYY-MM-DD')}}",
+    "meta_access_token": "{{process.env.META_ACCESS_TOKEN}}",
+    "tiktok_access_token": "{{process.env.TIKTOK_ACCESS_TOKEN}}",
+    "shopify_api_key": "{{process.env.SHOPIFY_API_KEY}}",
+    "shopify_password": "{{process.env.SHOPIFY_PASSWORD}}",
+    "shopify_store": "{{process.env.SHOPIFY_STORE}}"
+  },
+  "notes": [
+    "This is a blueprint for Zapier/Make.com automation",
+    "Import this JSON into your automation platform",
+    "Configure environment variables in platform settings",
+    "Test each automation before enabling",
+    "Monitor execution logs for errors",
+    "Consider rate limits and API quotas"
+  ]
+}
