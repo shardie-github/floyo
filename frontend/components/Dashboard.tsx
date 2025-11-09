@@ -44,6 +44,10 @@ import { ProgressMilestone } from './ProgressMilestone'
 import { SearchBar } from './SearchBar'
 import { OnboardingWizard } from './OnboardingWizard'
 import { KeyboardShortcutsHelp, useKeyboardShortcuts } from './KeyboardShortcuts'
+import { AIRecommendations } from './AIRecommendations'
+import { VoiceCommands } from './VoiceCommands'
+import { ChatAssistant } from './ChatAssistant'
+import { PredictiveDashboard } from './PredictiveDashboard'
 import { ProductTour, defaultTourSteps } from './ProductTour'
 import { InstallPrompt } from './InstallPrompt'
 import { ServiceWorkerUpdate } from './ServiceWorkerUpdate'
@@ -217,6 +221,7 @@ export function Dashboard() {
         onClose={() => setUnlockedAchievement(null)} 
       />
       <OnboardingWizard />
+      <ChatAssistant />
       {showShortcuts && <KeyboardShortcutsHelp />}
       <nav className="bg-white dark:bg-gray-800 shadow-sm transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -228,6 +233,7 @@ export function Dashboard() {
               <SearchBar />
             </div>
             <div className="flex items-center space-x-4">
+              <VoiceCommands />
               <button
                 onClick={handleNotificationToggle}
                 className="relative p-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
@@ -273,6 +279,12 @@ export function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <GamificationDashboard />
           <ComparisonCard />
+        </div>
+
+        {/* AI-Powered Features */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <AIRecommendations />
+          <PredictiveDashboard />
         </div>
 
         {/* Anxiety Reduction & Time Analysis */}
