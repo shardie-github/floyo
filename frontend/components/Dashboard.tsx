@@ -41,6 +41,9 @@ import { AchievementUnlockModal } from './AchievementUnlockModal'
 import { StreakCounter } from './StreakCounter'
 import { FOMOAlert } from './FOMOAlert'
 import { ProgressMilestone } from './ProgressMilestone'
+import { SearchBar } from './SearchBar'
+import { OnboardingWizard } from './OnboardingWizard'
+import { KeyboardShortcutsHelp, useKeyboardShortcuts } from './KeyboardShortcuts'
 import { ProductTour, defaultTourSteps } from './ProductTour'
 import { InstallPrompt } from './InstallPrompt'
 import { ServiceWorkerUpdate } from './ServiceWorkerUpdate'
@@ -176,6 +179,34 @@ export function Dashboard() {
     xp: number;
   } | null>(null);
 
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts([
+    {
+      key: 'k',
+      ctrl: true,
+      description: 'Open search',
+      action: () => {
+        const searchInput = document.querySelector<HTMLInputElement>('input[type="search"]');
+        searchInput?.focus();
+      },
+    },
+    {
+      key: 'g',
+      ctrl: true,
+      description: 'Go to dashboard',
+      action: () => {
+        window.location.href = '/dashboard';
+      },
+    },
+    {
+      key: '?',
+      description: 'Show shortcuts',
+      action: () => setShowShortcuts(!showShortcuts),
+    },
+  ]);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <OfflineIndicator />
@@ -185,11 +216,16 @@ export function Dashboard() {
         achievement={unlockedAchievement} 
         onClose={() => setUnlockedAchievement(null)} 
       />
+      <OnboardingWizard />
+      {showShortcuts && <KeyboardShortcutsHelp />}
       <nav className="bg-white dark:bg-gray-800 shadow-sm transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center">
               <h1 className="text-2xl font-bold text-primary-600 dark:text-primary-400">Floyo</h1>
+            </div>
+            <div className="flex items-center space-x-4 flex-1 max-w-md mx-4">
+              <SearchBar />
             </div>
             <div className="flex items-center space-x-4">
               <button

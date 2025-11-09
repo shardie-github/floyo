@@ -1,0 +1,55 @@
+name: Automated Daily Backups
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # 2 AM UTC daily
+  workflow_dispatch:
+
+jobs:
+  backup:
+    name: Create Database Backup
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Create Backup
+        run: |
+          npm run ops:snapshot -- --encrypt
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SNAPSHOT_ENCRYPTION_KEY: ${{ secrets.SNAPSHOT_ENCRYPTION_KEY }}
+      
+      - name: Upload Backup to S3 (if configured)
+        if: env.AWS_ACCESS_KEY_ID != ''
+        run: |
+          # Upload encrypted backup to S3
+          aws s3 cp ops/snapshots/*.encrypted s3://${{ secrets.S3_BACKUP_BUCKET }}/backups/ --recursive
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      
+      - name: Cleanup Old Backups
+        run: |
+          # Keep only last 7 days of backups locally
+          find ops/snapshots -name "*.encrypted" -mtime +7 -delete
+          find ops/snapshots -name "*.metadata.json" -mtime +7 -delete
+      
+      - name: Notify on Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          webhook_url: ${{ secrets.BACKUP_WEBHOOK_URL }}
+          text: 'Daily backup failed - manual intervention required'
