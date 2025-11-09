@@ -1,0 +1,13 @@
+{
+  "orgId": "${VERCEL_ORG_ID}",
+  "projectId": "${VERCEL_PROJECT_ID}",
+  "settings": {
+    "createdAt": 0,
+    "framework": "nextjs",
+    "devCommand": "cd frontend && npm run dev",
+    "installCommand": "npm ci",
+    "buildCommand": "cd frontend && npm ci && npm run build",
+    "outputDirectory": "frontend/.next",
+    "rootDirectory": "frontend"
+  }
+}
