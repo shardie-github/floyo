@@ -61,21 +61,29 @@ class StripeIntegration:
             raise ValueError("Plan not found")
         
         # Get or create Stripe customer
-        customer_id = None
-        if hasattr(user, 'stripe_customer_id') and user.stripe_customer_id:
-            customer_id = user.stripe_customer_id
-        else:
-            customer_data = StripeIntegration.create_customer(user)
-            customer_id = customer_data["customer_id"]
-            # Store customer ID (assuming User model has stripe_customer_id field)
-            # If not, you'd need to add this field to the model
+        # Store customer ID in subscription metadata or create new customer
+        customer_data = StripeIntegration.create_customer(user)
+        customer_id = customer_data["customer_id"]
         
         # Determine price ID based on billing cycle
-        # In production, you'd store Stripe price IDs in SubscriptionPlan model
-        price_id = plan.stripe_price_id_monthly if billing_cycle == "monthly" else plan.stripe_price_id_yearly
+        # Check plan metadata for Stripe price IDs, or use plan name/ID as fallback
+        plan_metadata = plan.features if isinstance(plan.features, dict) else {}
+        price_id = plan_metadata.get(f"stripe_price_id_{billing_cycle}")
         
+        # If no price ID in metadata, we'll need to create price in Stripe or use existing
+        # For now, we'll use a placeholder that should be configured
         if not price_id:
-            raise ValueError(f"Stripe price ID not configured for plan {plan.name}")
+            # In production, you should configure Stripe price IDs in plan.features metadata
+            # For now, we'll create a price on the fly or use a default
+            logger.warning(f"No Stripe price ID configured for plan {plan.name}, creating price")
+            # Create price in Stripe
+            price = stripe.Price.create(
+                unit_amount=int(plan.price_monthly * 100 if billing_cycle == "monthly" else plan.price_yearly * 100),
+                currency="usd",
+                recurring={"interval": billing_cycle},
+                product_data={"name": plan.name}
+            )
+            price_id = price.id
         
         # Create subscription in Stripe
         subscription_data = {
@@ -101,9 +109,9 @@ class StripeIntegration:
         )
         
         # Update subscription with Stripe data
-        subscription.stripe_id = stripe_subscription.id
-        subscription.stripe_customer_id = customer_id
+        subscription.stripe_subscription_id = stripe_subscription.id
         subscription.status = stripe_subscription.status
+        # Note: Customer ID is stored in Stripe, we can retrieve it from Stripe API if needed
         db.commit()
         
         # Create billing event
@@ -160,24 +168,24 @@ class StripeIntegration:
         if not subscription:
             raise ValueError("Subscription not found")
         
-        if not subscription.stripe_id:
+        if not subscription.stripe_subscription_id:
             # Cancel local subscription only
             SubscriptionManager.cancel_subscription(db, subscription_id, user_id)
             return {"status": "canceled", "message": "Subscription canceled (no Stripe subscription)"}
         
         # Cancel in Stripe
         if cancel_immediately:
-            stripe.Subscription.delete(subscription.stripe_id)
+            stripe.Subscription.delete(subscription.stripe_subscription_id)
             subscription.status = "canceled"
             subscription.canceled_at = datetime.utcnow()
         else:
             # Cancel at period end
             stripe_subscription = stripe.Subscription.modify(
-                subscription.stripe_id,
+                subscription.stripe_subscription_id,
                 cancel_at_period_end=True
             )
             subscription.status = "active"  # Still active until period end
-            subscription.cancel_at_period_end = True
+            # Note: cancel_at_period_end is tracked in Stripe, we check Stripe API if needed
         
         db.commit()
         
@@ -214,9 +222,9 @@ class StripeIntegration:
                 stripe_subscription_id = event_data.get("id")
                 customer_id = event_data.get("customer")
                 
-                # Find subscription by Stripe ID or customer ID
+                # Find subscription by Stripe ID
                 subscription = db.query(Subscription).filter(
-                    Subscription.stripe_id == stripe_subscription_id
+                    Subscription.stripe_subscription_id == stripe_subscription_id
                 ).first()
                 
                 if subscription:
@@ -229,13 +237,12 @@ class StripeIntegration:
                 # Subscription updated
                 stripe_subscription_id = event_data.get("id")
                 subscription = db.query(Subscription).filter(
-                    Subscription.stripe_id == stripe_subscription_id
+                    Subscription.stripe_subscription_id == stripe_subscription_id
                 ).first()
                 
                 if subscription:
                     subscription.status = event_data.get("status", subscription.status)
-                    if event_data.get("cancel_at_period_end"):
-                        subscription.cancel_at_period_end = True
+                    # Note: cancel_at_period_end is tracked in Stripe webhook data
                     db.commit()
                     results["processed"] = True
                     results["message"] = f"Subscription {subscription.id} updated"
@@ -244,7 +251,7 @@ class StripeIntegration:
                 # Subscription canceled
                 stripe_subscription_id = event_data.get("id")
                 subscription = db.query(Subscription).filter(
-                    Subscription.stripe_id == stripe_subscription_id
+                    Subscription.stripe_subscription_id == stripe_subscription_id
                 ).first()
                 
                 if subscription:
@@ -261,7 +268,7 @@ class StripeIntegration:
                 
                 if subscription_id:
                     subscription = db.query(Subscription).filter(
-                        Subscription.stripe_id == subscription_id
+                        Subscription.stripe_subscription_id == subscription_id
                     ).first()
                     
                     if subscription:
@@ -273,12 +280,12 @@ class StripeIntegration:
                         )
                         
                         # Update subscription period
-                        subscription.current_period_start = datetime.fromtimestamp(
-                            invoice.get("period_start", 0)
-                        )
-                        subscription.current_period_end = datetime.fromtimestamp(
-                            invoice.get("period_end", 0)
-                        )
+                        period_start = invoice.get("period_start")
+                        period_end = invoice.get("period_end")
+                        if period_start:
+                            subscription.current_period_start = datetime.fromtimestamp(period_start)
+                        if period_end:
+                            subscription.current_period_end = datetime.fromtimestamp(period_end)
                         db.commit()
                         results["processed"] = True
                         results["message"] = f"Payment succeeded for subscription {subscription.id}"
@@ -290,7 +297,7 @@ class StripeIntegration:
                 
                 if subscription_id:
                     subscription = db.query(Subscription).filter(
-                        Subscription.stripe_id == subscription_id
+                        Subscription.stripe_subscription_id == subscription_id
                     ).first()
                     
                     if subscription:

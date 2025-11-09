@@ -1,5 +1,6 @@
 """Retention campaign email automation system."""
 
+import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from uuid import UUID
@@ -66,7 +67,7 @@ class RetentionCampaignService:
                     <li>Click "Create Workflow" on any suggestion</li>
                     <li>Customize the automation to fit your needs</li>
                 </ol>
-                <a href="{email_service.smtp_from_email.replace('noreply@', 'https://')}/dashboard" class="button">Create Your First Workflow</a>
+                <a href="{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/dashboard" class="button">Create Your First Workflow</a>
                 <p>Need help? Check out our <a href="#">quick start guide</a> or reply to this email.</p>
                 <div class="footer">
                     <p>This is an automated message from Floyo. You're receiving this because you signed up 3 days ago.</p>
@@ -89,7 +90,7 @@ class RetentionCampaignService:
         2. Click "Create Workflow" on any suggestion
         3. Customize the automation to fit your needs
         
-        Create your first workflow: {email_service.smtp_from_email.replace('noreply@', 'https://')}/dashboard
+        Create your first workflow: {os.getenv('FRONTEND_URL', 'http://localhost:3000')}/dashboard
         
         Need help? Check out our quick start guide or reply to this email.
         
@@ -183,7 +184,7 @@ class RetentionCampaignService:
                 <p>Hi {user.email.split('@')[0]},</p>
                 <p>We've analyzed your work patterns and found 3 automations that could save you time:</p>
                 {suggestions_html}
-                <a href="{email_service.smtp_from_email.replace('noreply@', 'https://')}/dashboard/suggestions" class="button">View All Suggestions</a>
+                <a href="{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/dashboard/suggestions" class="button">View All Suggestions</a>
                 <p>These suggestions are personalized based on your actual usage patterns. Try them out!</p>
                 <div class="footer">
                     <p>This is an automated message from Floyo. You're receiving this because you've been using Floyo for a week.</p>
@@ -202,7 +203,7 @@ class RetentionCampaignService:
         
         {chr(10).join([f"{i+1}. {s.title or 'Workflow Suggestion'}: {s.description or 'Automate this pattern.'}" for i, s in enumerate(suggestions)])}
         
-        View all suggestions: {email_service.smtp_from_email.replace('noreply@', 'https://')}/dashboard/suggestions
+        View all suggestions: {os.getenv('FRONTEND_URL', 'http://localhost:3000')}/dashboard/suggestions
         
         These suggestions are personalized based on your actual usage patterns. Try them out!
         
@@ -286,7 +287,7 @@ class RetentionCampaignService:
                     <li><strong>Team Collaboration:</strong> Share workflows with your team</li>
                     <li><strong>API Access:</strong> Integrate Floyo into your own tools</li>
                 </ul>
-                <a href="{email_service.smtp_from_email.replace('noreply@', 'https://')}/dashboard" class="button">Explore Advanced Features</a>
+                <a href="{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/dashboard" class="button">Explore Advanced Features</a>
                 <p>Upgrade to Pro to unlock unlimited workflows and advanced features.</p>
                 <div class="footer">
                     <p>This is an automated message from Floyo. You're receiving this because you've been using Floyo for 2 weeks.</p>
@@ -309,7 +310,7 @@ class RetentionCampaignService:
         - Team Collaboration: Share workflows with your team
         - API Access: Integrate Floyo into your own tools
         
-        Explore advanced features: {email_service.smtp_from_email.replace('noreply@', 'https://')}/dashboard
+        Explore advanced features: {os.getenv('FRONTEND_URL', 'http://localhost:3000')}/dashboard
         
         Upgrade to Pro to unlock unlimited workflows and advanced features.
         
