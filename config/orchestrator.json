@@ -1,0 +1,5 @@
+{
+  "budget": 75,
+  "reliabilityWebhook": null,
+  "notes": "Configure RELIABILITY_ALERT_WEBHOOK environment variable for alerts"
+}
