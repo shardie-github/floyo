@@ -6,7 +6,7 @@ from typing import Dict, List, Optional, Any
 from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
-from database.models import User, Event, Workflow, Suggestion, RetentionCampaign
+from database.models import User, Event, Workflow, Suggestion, RetentionCampaign, Pattern
 from backend.email_service import email_service
 from backend.audit import log_audit
 from backend.growth import RetentionEngine
