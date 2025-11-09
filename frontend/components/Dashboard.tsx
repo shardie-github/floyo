@@ -32,6 +32,15 @@ import { Pagination } from './Pagination'
 import { EmptyState } from './EmptyState'
 import { NotificationCenter } from './NotificationCenter'
 import { useNotifications } from './NotificationProvider'
+import { GamificationDashboard } from './GamificationDashboard'
+import { InsightsPanel } from './InsightsPanel'
+import { ComparisonCard } from './ComparisonCard'
+import { AnxietyReductionPanel } from './AnxietyReductionPanel'
+import { TimeAnxietyCard } from './TimeAnxietyCard'
+import { AchievementUnlockModal } from './AchievementUnlockModal'
+import { StreakCounter } from './StreakCounter'
+import { FOMOAlert } from './FOMOAlert'
+import { ProgressMilestone } from './ProgressMilestone'
 import { ProductTour, defaultTourSteps } from './ProductTour'
 import { InstallPrompt } from './InstallPrompt'
 import { ServiceWorkerUpdate } from './ServiceWorkerUpdate'
@@ -158,9 +167,24 @@ export function Dashboard() {
     }
   }, [handleWebSocketMessage])
 
+  const [unlockedAchievement, setUnlockedAchievement] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+    rarity: 'common' | 'rare' | 'epic' | 'legendary';
+    xp: number;
+  } | null>(null);
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <OfflineIndicator />
+      <StreakCounter />
+      <FOMOAlert />
+      <AchievementUnlockModal 
+        achievement={unlockedAchievement} 
+        onClose={() => setUnlockedAchievement(null)} 
+      />
       <nav className="bg-white dark:bg-gray-800 shadow-sm transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
@@ -197,6 +221,28 @@ export function Dashboard() {
           <p className="text-gray-600 dark:text-gray-400">
             Track your file usage patterns and discover integration opportunities
           </p>
+        </div>
+
+        {/* Progress Milestone - Achievement Progress */}
+        <div className="mb-6">
+          <ProgressMilestone />
+        </div>
+
+        {/* Insights Panel - FOMO, Urgency, Personalization */}
+        <div className="mb-8">
+          <InsightsPanel />
+        </div>
+
+        {/* Gamification & Comparison Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <GamificationDashboard />
+          <ComparisonCard />
+        </div>
+
+        {/* Anxiety Reduction & Time Analysis */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <AnxietyReductionPanel />
+          <TimeAnxietyCard />
         </div>
 
         {statsLoading ? (
