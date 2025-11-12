@@ -1,0 +1,30 @@
+[
+  {
+    "platform": "source_a",
+    "campaign_id": "camp_123",
+    "adset_id": "adset_456",
+    "date": "2025-01-27",
+    "spend_cents": 5000,
+    "clicks": 100,
+    "impressions": 5000,
+    "conversions": 5,
+    "metadata": {
+      "campaign_name": "Test Campaign A",
+      "adset_name": "Test Adset A"
+    }
+  },
+  {
+    "platform": "source_a",
+    "campaign_id": "camp_124",
+    "adset_id": "adset_457",
+    "date": "2025-01-26",
+    "spend_cents": 3000,
+    "clicks": 60,
+    "impressions": 3000,
+    "conversions": 3,
+    "metadata": {
+      "campaign_name": "Test Campaign B",
+      "adset_name": "Test Adset B"
+    }
+  }
+]

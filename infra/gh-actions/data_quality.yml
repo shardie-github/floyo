@@ -1,0 +1,48 @@
+name: Data Quality Checks
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 02:00 America/Toronto (nightly)
+  workflow_dispatch:
+
+jobs:
+  data-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      
+      - name: Install dependencies
+        run: npm ci || true
+      
+      - name: Recompute yesterday's metrics
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TZ: America/Toronto
+        run: |
+          YESTERDAY=$(date -d "yesterday" +%Y-%m-%d)
+          tsx scripts/etl/compute_metrics.ts --date $YESTERDAY
+      
+      - name: Run data quality checks
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          TZ: America/Toronto
+        run: tsx scripts/agents/run_data_quality.ts
+      
+      - name: Notify on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: tsx scripts/agents/notify.ts "Data Quality Check Failed" "One or more data quality checks failed. See report for details." "error"
+      
+      - name: Upload data quality report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-quality-report
+          path: reports/exec/data_quality_report.md

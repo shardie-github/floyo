@@ -1,16 +1,24 @@
-// /scripts/agents/generate_delta_migration.ts
+#!/usr/bin/env tsx
+/**
+ * Delta Migration Generator
+ * Introspects database and generates migration with only missing objects
+ */
+
 import fs from "fs";
 import path from "path";
 import pg from "pg";
+import { logger } from '../lib/logger.js';
 
 const REQUIRED = {
   tables: {
     events: `CREATE TABLE IF NOT EXISTS public.events(
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL,
   occurred_at timestamptz NOT NULL DEFAULT now(),
   user_id uuid,
-  event_name text NOT NULL,
-  props jsonb NOT NULL DEFAULT '{}'::jsonb
+  props jsonb NOT NULL DEFAULT '{}'::jsonb,
+  source text,
+  created_at timestamptz NOT NULL DEFAULT now()
 );`,
     orders: `CREATE TABLE IF NOT EXISTS public.orders(
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -35,7 +43,11 @@ const REQUIRED = {
   spend_cents integer NOT NULL DEFAULT 0,
   clicks integer NOT NULL DEFAULT 0,
   impressions integer NOT NULL DEFAULT 0,
-  conv integer NOT NULL DEFAULT 0
+  conversions integer NOT NULL DEFAULT 0,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(platform, campaign_id, adset_id, date)
 );`,
     experiments: `CREATE TABLE IF NOT EXISTS public.experiments(
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -53,7 +65,7 @@ const REQUIRED = {
 );`,
     metrics_daily: `CREATE TABLE IF NOT EXISTS public.metrics_daily(
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  day date NOT NULL,
+  day date NOT NULL UNIQUE,
   sessions integer NOT NULL DEFAULT 0,
   add_to_carts integer NOT NULL DEFAULT 0,
   orders integer NOT NULL DEFAULT 0,
@@ -61,7 +73,11 @@ const REQUIRED = {
   refunds_cents integer NOT NULL DEFAULT 0,
   aov_cents integer NOT NULL DEFAULT 0,
   cac_cents integer NOT NULL DEFAULT 0,
-  conversion_rate numeric NOT NULL DEFAULT 0
+  conversion_rate numeric NOT NULL DEFAULT 0,
+  gross_margin_cents integer NOT NULL DEFAULT 0,
+  traffic integer NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
 );`,
     feedback_loops: `CREATE TABLE IF NOT EXISTS public.feedback_loops(
   id serial PRIMARY KEY,
@@ -90,15 +106,13 @@ const REQUIRED = {
     }
   },
   indexes: {
-    events: ["idx_events_name_time(event_name, occurred_at)"],
-    orders: ["idx_orders_placed_at(placed_at)"],
-    spend: ["idx_spend_platform_dt(platform, date)"],
-    metrics_daily: ["idx_metrics_day(day)"]
+    events: ["idx_events_name_time(name, occurred_at)", "idx_events_occurred_at(occurred_at DESC)"],
+    spend: ["idx_spend_platform_dt(platform, date DESC)", "idx_spend_date(date DESC)"],
+    metrics_daily: ["idx_metrics_day(day DESC)"]
   },
   extensions: ["pgcrypto","pg_trgm"],
   rlsTables: [
-    "events","orders","spend","experiments","experiment_arms","metrics_daily",
-    "feedback_loops","safeguards","constraints","resilience_checks"
+    "events","spend","metrics_daily"
   ]
 };
 
@@ -107,7 +121,7 @@ function stamp(){
   return `${d.getUTCFullYear()}${p(d.getUTCMonth()+1)}${p(d.getUTCDate())}${p(d.getUTCHours())}${p(d.getUTCMinutes())}${p(d.getUTCSeconds())}`;
 }
 
-async function main(){
+export async function generateDeltaMigration(): Promise<string | null> {
   const outDir="supabase/migrations";
   fs.mkdirSync(outDir,{recursive:true});
   const dbUrl=process.env.SUPABASE_DB_URL||process.env.DATABASE_URL;
@@ -153,8 +167,8 @@ async function main(){
       select c.relname, c.relrowsecurity,
              coalesce((select count(*) from pg_policies p where p.schemaname='public' and p.tablename=c.relname),0) as pols
       from pg_class c join pg_namespace n on n.oid=c.relnamespace
-      where n.nspname='public' and c.relkind='r'
-    `);
+      where n.nspname='public' and c.relkind='r' and c.relname = ANY($1)
+    `, [REQUIRED.rlsTables]);
     const map=new Map<string,{rowsec:boolean,pols:number}>();
     rls.rows.forEach((r:any)=>map.set(r.relname,{rowsec:r.relrowsecurity,pols:Number(r.pols)}));
 
@@ -170,10 +184,26 @@ END $$;
 `;
     }
 
-    if(sql.trim().length===0){ console.log("No delta required."); return; }
+    if(sql.trim().length===0){ 
+      logger.info("No delta required.");
+      return null;
+    }
     const file=path.join(outDir,`${stamp()}_delta.sql`);
-    fs.writeFileSync(file,`-- AUTO-GENERATED DELTA\nSET statement_timeout=0;\n${sql}`);
-    console.log("✅ wrote",file);
+    fs.writeFileSync(file,`-- AUTO-GENERATED DELTA\nSET statement_timeout=0;\nSET timezone='America/Toronto';\n${sql}`);
+    logger.info(`✅ Wrote delta migration: ${file}`);
+    return file;
   } finally { c.release(); await pool.end(); }
 }
-main().catch(e=>{ console.error(e); process.exit(1); });
+
+async function main(){
+  try {
+    await generateDeltaMigration();
+  } catch (e) {
+    logger.error('Delta migration generation failed:', e);
+    process.exit(1);
+  }
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}
