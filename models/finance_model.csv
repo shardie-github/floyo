@@ -1,27 +1,4 @@
-Metric,Base Case (Month 1),Base Case (Month 3),Optimistic (Month 3),Conservative (Month 3),Notes
-MRR,5000,15000,25000,8000,Monthly Recurring Revenue
-ARR,60000,180000,300000,96000,Annual Recurring Revenue
-Customers,100,300,500,160,Total paying customers
-ARPU,50,50,50,50,Average Revenue Per User (monthly)
-New Customers/mo,50,100,150,40,New customer acquisition
-Churn Rate,0.05,0.05,0.03,0.08,Monthly churn rate
-CAC,50,50,30,80,Customer Acquisition Cost
-LTV,300,300,600,150,Lifetime Value (6 months base, 12 months optimistic)
-LTV:CAC,6.0,6.0,20.0,1.9,LTV to CAC ratio
-Revenue,5000,15000,25000,8000,Total revenue
-COGS,1750,5250,7500,3200,Cost of Goods Sold (35% of revenue)
-Gross Margin,3250,9750,17500,4800,Gross profit
-Gross Margin %,65,65,70,60,Gross margin percentage
-Sales/Marketing,2000,5000,8000,3000,Sales and marketing expenses
-Product/Dev,12000,12000,15000,10000,Product and development expenses
-General/Admin,8000,8000,10000,6000,General and administrative expenses
-Operating Expenses,22000,25000,33000,19000,Total operating expenses
-EBITDA,-18750,-15250,-15500,-14200,Earnings Before Interest Taxes Depreciation Amortization
-EBITDA Margin %,-375,-102,-62,-178,EBITDA as percentage of revenue
-Cash Balance,50000,5000,25000,20000,Starting cash balance
-Monthly Burn,18750,15250,15500,14200,Monthly cash burn
-Cash Runway (months),2.7,0.3,1.6,1.4,Months until cash runs out
-Growth Rate (MoM),0,0.15,0.25,0.10,Month-over-month growth rate
-Activation Rate,0.40,0.40,0.60,0.30,Percentage of signups who activate
-D7 Retention,0.25,0.25,0.40,0.20,Day 7 retention rate
-D30 Retention,0.15,0.15,0.30,0.10,Day 30 retention rate
+Scenario,Revenue,Costs,Profit,Margin
+Base,,,,
+Optimistic,,,,
+Conservative,,,,

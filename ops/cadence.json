@@ -1,0 +1,16 @@
+{
+  "timezone": "America/Toronto",
+  "phases": {
+    "find": ["preflight", "post_deploy_verify", "dq"],
+    "fix": ["delta_migrate", "doctor", "verify_db"],
+    "deploy": ["compute_metrics", "system_health"]
+  },
+  "schedules": {
+    "on_push_main": ["delta_migrate", "verify_db", "post_deploy_verify"],
+    "nightly": { "cron": "15 2 * * *", "tasks": ["compute_metrics", "dq"] },
+    "weekly": { "cron": "30 7 * * MON", "tasks": ["system_health"] },
+    "monthly": { "cron": "5 8 1 * *", "tasks": ["backfill_opt"] },
+    "on_failure": ["doctor", "verify_db", "post_deploy_verify"]
+  },
+  "backfill": { "enabled": false, "start_days_ago": 90, "sources": ["source_a", "source_b", "events"] }
+}

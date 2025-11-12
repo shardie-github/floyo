@@ -1,303 +1,133 @@
-# Master One-Shot: Self-Healing Data & Systems Stack
+# ✅ Master One-Shot Complete
 
-**Status:** ✅ Complete  
-**Date:** 2025-01-27  
-**Execution Time:** Single run
+**Execution Date:** 2025-11-12  
+**Branch:** main  
+**Timezone:** America/Toronto
 
----
+## 🎯 Mission Accomplished
 
-## Overview
+All artifacts created successfully according to the Master One-Shot specification. The data pipeline infrastructure is ready for deployment.
 
-This document summarizes the complete implementation of the Master One-Shot "Self-Healing Data & Systems Stack" system. All phases have been executed and artifacts created.
+## 📦 Deliverables
 
-## What Was Built
+### ✅ All Folders Created
+- `/models`, `/reports/exec`, `/reports/system`, `/reports/finance`
+- `/solutions/system`, `/growth/experiments`, `/featureflags`, `/middleware`
+- `/backlog`, `/infra/env`, `/infra/cron`, `/infra/gh-actions`
+- `/supabase/migrations`, `/scripts/lib`, `/scripts/etl`, `/scripts/agents`
+- `/tests/fixtures`, `/tests`, `/status`, `/ops`
 
-### Phase A: Business Intelligence Audit ✅
-- **Report:** `/reports/exec/unaligned_audit.md`
-- **Backlog Tickets:** Top 5 realignments created in `/backlog/READY_*.md`
-- **Alignment Temperature:** 42/100
-- **Momentum Index:** 35/100
+### ✅ Core Infrastructure
+1. **SQL Migration** (`/supabase/migrations/000000000800_upsert_functions.sql`)
+   - Self-healing, idempotent DDL
+   - Tables: events, spend, metrics_daily
+   - Functions: upsert_events, upsert_spend, recompute_metrics_daily, system_healthcheck
+   - RLS enabled with policies
 
-### Phase B: Finance → Automation → Growth ✅
-- **Finance Model:** `/models/finance_model.csv`, `/models/assumptions.json`
-- **Forecast Report:** `/reports/finance/forecast.md`
-- **Automation:** 
-  - `/infra/gh-actions/nightly-etl.yml`
-  - `/infra/cron/etl.cron`
-  - `/dashboards/metrics_spec.md`
-  - `/infra/env/.env.example`
-- **ETL Scripts:**
-  - `/scripts/etl/pull_events.ts`
-  - `/scripts/etl/pull_ads_source_a.ts`
-  - `/scripts/etl/pull_ads_source_b.ts`
-  - `/scripts/etl/compute_metrics.ts`
-- **Growth Experiments:** `/growth/portfolio.md`, `/growth/experiments/*/plan.md`
-- **Feature Flags:** `/featureflags/flags.json`, `/middleware/flags.ts`
-- **Memo:** `/reports/exec/finance_automation_growth_memo.md`
+2. **TypeScript Libraries** (`/scripts/lib/`)
+   - `db.ts` - PostgreSQL connection pool
+   - `retry.ts` - Exponential backoff retry
+   - `logger.ts` - ISO timestamp logger
 
-### Phase C: Six-Part System Health Audit ✅
-- **Reports:**
-  - `/reports/system/loops.md`
-  - `/reports/system/second_order.md`
-  - `/reports/system/socio_tech_alignment.md`
-  - `/reports/system/constraints_report.md`
-  - `/reports/system/resilience_index.md`
-  - `/reports/system/multi_agent_sync.md`
-- **Solutions:** `/solutions/system/*.md`
-- **Master Report:** `/reports/system_health_<YYYY-MM-DD>.md`
-- **Scheduler:** `/infra/gh-actions/system_health.yml`
+3. **ETL Scripts** (`/scripts/etl/`)
+   - `pull_events.ts` - Events loader
+   - `pull_ads_source_a.ts` - Source A ads loader
+   - `pull_ads_source_b.ts` - Source B ads loader
+   - `compute_metrics.ts` - Metrics rollup
 
-### Phase D: Supabase Delta Migrations ✅
-- **Self-Healing SQL:** `/supabase/migrations/000000000800_upsert_functions.sql`
-  - Extensions: pgcrypto, pg_trgm
-  - Tables: events, spend, metrics_daily
-  - Indexes: idx_events_name_time, idx_spend_platform_dt, idx_metrics_day
-  - RLS: Enabled with guarded SELECT policies
-  - Functions: upsert_events, upsert_spend, recompute_metrics_daily, system_healthcheck
-- **Delta Generator:** `/scripts/agents/generate_delta_migration.ts`
-- **Verifier:** `/scripts/agents/verify_db.ts`
-- **CI:** `/infra/gh-actions/supabase_delta_apply.yml`
+4. **Agent Scripts** (`/scripts/agents/`)
+   - `generate_delta_migration.ts` - Introspects DB, generates delta
+   - `verify_db.ts` - Verifies schema integrity
+   - `preflight.ts` - Environment & connectivity checks
+   - `run_data_quality.ts` - Data quality checks
+   - `system_doctor.ts` - Auto-heal on failures
+   - `post_deploy_verify.ts` - Comprehensive verification
+   - `cadence_orchestrator.ts` - Find → Fix → Deploy orchestrator
+   - `system_health.ts` - System health reports
+   - `write_status_json.ts` - Status page data generator
 
-### Phase E: Guardrails Pack ✅
-- **TS Utilities:**
-  - `/scripts/lib/db.ts` - PostgreSQL connection pool
-  - `/scripts/lib/retry.ts` - Exponential backoff with jitter
-  - `/scripts/lib/logger.ts` - Timestamped logging
-- **ETL Scripts:** All support `--dry-run`, retries, idempotent upserts
-- **Fixtures:**
-  - `/tests/fixtures/events_sample.json`
-  - `/tests/fixtures/source_a_ads_sample.json`
-  - `/tests/fixtures/source_b_ads_sample.json`
-- **Preflight:** `/scripts/agents/preflight.ts`
-- **Data Quality:** `/tests/data_quality.sql`, `/scripts/agents/run_data_quality.ts`
-- **Notify:** `/scripts/agents/notify.ts` (Slack + console)
-- **System Doctor:** `/scripts/agents/system_doctor.ts` (auto-heal + tickets)
-- **CI Jobs:**
-  - `/infra/gh-actions/preflight.yml`
-  - `/infra/gh-actions/data_quality.yml`
-  - `/infra/gh-actions/nightly-etl.yml`
+5. **Test Fixtures** (`/tests/fixtures/`)
+   - `events_sample.json` - 3 sample events
+   - `source_a_ads_sample.json` - 2 sample ad rows
+   - `source_b_ads_sample.json` - 1 sample ad row
+   - `data_quality.sql` - DQ validation queries
 
-### Phase F: Master Orchestration ✅
-- **Orchestrator:** `/scripts/orchestrate_master_one_shot.ts`
-- **Executive Summary:** `/reports/exec/run_summary_<date>.md`
+6. **Status Page** (`/status/index.html`)
+   - Real-time dashboard with Tailwind CSS
+   - Shows DB verify, DQ, workflows, reports
 
----
+7. **Configuration** (`/ops/cadence.json`)
+   - Single source of truth for cadence
+   - Phases: find, fix, deploy
+   - Schedules: on_push_main, nightly, weekly, monthly, on_failure
 
-## How to Use
+8. **GitHub Actions** (`/infra/gh-actions/`)
+   - `supabase_delta_apply.yml` - Delta migrate & verify
+   - `preflight.yml` - Preflight checks
+   - `data_quality.yml` - Nightly DQ
+   - `post_deploy_verify.yml` - Post-deploy verification
+   - `orchestrate.yml` - Cadence orchestrator
+   - `status_pages.yml` - GitHub Pages deployment
+   - `on_failure_doctor.yml` - Auto-heal on failures
 
-### 1. Run Preflight Checks
-```bash
-tsx scripts/agents/preflight.ts
-```
+9. **Business Scaffolds**
+   - `/reports/exec/unaligned_audit.md`
+   - `/models/finance_model.csv`
+   - `/models/assumptions.json`
+   - `/reports/finance/forecast.md`
+   - `/growth/portfolio.md`
+   - `/featureflags/flags.json`
+   - `/middleware/flags.ts`
 
-### 2. Generate Delta Migration
-```bash
-tsx scripts/agents/generate_delta_migration.ts
-```
+## ✅ Smoke Tests Passed
 
-### 3. Apply Migration
-```bash
-# Via Supabase CLI (preferred)
-supabase db push --include-all
+All ETL scripts tested in dry-run mode:
+- ✅ `pull_events.ts` - Read 3 events
+- ✅ `pull_ads_source_a.ts` - Read 2 rows  
+- ✅ `pull_ads_source_b.ts` - Read 1 row
 
-# Or via psql fallback
-psql "$SUPABASE_DB_URL" -f supabase/migrations/000000000800_upsert_functions.sql
-```
+## 🚀 Ready for Execution
 
-### 4. Verify Database
-```bash
-tsx scripts/agents/verify_db.ts
-```
-
-### 5. Run ETL (Dry-Run)
-```bash
-tsx scripts/etl/pull_events.ts --dry-run
-tsx scripts/etl/pull_ads_source_a.ts --dry-run
-tsx scripts/etl/pull_ads_source_b.ts --dry-run
-tsx scripts/etl/compute_metrics.ts --dry-run
-```
-
-### 6. Compute Metrics
-```bash
-# Via Supabase RPC
-psql "$SUPABASE_DB_URL" -c "SELECT recompute_metrics_daily('2025-01-20', '2025-01-27');"
-
-# Or via ETL script
-tsx scripts/etl/compute_metrics.ts --date 2025-01-27
-```
-
-### 7. Run Data Quality Checks
-```bash
-tsx scripts/agents/run_data_quality.ts
-```
-
-### 8. Run System Doctor
-```bash
-tsx scripts/agents/system_doctor.ts
-```
-
-### 9. Run Full Orchestration
-```bash
-tsx scripts/orchestrate_master_one_shot.ts
-```
-
----
-
-## Required Environment Variables
-
-Set these in your `.env` file or GitHub Secrets:
+The pipeline is ready to run once `SUPABASE_DB_URL` is configured:
 
 ```bash
-# Required
-SUPABASE_DB_URL=postgresql://postgres:[password]@[host]:[port]/postgres
-SUPABASE_URL=https://[project-ref].supabase.co
-SUPABASE_SERVICE_ROLE_KEY=[service-role-key]
+export SUPABASE_DB_URL="postgresql://..."
+export TZ="America/Toronto"
 
-# Optional
-SUPABASE_ANON_KEY=[anon-key]
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/[webhook-path]
-GENERIC_SOURCE_A_TOKEN=[token]
-GENERIC_SOURCE_B_TOKEN=[token]
-TZ=America/Toronto
-
-# Run Flags
-RUN_BACKFILL=false
-BACKFILL_SOURCES=source_a,source_b,events
-BACKFILL_START=2025-01-01
-BACKFILL_END=2025-01-31
+# Full pipeline execution:
+node scripts/agents/preflight.ts
+node scripts/agents/generate_delta_migration.ts
+supabase db push --db-url "$SUPABASE_DB_URL" --include-all
+node scripts/agents/verify_db.ts
+node scripts/etl/compute_metrics.ts --start <date> --end <date>
+node scripts/agents/run_data_quality.ts
+node scripts/agents/post_deploy_verify.ts
+node scripts/agents/write_status_json.ts
+node scripts/agents/cadence_orchestrator.ts
 ```
 
----
+## 🔒 Guardrails
 
-## CI/CD Integration
+- ✅ Idempotent SQL (IF NOT EXISTS)
+- ✅ Retry logic with exponential backoff
+- ✅ RLS enabled with policies
+- ✅ Non-destructive DDL
+- ✅ Auto-ticket creation on failures
+- ✅ Self-healing system doctor
 
-### Preflight (on PR)
-- Runs: `/infra/gh-actions/preflight.yml`
-- Checks: Environment variables, database connectivity
+## 📊 Architecture
 
-### Data Quality (Nightly)
-- Runs: `/infra/gh-actions/data_quality.yml`
-- Schedule: 02:00 America/Toronto
-- Actions: Recompute yesterday's metrics, run DQ checks, notify on failure
+**Self-Healing Pipeline:**
+- Delta migration generator creates only missing objects
+- System doctor auto-heals on failures
+- On-failure workflows trigger recovery
+- Status page shows real-time health
 
-### Delta Migration (on Push)
-- Runs: `/infra/gh-actions/supabase_delta_apply.yml`
-- Actions: Generate delta, apply via CLI (fallback psql), verify
-
-### System Health (Weekly)
-- Runs: `/infra/gh-actions/system_health.yml`
-- Schedule: Monday 07:30 America/Toronto
-- Actions: Generate system health reports
-
-### Nightly ETL
-- Runs: `/infra/gh-actions/nightly-etl.yml`
-- Schedule: 01:10 America/Toronto
-- Actions: Compute daily metrics
+**Cadence Orchestrator:**
+- **Find:** preflight, post_deploy_verify, dq
+- **Fix:** delta_migrate, doctor, verify_db
+- **Deploy:** compute_metrics, system_health
 
 ---
 
-## Guardrails & Safety
-
-### Idempotent Operations
-- All migrations use `IF NOT EXISTS`
-- All ETL scripts use upsert functions
-- Safe to re-run multiple times
-
-### Non-Destructive
-- Only `CREATE` statements (no `DROP`)
-- Only `ADD COLUMN IF NOT EXISTS` (no column removal)
-- Guarded RLS policies in `DO $$` blocks
-
-### Retry Logic
-- All external I/O wrapped with exponential backoff
-- Respects rate limits
-- Configurable max retries
-
-### Dry-Run Support
-- All ETL scripts accept `--dry-run`
-- Reports expected operations without writes
-- Safe for testing
-
-### Verification Gates
-- Preflight checks before operations
-- Database verification after migrations
-- Data quality checks after ETL
-- CI fails if verification fails
-
----
-
-## Next Steps
-
-1. **Set Environment Variables:** Configure `.env` or GitHub Secrets
-2. **Run Preflight:** Verify environment and database connectivity
-3. **Apply Migrations:** Run delta migration generator and apply
-4. **Verify Database:** Confirm tables, columns, indexes, RLS present
-5. **Test ETL:** Run ETL scripts in dry-run mode
-6. **Compute Metrics:** Backfill historical metrics if needed
-7. **Run Data Quality:** Verify data quality checks pass
-8. **Monitor:** Set up CI/CD jobs for automated checks
-
----
-
-## Troubleshooting
-
-### Database Connection Failed
-- Check `SUPABASE_DB_URL` is set correctly
-- Verify network connectivity
-- Check database is accessible
-
-### Migration Fails
-- Check migration file syntax
-- Verify no conflicting objects exist
-- Review error message for specific issue
-
-### ETL Scripts Fail
-- Check API tokens are set
-- Verify source APIs are accessible
-- Review retry logs for rate limit issues
-
-### Data Quality Checks Fail
-- Review failed checks in report
-- Fix data issues at source
-- Re-run checks after fixes
-
----
-
-## Success Criteria
-
-✅ All phases executed  
-✅ All artifacts created  
-✅ Database migrations applied  
-✅ Verification passes  
-✅ ETL smoke tests pass  
-✅ Data quality checks pass  
-✅ System doctor reports no critical issues  
-✅ Executive summary generated  
-
----
-
-## Files Created
-
-- **Migrations:** 1 SQL file
-- **Scripts:** 15+ TypeScript files
-- **Reports:** 10+ Markdown files
-- **CI Jobs:** 5 YAML files
-- **Fixtures:** 3 JSON files
-- **Configuration:** 1 `.env.example` file
-
-**Total:** 35+ files created/modified
-
----
-
-## Notes
-
-- All scripts are idempotent and safe to re-run
-- All migrations are non-destructive
-- All operations respect timezone (America/Toronto)
-- All logs are timestamped
-- All reports are in Markdown format
-- All CI jobs include error handling and notifications
-
----
-
-**Status:** ✅ Complete and ready for production use
+**Status:** ✅ Complete. All artifacts created. Pipeline ready for deployment.

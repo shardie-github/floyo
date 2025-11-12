@@ -1,20 +1,24 @@
-name: Data Quality (Nightly)
+name: On-Failure Doctor (Auto-Heal)
 on:
-  schedule: [{ cron: '15 2 * * *' }]
+  workflow_run:
+    workflows:
+      - "Supabase Delta Migrate & Verify"
+      - "Post-Deploy Verify (Supabase & DQ)"
+      - "Data Quality (Nightly)"
+      - "Orchestrate (Diagnose → Fix → Deploy)"
+    types: [completed]
 jobs:
-  run:
+  heal:
+    if: ${{ github.event.workflow_run.conclusion != 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm ci || true
-      - name: Compute metrics (yesterday)
+      - name: Doctor
         env: { SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }} }
-        run: node scripts/etl/compute_metrics.ts --start $(date -u -d 'yesterday' +%F) --end $(date -u +%F)
-      - name: Data Quality
-        env: { SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }} }
-        run: node scripts/agents/run_data_quality.ts
+        run: node scripts/agents/system_doctor.ts
       - name: Write status.json
         if: always()
         env:
