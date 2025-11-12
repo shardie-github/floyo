@@ -75,29 +75,97 @@ async function pullTikTokAdsData(
   startDate: string,
   endDate: string
 ): Promise<TikTokAdStat[]> {
-  // TODO: Replace with actual TikTok Ads API implementation
-  // This is a placeholder structure
-  
-  const adId = advertiserId || '<ADVERTISER_ID>';
+  const adId = advertiserId || process.env.TIKTOK_ADVERTISER_ID || '';
+  if (!adId || adId.includes('<ADVERTISER_ID>')) {
+    console.warn('[TikTok ETL] TIKTOK_ADVERTISER_ID not set, skipping API call');
+    return [];
+  }
+
   const apiVersion = 'v1.3';
   const baseUrl = `https://business-api.tiktok.com/open_api/${apiVersion}`;
   
   console.log(`[TikTok ETL] Fetching data from ${startDate} to ${endDate} for advertiser ${adId}`);
   
-  // Placeholder: In production, implement actual TikTok Marketing API calls
-  // Example structure:
-  // const response = await fetch(
-  //   `${baseUrl}/report/integrated/get/?` +
-  //   `advertiser_id=${adId}&` +
-  //   `start_date=${startDate}&` +
-  //   `end_date=${endDate}&` +
-  //   `fields=["spend","impressions","clicks","conversions","campaign_id","campaign_name"]&` +
-  //   `access_token=${token}`,
-  //   { method: 'GET', headers: { 'Access-Token': token } }
-  // );
+  const stats: TikTokAdStat[] = [];
+  let page = 1;
+  const pageSize = 1000;
+  let hasMore = true;
   
-  // For now, return empty array (dry-run mode will show structure)
-  return [];
+  while (hasMore) {
+    try {
+      const url = `${baseUrl}/report/integrated/get/`;
+      const body = {
+        advertiser_id: adId,
+        start_date: startDate,
+        end_date: endDate,
+        fields: ['spend', 'impressions', 'clicks', 'conversions', 'campaign_id', 'campaign_name', 'adgroup_id', 'adgroup_name', 'ad_id', 'ad_name'],
+        page: page,
+        page_size: pageSize,
+        dimensions: ['stat_time_day', 'campaign_id', 'adgroup_id', 'ad_id'],
+      };
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Access-Token': token,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          throw new Error('Invalid TikTok access token. Please check TIKTOK_TOKEN.');
+        }
+        if (response.status === 400 && errorData.error) {
+          throw new Error(`TikTok API error: ${errorData.error.message || JSON.stringify(errorData.error)}`);
+        }
+        throw new Error(`TikTok API returned ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.data && data.data.list && Array.isArray(data.data.list)) {
+        for (const item of data.data.list) {
+          stats.push({
+            date: item.dimensions?.stat_time_day || startDate,
+            spend: item.metrics?.spend || 0,
+            impressions: item.metrics?.impressions || 0,
+            clicks: item.metrics?.clicks || 0,
+            conversions: item.metrics?.conversions || 0,
+            campaign_id: item.dimensions?.campaign_id || '',
+            campaign_name: item.dimensions?.campaign_name || '',
+            adgroup_id: item.dimensions?.adgroup_id,
+            adgroup_name: item.dimensions?.adgroup_name,
+            ad_id: item.dimensions?.ad_id,
+            ad_name: item.dimensions?.ad_name,
+          });
+        }
+        
+        hasMore = data.data.page_info?.has_more_page || false;
+        page++;
+      } else {
+        hasMore = false;
+      }
+      
+      // Rate limiting: wait 1 second between requests
+      if (hasMore) {
+        await sleep(1000);
+      }
+    } catch (error) {
+      console.error('[TikTok ETL] Error fetching data:', error);
+      // If it's a token error, don't retry
+      if (error instanceof Error && error.message.includes('token')) {
+        throw error;
+      }
+      // For other errors, break and return what we have
+      break;
+    }
+  }
+  
+  console.log(`[TikTok ETL] Fetched ${stats.length} stats`);
+  return stats;
 }
 
 async function upsertSpendData(
@@ -111,18 +179,23 @@ async function upsertSpendData(
   }
   
   const records = stats.map((stat) => ({
-    source: 'tiktok',
+    platform: 'tiktok',
+    source: 'tiktok', // For backward compatibility
     external_id: `${stat.campaign_id}_${stat.date}`,
     date: stat.date,
-    amount: stat.spend,
+    spend_cents: Math.round(stat.spend * 100),
+    amount: stat.spend, // For backward compatibility
     currency: 'USD',
     impressions: stat.impressions || 0,
     clicks: stat.clicks || 0,
-    conversions: stat.conversions || 0,
+    conv: stat.conversions || 0,
+    conversions: stat.conversions || 0, // For backward compatibility
     campaign_id: stat.campaign_id,
     campaign_name: stat.campaign_name,
-    ad_set_id: stat.adgroup_id,
-    ad_set_name: stat.adgroup_name,
+    adset_id: stat.adgroup_id,
+    ad_set_id: stat.adgroup_id, // For backward compatibility
+    adset_name: stat.adgroup_name,
+    ad_set_name: stat.adgroup_name, // For backward compatibility
     ad_id: stat.ad_id,
     ad_name: stat.ad_name,
     metadata: {
@@ -141,7 +214,7 @@ async function upsertSpendData(
   const { error } = await supabase
     .from('spend')
     .upsert(records, {
-      onConflict: 'source,external_id,date',
+      onConflict: 'platform,external_id,date',
       ignoreDuplicates: false,
     });
   
