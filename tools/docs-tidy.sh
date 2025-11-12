@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 YEAR="$(date +%Y)"
 MODE="plan"
@@ -57,7 +57,7 @@ is_final_name() {
 }
 has_final_marker() {
   local f="$1"
-  head -n 15 "$f" 2>/dev/null | grep -qiE '^(status:\s*final|final:\s*true)|^\# .*final' && return 0 || return 1
+  head -n 15 "$f" 2>/dev/null | grep -qiE '^(status:\s*final|final:\s*true)|^\# .*final' 2>/dev/null && return 0 || return 1
 }
 is_archive_name() {
   local n="$(basename "$1")"
@@ -69,11 +69,11 @@ is_version_like() {
 }
 looks_sensitive_content() {
   local f="$1"
-  head -n 200 "$f" 2>/dev/null | grep -qiE '(sk-[A-Za-z0-9]{20,}|x-api-key|Authorization:|Bearer [A-Za-z0-9._\-]{20,}|secret=|token=|sensitive:\s*true)' && return 0 || return 1
+  head -n 200 "$f" 2>/dev/null | grep -qiE '(sk-[A-Za-z0-9]{20,}|x-api-key|Authorization:|Bearer [A-Za-z0-9._\-]{20,}|secret=|token=|sensitive:\s*true)' 2>/dev/null && return 0 || return 1
 }
 has_email() {
   local f="$1"
-  grep -qiE '\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b' "$f" && return 0 || return 1
+  grep -qiE '\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b' "$f" 2>/dev/null && return 0 || return 1
 }
 derive_area() {
   local f="$1" dir rel
@@ -105,15 +105,20 @@ private_count=0
 # Build version map to detect supersession
 declare -A latest_by_stem
 for f in "${files[@]}"; do
+  [[ ! -f "$f" ]] && continue
   stem="$(basename "$f" .md | sed -E 's/[-_ ]v[0-9]+$//I')"
-  ver="$(basename "$f" .md | grep -oEi 'v[0-9]+' | tr -d 'v' | tail -n1 || echo 0)"
-  if [[ -z "${latest_by_stem[$stem]:-}" ]] || (( ver > latest_by_stem[$stem] )); then
+  ver_str="$(basename "$f" .md | grep -oEi 'v[0-9]+' | tr -d 'v' | tail -n1 || echo 0)"
+  ver="${ver_str:-0}"
+  ver="${ver//[^0-9]/}"
+  ver="${ver:-0}"
+  if [[ -z "${latest_by_stem[$stem]:-}" ]] || (( ver > ${latest_by_stem[$stem]:-0} )); then
     latest_by_stem[$stem]=$ver
   fi
 done
 
 for f in "${files[@]}"; do
   [[ ! -f "$f" ]] && continue
+  [[ ! -r "$f" ]] && continue
   base="$(basename "$f")"
   dir="$(dirname "$f")"
   area="$(derive_area "$f")"
@@ -121,15 +126,18 @@ for f in "${files[@]}"; do
   class=""
   reason=""
 
-  if looks_sensitive_content "$f" || has_email "$f"; then
+  if looks_sensitive_content "$f" 2>/dev/null || has_email "$f" 2>/dev/null; then
     class="private"
     reason="Sensitive/PII or flagged by heuristics"
-  elif is_archive_name "$f"; then
+  elif is_archive_name "$f" 2>/dev/null; then
     class="archive"
     reason="Name indicates draft/notes/legacy"
-  elif is_version_like "$f"; then
+  elif is_version_like "$f" 2>/dev/null; then
     stem="$(basename "$f" .md | sed -E 's/[-_ ]v[0-9]+$//I')"
-    ver="$(basename "$f" .md | grep -oEi 'v[0-9]+' | tr -d 'v' | tail -n1 || echo 0)"
+    ver_str="$(basename "$f" .md | grep -oEi 'v[0-9]+' | tr -d 'v' | tail -n1 || echo 0)"
+    ver="${ver_str:-0}"
+    ver="${ver//[^0-9]/}"
+    ver="${ver:-0}"
     latest="${latest_by_stem[$stem]:-0}"
     if (( ver < latest )); then
       class="archive"; reason="Superseded by v${latest}"
@@ -141,7 +149,7 @@ for f in "${files[@]}"; do
         class="archive"; reason="Latest but not final-marked"
       fi
     fi
-  elif is_final_name "$f" || has_final_marker "$f"; then
+  elif is_final_name "$f" 2>/dev/null || has_final_marker "$f" 2>/dev/null; then
     class="final"; reason="Final marker/name"
   else
     # Default: archive non-top-level reference docs unless in docs/final
