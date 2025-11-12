@@ -1,72 +1,25 @@
 name: Nightly ETL
-
 on:
   schedule:
-    # Run at 01:10 America/Toronto (06:10 UTC)
-    - cron: '10 6 * * *'
-  workflow_dispatch: # Allow manual trigger
-    inputs:
-      dry_run:
-        description: 'Run in dry-run mode'
-        required: false
-        default: 'false'
-        type: boolean
-
+    - cron: '10 1 * * *'  # 01:10 America/Toronto
 jobs:
-  run-etl:
+  run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    
-    env:
-      TZ: America/Toronto
-      NODE_VERSION: 20
-      
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          
-      - name: Install dependencies
-        run: npm ci
-        
-      - name: Setup environment variables
-        run: |
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> $GITHUB_ENV
-          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> $GITHUB_ENV
-          echo "META_TOKEN=${{ secrets.META_TOKEN }}" >> $GITHUB_ENV
-          echo "TIKTOK_TOKEN=${{ secrets.TIKTOK_TOKEN }}" >> $GITHUB_ENV
-          echo "SHOPIFY_API_KEY=${{ secrets.SHOPIFY_API_KEY }}" >> $GITHUB_ENV
-          echo "SHOPIFY_PASSWORD=${{ secrets.SHOPIFY_PASSWORD }}" >> $GITHUB_ENV
-          echo "SHOPIFY_STORE=${{ secrets.SHOPIFY_STORE }}" >> $GITHUB_ENV
-          echo "TZ=${{ env.TZ }}" >> $GITHUB_ENV
-          
-      - name: Pull Meta Ads Data
-        continue-on-error: true
-        run: |
-          tsx scripts/etl/pull_ads_meta.ts --cron ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
-          
-      - name: Pull TikTok Ads Data
-        continue-on-error: true
-        run: |
-          tsx scripts/etl/pull_ads_tiktok.ts --cron ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
-          
-      - name: Pull Shopify Orders
-        continue-on-error: true
-        run: |
-          tsx scripts/etl/pull_shopify_orders.ts --cron ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
-          
-      - name: Compute Daily Metrics
-        run: |
-          tsx scripts/etl/compute_metrics.ts --cron ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
-          
-      - name: Notify on failure
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            core.setFailed('ETL pipeline failed. Check logs for details.');
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Install deps
+        run: npm ci || true
+      - name: Run ETL
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          META_TOKEN: ${{ secrets.META_TOKEN }}
+          META_ACCOUNT_ID: ${{ secrets.META_ACCOUNT_ID }}
+          TIKTOK_TOKEN: ${{ secrets.TIKTOK_TOKEN }}
+          TIKTOK_ADVERTISER_ID: ${{ secrets.TIKTOK_ADVERTISER_ID }}
+          SHOPIFY_STORE: ${{ secrets.SHOPIFY_STORE }}
+          SHOPIFY_API_KEY: ${{ secrets.SHOPIFY_API_KEY }}
+          SHOPIFY_PASSWORD: ${{ secrets.SHOPIFY_PASSWORD }}
+          TZ: America/Toronto
+        run: node scripts/etl/compute_metrics.ts --cron

@@ -72,6 +72,7 @@
     "@supabase/supabase-js": "^2.38.4",
     "commander": "^11.1.0",
     "dotenv": "^16.3.1",
+    "pg": "^8.11.3",
     "zod": "^3.22.4"
   },
   "devDependencies": {
@@ -80,6 +81,7 @@
     "@lhci/cli": "^0.13.0",
     "@playwright/test": "^1.40.0",
     "@types/node": "^20.10.5",
+    "@types/pg": "^8.10.9",
     "@typescript-eslint/parser": "^6.0.0",
     "depcheck": "^1.4.7",
     "eslint-config-next": "^14.0.4",
