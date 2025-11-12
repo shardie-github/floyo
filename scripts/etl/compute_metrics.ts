@@ -26,49 +26,77 @@ const argsSchema = z.object({
 });
 
 interface DailyMetrics {
-  date: string;
-  revenue: number;
-  net_revenue: number;
-  refund_amount: number;
-  refund_count: number;
-  refund_rate: number;
-  order_count: number;
-  new_customers: number;
-  returning_customers: number;
-  average_order_value: number;
-  spend_total: number;
-  spend_meta: number;
-  spend_tiktok: number;
-  spend_other: number;
-  impressions_total: number;
-  clicks_total: number;
-  conversions_total: number;
-  cac: number | null;
-  cac_meta: number | null;
-  cac_tiktok: number | null;
-  cac_other: number | null;
-  ltv: number | null;
-  ltv_cac_ratio: number | null;
-  cogs: number;
-  cogs_percentage: number;
-  gross_margin: number;
-  gross_margin_percentage: number;
-  sales_marketing_expense: number;
-  product_dev_expense: number;
-  general_admin_expense: number;
-  operating_expenses_total: number;
-  ebitda: number;
-  ebitda_margin: number;
-  cash_balance: number | null;
-  cash_runway_months: number | null;
-  mrr: number;
-  arr: number;
-  mrr_growth_rate: number;
-  experiment_metrics: Record<string, unknown> | null;
+  day: string;
+  sessions: number;
+  add_to_carts: number;
+  orders: number;
+  revenue_cents: number;
+  refunds_cents: number;
+  aov_cents: number;
+  cac_cents: number;
+  conversion_rate: number;
+  gross_margin_cents: number;
+  traffic: number;
 }
 
 // COGS percentage assumption (from finance model)
 const COGS_PERCENTAGE = 0.35;
+
+// Aggregate experiment metrics for the day
+async function aggregateExperimentMetrics(
+  supabase: ReturnType<typeof createClient>,
+  date: string
+): Promise<Record<string, unknown> | null> {
+  try {
+    const { data: experiments } = await supabase
+      .from('experiments')
+      .select('id, key, name, status')
+      .eq('status', 'active')
+      .lte('start_at', `${date}T23:59:59Z`)
+      .or(`end_at.is.null,end_at.gte.${date}T00:00:00Z`);
+    
+    if (!experiments || experiments.length === 0) {
+      return null;
+    }
+    
+    const metrics: Record<string, unknown> = {};
+    
+    for (const exp of experiments) {
+      // Get experiment arms
+      const { data: arms } = await supabase
+        .from('experiment_arms')
+        .select('arm_key, weight')
+        .eq('experiment_id', exp.id);
+      
+      // Get events for this experiment on this date
+      const { data: events } = await supabase
+        .from('events')
+        .select('event_name, props')
+        .eq('event_name', `experiment_${exp.key}`)
+        .gte('occurred_at', `${date}T00:00:00Z`)
+        .lte('occurred_at', `${date}T23:59:59Z`);
+      
+      if (events && events.length > 0) {
+        const armCounts: Record<string, number> = {};
+        events.forEach((e: any) => {
+          const arm = e.props?.arm || 'control';
+          armCounts[arm] = (armCounts[arm] || 0) + 1;
+        });
+        
+        metrics[exp.key] = {
+          total_events: events.length,
+          arm_counts: armCounts,
+          arms: arms?.map(a => ({ key: a.arm_key, weight: a.weight })),
+        };
+      }
+    }
+    
+    return Object.keys(metrics).length > 0 ? metrics : null;
+  } catch (error) {
+    console.warn('[Compute Metrics] Error aggregating experiment metrics:', error);
+    return null;
+  }
+}
 
 // Operating expense assumptions (from finance model - simplified)
 // In production, these would come from a separate expenses table
@@ -100,21 +128,29 @@ async function computeDailyMetrics(
   const { data: orders, error: ordersError } = await supabase
     .from('orders')
     .select('*')
-    .gte('order_date', dateStart)
-    .lte('order_date', dateEnd);
+    .gte('placed_at', dateStart)
+    .lte('placed_at', dateEnd);
   
   if (ordersError) throw new Error(`Failed to fetch orders: ${ordersError.message}`);
   
-  // Calculate revenue metrics
-  const revenue = (orders || []).reduce((sum, o) => sum + parseFloat(o.total_amount.toString()), 0);
-  const refundAmount = (orders || []).reduce((sum, o) => sum + parseFloat((o.refund_amount || 0).toString()), 0);
+  // Calculate revenue metrics (handle both old and new schema)
+  const revenue = (orders || []).reduce((sum, o) => {
+    const total = o.total_cents ? o.total_cents / 100 : (o.total_amount ? parseFloat(o.total_amount.toString()) : 0);
+    return sum + total;
+  }, 0);
+  
+  const refundAmount = (orders || []).reduce((sum, o) => {
+    const refund = o.refund_cents ? o.refund_cents / 100 : (o.refund_amount ? parseFloat(o.refund_amount.toString()) : 0);
+    return sum + refund;
+  }, 0);
+  
   const netRevenue = revenue - refundAmount;
   const refundRate = revenue > 0 ? refundAmount / revenue : 0;
   const orderCount = orders?.length || 0;
   
   // Calculate customer metrics
-  const customerEmails = new Set((orders || []).map(o => o.customer_email).filter(Boolean));
-  const newCustomers = customerEmails.size; // Simplified: in production, track first order date
+  const customerIds = new Set((orders || []).map(o => o.user_id || o.customer_id || o.customer_email).filter(Boolean));
+  const newCustomers = customerIds.size; // Simplified: in production, track first order date
   const returningCustomers = 0; // Simplified: would require historical lookup
   const averageOrderValue = orderCount > 0 ? revenue / orderCount : 0;
   
@@ -127,19 +163,28 @@ async function computeDailyMetrics(
   if (spendError) throw new Error(`Failed to fetch spend: ${spendError.message}`);
   
   const spendMeta = (spend || [])
-    .filter(s => s.source === 'meta')
-    .reduce((sum, s) => sum + parseFloat(s.amount.toString()), 0);
+    .filter(s => s.platform === 'meta' || s.source === 'meta')
+    .reduce((sum, s) => {
+      const amount = s.spend_cents ? s.spend_cents / 100 : (s.amount ? parseFloat(s.amount.toString()) : 0);
+      return sum + amount;
+    }, 0);
   const spendTikTok = (spend || [])
-    .filter(s => s.source === 'tiktok')
-    .reduce((sum, s) => sum + parseFloat(s.amount.toString()), 0);
+    .filter(s => s.platform === 'tiktok' || s.source === 'tiktok')
+    .reduce((sum, s) => {
+      const amount = s.spend_cents ? s.spend_cents / 100 : (s.amount ? parseFloat(s.amount.toString()) : 0);
+      return sum + amount;
+    }, 0);
   const spendOther = (spend || [])
-    .filter(s => !['meta', 'tiktok'].includes(s.source))
-    .reduce((sum, s) => sum + parseFloat(s.amount.toString()), 0);
+    .filter(s => s.platform && !['meta', 'tiktok'].includes(s.platform) && !['meta', 'tiktok'].includes(s.source || ''))
+    .reduce((sum, s) => {
+      const amount = s.spend_cents ? s.spend_cents / 100 : (s.amount ? parseFloat(s.amount.toString()) : 0);
+      return sum + amount;
+    }, 0);
   const spendTotal = spendMeta + spendTikTok + spendOther;
   
   const impressionsTotal = (spend || []).reduce((sum, s) => sum + (s.impressions || 0), 0);
   const clicksTotal = (spend || []).reduce((sum, s) => sum + (s.clicks || 0), 0);
-  const conversionsTotal = (spend || []).reduce((sum, s) => sum + (s.conversions || 0), 0);
+  const conversionsTotal = (spend || []).reduce((sum, s) => sum + (s.conv || s.conversions || 0), 0);
   
   // Calculate CAC
   const cac = newCustomers > 0 ? spendTotal / newCustomers : null;
@@ -166,68 +211,49 @@ async function computeDailyMetrics(
   const ebitda = grossMargin - operatingExpensesTotal;
   const ebitdaMargin = netRevenue > 0 ? ebitda / netRevenue : 0;
   
-  // Cash metrics (would need to fetch from cash tracking table)
-  const cashBalance = null; // TODO: Implement cash tracking
-  const cashRunwayMonths = null; // TODO: Calculate from cash balance and burn rate
+  // Cash metrics (fetch from previous metrics or calculate from burn rate)
+  const { data: prevDayMetrics } = await supabase
+    .from('metrics_daily')
+    .select('cash_balance, operating_expenses_total')
+    .order('day', { ascending: false })
+    .limit(1)
+    .single();
   
-  // MRR/ARR (simplified: assumes all revenue is MRR)
-  const mrr = netRevenue;
-  const arr = mrr * 12;
+  const prevCashBalance = prevDayMetrics?.cash_balance || 50000; // Default starting balance
+  const dailyBurn = operatingExpensesTotal / 30; // Approximate daily burn
+  const cashBalance = prevCashBalance - dailyBurn;
+  const cashRunwayMonths = cashBalance > 0 && dailyBurn > 0 
+    ? cashBalance / (dailyBurn * 30) 
+    : null;
   
   // Calculate MRR growth rate (compare to previous day)
+  // Note: MRR/ARR are calculated from revenue, not stored in metrics_daily schema
   const { data: prevMetrics } = await supabase
     .from('metrics_daily')
-    .select('mrr')
-    .eq('date', (() => {
+    .select('revenue_cents')
+    .eq('day', (() => {
       const d = new Date(date);
       d.setDate(d.getDate() - 1);
       return d.toISOString().split('T')[0];
     })())
     .single();
   
-  const prevMrr = prevMetrics?.mrr || 0;
-  const mrrGrowthRate = prevMrr > 0 ? (mrr - prevMrr) / prevMrr : 0;
+  const prevRevenue = prevMetrics?.revenue_cents ? prevMetrics.revenue_cents / 100 : 0;
+  // Growth rate calculated but not stored (can be computed from revenue_cents)
   
+  // Map to metrics_daily schema (using cents for monetary values)
   return {
-    date,
-    revenue,
-    net_revenue: netRevenue,
-    refund_amount: refundAmount,
-    refund_count: (orders || []).filter(o => (o.refund_amount || 0) > 0).length,
-    refund_rate: refundRate,
-    order_count: orderCount,
-    new_customers: newCustomers,
-    returning_customers: returningCustomers,
-    average_order_value: averageOrderValue,
-    spend_total: spendTotal,
-    spend_meta: spendMeta,
-    spend_tiktok: spendTikTok,
-    spend_other: spendOther,
-    impressions_total: impressionsTotal,
-    clicks_total: clicksTotal,
-    conversions_total: conversionsTotal,
-    cac,
-    cac_meta: cacMeta,
-    cac_tiktok: cacTikTok,
-    cac_other: cacOther,
-    ltv,
-    ltv_cac_ratio: ltvCacRatio,
-    cogs,
-    cogs_percentage: cogsPercentage,
-    gross_margin: grossMargin,
-    gross_margin_percentage: grossMarginPercentage,
-    sales_marketing_expense: opEx.sales_marketing,
-    product_dev_expense: opEx.product_dev,
-    general_admin_expense: opEx.general_admin,
-    operating_expenses_total: operatingExpensesTotal,
-    ebitda,
-    ebitda_margin: ebitdaMargin,
-    cash_balance: cashBalance,
-    cash_runway_months: cashRunwayMonths,
-    mrr,
-    arr,
-    mrr_growth_rate: mrrGrowthRate,
-    experiment_metrics: null, // TODO: Aggregate experiment metrics
+    day: date,
+    sessions: 0, // Would come from analytics events
+    add_to_carts: 0, // Would come from analytics events
+    orders: orderCount,
+    revenue_cents: Math.round(revenue * 100),
+    refunds_cents: Math.round(refundAmount * 100),
+    aov_cents: Math.round(averageOrderValue * 100),
+    cac_cents: cac ? Math.round(cac * 100) : 0,
+    conversion_rate: orderCount > 0 && impressionsTotal > 0 ? conversionsTotal / impressionsTotal : 0,
+    gross_margin_cents: Math.round(grossMargin * 100),
+    traffic: impressionsTotal, // Using impressions as traffic proxy
   };
 }
 
@@ -245,7 +271,7 @@ async function upsertMetrics(
   const { error } = await supabase
     .from('metrics_daily')
     .upsert(metrics, {
-      onConflict: 'date',
+      onConflict: 'day',
       ignoreDuplicates: false,
     });
   
@@ -253,7 +279,7 @@ async function upsertMetrics(
     throw new Error(`Failed to upsert metrics: ${error.message}`);
   }
   
-  console.log(`[Compute Metrics] Successfully computed metrics for ${metrics.date}`);
+  console.log(`[Compute Metrics] Successfully computed metrics for ${metrics.day}`);
 }
 
 async function main() {

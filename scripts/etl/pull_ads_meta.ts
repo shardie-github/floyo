@@ -75,26 +75,89 @@ async function pullMetaAdsData(
   startDate: string,
   endDate: string
 ): Promise<MetaAdInsight[]> {
-  // TODO: Replace with actual Meta Ads API implementation
-  // This is a placeholder structure
-  
-  const accountId = adAccountId || 'act_<ACCOUNT_ID>';
+  const accountId = adAccountId || process.env.META_AD_ACCOUNT_ID || '';
+  if (!accountId || accountId.includes('<ACCOUNT_ID>')) {
+    console.warn('[Meta ETL] META_AD_ACCOUNT_ID not set, skipping API call');
+    return [];
+  }
+
   const apiVersion = 'v18.0';
   const baseUrl = `https://graph.facebook.com/${apiVersion}`;
   
   console.log(`[Meta ETL] Fetching data from ${startDate} to ${endDate} for account ${accountId}`);
   
-  // Placeholder: In production, implement actual Meta Graph API calls
-  // Example structure:
-  // const response = await fetch(
-  //   `${baseUrl}/${accountId}/insights?` +
-  //   `fields=spend,impressions,clicks,conversions,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name&` +
-  //   `time_range={'since':'${startDate}','until':'${endDate}'}&` +
-  //   `access_token=${token}`
-  // );
+  const insights: MetaAdInsight[] = [];
+  let after: string | null = null;
   
-  // For now, return empty array (dry-run mode will show structure)
-  return [];
+  do {
+    try {
+      const timeRange = JSON.stringify({ since: startDate, until: endDate });
+      const fields = 'spend,impressions,clicks,actions,campaign_id,campaign_name,adset_id,adset_name,ad_id,ad_name';
+      const level = 'ad'; // Can be 'ad', 'adset', 'campaign'
+      const url = `${baseUrl}/${accountId}/insights?` +
+        `fields=${fields}&` +
+        `time_range=${encodeURIComponent(timeRange)}&` +
+        `level=${level}&` +
+        `access_token=${token}` +
+        (after ? `&after=${after}` : '');
+      
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          throw new Error('Invalid Meta access token. Please check META_TOKEN.');
+        }
+        if (response.status === 400 && errorData.error) {
+          throw new Error(`Meta API error: ${errorData.error.message || JSON.stringify(errorData.error)}`);
+        }
+        throw new Error(`Meta API returned ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.data && Array.isArray(data.data)) {
+        for (const insight of data.data) {
+          // Extract conversions from actions array
+          const conversions = insight.actions?.find((a: any) => 
+            a.action_type === 'purchase' || a.action_type === 'lead' || a.action_type === 'complete_registration'
+          )?.value || '0';
+          
+          insights.push({
+            date: insight.date_start || startDate,
+            spend: insight.spend || '0',
+            impressions: insight.impressions || '0',
+            clicks: insight.clicks || '0',
+            conversions: conversions.toString(),
+            campaign_id: insight.campaign_id || '',
+            campaign_name: insight.campaign_name || '',
+            adset_id: insight.adset_id,
+            adset_name: insight.adset_name,
+            ad_id: insight.ad_id,
+            ad_name: insight.ad_name,
+          });
+        }
+      }
+      
+      after = data.paging?.cursors?.after || null;
+      
+      // Rate limiting: wait 1 second between requests
+      if (after) {
+        await sleep(1000);
+      }
+    } catch (error) {
+      console.error('[Meta ETL] Error fetching data:', error);
+      // If it's a token error, don't retry
+      if (error instanceof Error && error.message.includes('token')) {
+        throw error;
+      }
+      // For other errors, break and return what we have
+      break;
+    }
+  } while (after);
+  
+  console.log(`[Meta ETL] Fetched ${insights.length} insights`);
+  return insights;
 }
 
 async function upsertSpendData(
@@ -108,18 +171,23 @@ async function upsertSpendData(
   }
   
   const records = insights.map((insight) => ({
-    source: 'meta',
+    platform: 'meta',
+    source: 'meta', // For backward compatibility
     external_id: `${insight.campaign_id}_${insight.date}`,
     date: insight.date,
-    amount: parseFloat(insight.spend),
+    spend_cents: Math.round(parseFloat(insight.spend) * 100),
+    amount: parseFloat(insight.spend), // For backward compatibility
     currency: 'USD',
     impressions: parseInt(insight.impressions) || 0,
     clicks: parseInt(insight.clicks) || 0,
-    conversions: parseInt(insight.conversions) || 0,
+    conv: parseInt(insight.conversions) || 0,
+    conversions: parseInt(insight.conversions) || 0, // For backward compatibility
     campaign_id: insight.campaign_id,
     campaign_name: insight.campaign_name,
-    ad_set_id: insight.adset_id,
-    ad_set_name: insight.adset_name,
+    adset_id: insight.adset_id,
+    ad_set_id: insight.adset_id, // For backward compatibility
+    adset_name: insight.adset_name,
+    ad_set_name: insight.adset_name, // For backward compatibility
     ad_id: insight.ad_id,
     ad_name: insight.ad_name,
     metadata: {
@@ -138,7 +206,7 @@ async function upsertSpendData(
   const { error } = await supabase
     .from('spend')
     .upsert(records, {
-      onConflict: 'source,external_id,date',
+      onConflict: 'platform,external_id,date',
       ignoreDuplicates: false,
     });
   

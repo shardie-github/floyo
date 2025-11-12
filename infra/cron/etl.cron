@@ -1,25 +1,15 @@
-# ETL Cron Schedule
-# Description: Nightly ETL pipeline for finance automation and growth metrics
+# ETL Cron Jobs
 # Timezone: America/Toronto
-# Schedule: 01:10 AM America/Toronto (06:10 UTC)
+# Runs daily at 01:10 AM ET (06:10 UTC)
 
-# Prerequisites:
-# 1. Set environment variables in /etc/environment or ~/.bashrc
-# 2. Ensure Node.js 20+ is installed
-# 3. Run `npm ci` in project directory
-# 4. Update paths below to match your installation
+# Pull Meta Ads data (last 7 days)
+10 1 * * * cd /workspace && TZ=America/Toronto node scripts/etl/pull_ads_meta.ts --cron >> /var/log/etl-meta.log 2>&1
 
-# Example crontab entry (add to crontab with: crontab -e)
-# 10 6 * * * cd /workspace && /usr/bin/node --loader tsx scripts/etl/pull_ads_meta.ts --cron >> /var/log/etl-meta.log 2>&1
-# 10 6 * * * cd /workspace && /usr/bin/node --loader tsx scripts/etl/pull_ads_tiktok.ts --cron >> /var/log/etl-tiktok.log 2>&1
-# 10 6 * * * cd /workspace && /usr/bin/node --loader tsx scripts/etl/pull_shopify_orders.ts --cron >> /var/log/etl-shopify.log 2>&1
-# 15 6 * * * cd /workspace && /usr/bin/node --loader tsx scripts/etl/compute_metrics.ts --cron >> /var/log/etl-metrics.log 2>&1
+# Pull TikTok Ads data (last 7 days)
+15 1 * * * cd /workspace && TZ=America/Toronto node scripts/etl/pull_ads_tiktok.ts --cron >> /var/log/etl-tiktok.log 2>&1
 
-# Alternative: Run all ETL scripts sequentially via wrapper script
-# 10 6 * * * cd /workspace && bash scripts/etl/run_all.sh >> /var/log/etl-all.log 2>&1
+# Pull Shopify Orders (last 7 days)
+20 1 * * * cd /workspace && TZ=America/Toronto node scripts/etl/pull_shopify_orders.ts --cron >> /var/log/etl-shopify.log 2>&1
 
-# Notes:
-# - Adjust paths and node executable location as needed
-# - Consider using systemd timers instead of cron for better logging and error handling
-# - Monitor logs regularly for failures
-# - Set up alerts for ETL failures (e.g., via Slack/Discord webhooks)
+# Compute daily metrics (yesterday)
+25 1 * * * cd /workspace && TZ=America/Toronto node scripts/etl/compute_metrics.ts --cron >> /var/log/etl-metrics.log 2>&1

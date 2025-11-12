@@ -94,23 +94,60 @@ async function pullShopifyOrders(
   console.log(`[Shopify ETL] Fetching orders from ${startDate} to ${endDate}`);
   
   do {
-    // TODO: Replace with actual Shopify Admin API implementation
-    // This is a placeholder structure
-    
-    // Example structure:
-    // const url = `${baseUrl}/orders.json?` +
-    //   `created_at_min=${startDate}T00:00:00-05:00&` +
-    //   `created_at_max=${endDate}T23:59:59-05:00&` +
-    //   `limit=250` +
-    //   (pageInfo ? `&page_info=${pageInfo}` : '');
-    // 
-    // const response = await fetch(url);
-    // const data = await response.json();
-    // orders.push(...data.orders);
-    // pageInfo = extractPageInfo(response.headers);
-    
-    // For now, break immediately (dry-run mode will show structure)
-    break;
+    try {
+      const url = `${baseUrl}/orders.json?` +
+        `created_at_min=${startDate}T00:00:00-05:00&` +
+        `created_at_max=${endDate}T23:59:59-05:00&` +
+        `limit=250&` +
+        `status=any&` +
+        `financial_status=any` +
+        (pageInfo ? `&page_info=${pageInfo}` : '');
+      
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Invalid Shopify credentials. Please check SHOPIFY_API_KEY and SHOPIFY_PASSWORD.');
+        }
+        throw new Error(`Shopify API returned ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.orders && Array.isArray(data.orders)) {
+        orders.push(...data.orders);
+      }
+      
+      // Extract pagination info from Link header or response
+      const linkHeader = response.headers.get('link');
+      if (linkHeader) {
+        const nextMatch = linkHeader.match(/<([^>]+)>; rel="next"/);
+        if (nextMatch) {
+          const nextUrl = new URL(nextMatch[1]);
+          pageInfo = nextUrl.searchParams.get('page_info');
+        } else {
+          pageInfo = null;
+        }
+      } else {
+        // Check if there are more pages based on response
+        pageInfo = data.orders && data.orders.length === 250 ? 'has_more' : null;
+      }
+      
+      // Rate limiting: Shopify allows 2 requests per second
+      await sleep(500);
+    } catch (error) {
+      console.error('[Shopify ETL] Error fetching orders:', error);
+      // If it's an auth error, don't retry
+      if (error instanceof Error && error.message.includes('credentials')) {
+        throw error;
+      }
+      // For other errors, break and return what we have
+      break;
+    }
   } while (pageInfo);
   
   return orders;

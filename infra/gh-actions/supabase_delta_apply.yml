@@ -1,0 +1,41 @@
+name: Supabase Delta Migrate & Verify
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - "scripts/agents/generate_delta_migration.ts"
+      - "supabase/migrations/**.sql"
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Install deps
+        run: npm ci || true
+      - name: Build Delta
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: node scripts/agents/generate_delta_migration.ts
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with: { version: latest }
+      - name: Apply via Supabase CLI
+        env: { SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }} }
+        run: supabase db push --db-url "$SUPABASE_DB_URL" --include-all
+      - name: Fallback psql per-file if CLI fails
+        if: failure()
+        env: { SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }} }
+        run: |
+          echo "CLI failed; fallback to psql"
+          for f in $(ls -1 supabase/migrations/*.sql | sort); do
+            echo "Applying $f"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+      - name: Verify Post-Apply
+        env:
+          DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: node scripts/agents/verify_db.ts
