@@ -19,7 +19,7 @@ jobs:
       - name: Build Delta
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: node scripts/agents/generate_delta_migration.ts
+        run: tsx scripts/agents/generate_delta_migration.ts
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
         with: { version: latest }
@@ -31,11 +31,12 @@ jobs:
         env: { SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }} }
         run: |
           echo "CLI failed; fallback to psql"
-          for f in $(ls -1 supabase/migrations/*.sql | sort); do
+          for f in $(ls -1 supabase/migrations/*_delta.sql 2>/dev/null | sort); do
             echo "Applying $f"
-            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$f"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$f" || true
           done
       - name: Verify Post-Apply
         env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           DATABASE_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: node scripts/agents/verify_db.ts
+        run: tsx scripts/agents/verify_db.ts

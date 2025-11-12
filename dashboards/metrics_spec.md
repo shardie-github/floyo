@@ -1,130 +1,104 @@
 # Metrics Dashboard Specification
 
-**Purpose:** Real-time business intelligence dashboard for Floyo  
-**Target Users:** Executives, Product, Growth, Engineering  
-**Update Frequency:** Real-time (events), Daily (aggregates)
+**Last Updated:** 2025-01-27  
+**Timezone:** America/Toronto
 
----
+## Overview
 
-## Core Metrics
+This document defines KPIs and Data Quality (DQ) tiles for the metrics dashboard.
+
+## Core KPIs
 
 ### Revenue Metrics
-- **MRR** (Monthly Recurring Revenue)
-- **ARR** (Annual Recurring Revenue)
-- **Revenue Growth (MoM)** (Month-over-month growth rate)
-- **ARPU** (Average Revenue Per User)
+- **MRR** (Monthly Recurring Revenue): Sum of active subscriptions
+- **ARR** (Annual Recurring Revenue): MRR × 12
+- **Revenue**: Total revenue (orders + subscriptions)
+- **AOV** (Average Order Value): Revenue / Orders
+- **Gross Margin**: Revenue - COGS
+- **Gross Margin %**: (Gross Margin / Revenue) × 100
 
 ### Customer Metrics
-- **Total Customers** (Active paying customers)
-- **New Customers** (This month)
-- **Churn Rate** (Monthly churn percentage)
-- **Net Customer Growth** (New - Churned)
-
-### Unit Economics
-- **CAC** (Customer Acquisition Cost)
-- **LTV** (Lifetime Value)
-- **LTV:CAC Ratio** (Target: >4:1)
-- **Payback Period** (Months to recover CAC)
-
-### Activation & Retention
-- **Activation Rate** (% of signups who create first workflow)
-- **D1 Retention** (Day 1 retention rate)
-- **D7 Retention** (Day 7 retention rate)
-- **D30 Retention** (Day 30 retention rate)
-- **Cohort Retention** (Retention by signup cohort)
+- **Customers**: Total paying customers
+- **New Customers**: New customers this period
+- **ARPU** (Average Revenue Per User): MRR / Customers
+- **Churn Rate**: Customers lost / Starting customers
+- **Retention D7**: % of users active on day 7
+- **Retention D30**: % of users active on day 30
 
 ### Growth Metrics
-- **Signups** (Total signups)
-- **Signup Growth (MoM)** (Month-over-month signup growth)
-- **Conversion Rate** (Signup → Paid)
-- **Referral Rate** (% of signups from referrals)
+- **Activation Rate**: % of signups who activate (first workflow created)
+- **Conversion Rate**: Orders / Sessions
+- **CAC** (Customer Acquisition Cost): Marketing spend / New customers
+- **LTV** (Lifetime Value): ARPU × Average lifetime months
+- **LTV:CAC Ratio**: LTV / CAC (target: ≥4:1)
 
 ### Engagement Metrics
-- **Active Users (DAU)** (Daily Active Users)
-- **Active Users (MAU)** (Monthly Active Users)
-- **Workflows Created** (Total workflows)
-- **Workflows Run** (Total workflow executions)
-- **Time Saved** (Estimated hours saved)
+- **Sessions**: Total user sessions
+- **Active Users**: Users with activity in period
+- **Workflows Created**: Total workflows created
+- **Workflows Executed**: Total workflow executions
 
-### Financial Metrics
-- **Gross Margin** (Revenue - COGS)
-- **Gross Margin %** (Target: >65%)
-- **EBITDA** (Earnings Before Interest Taxes Depreciation Amortization)
-- **EBITDA Margin %** (Target: >0% for profitability)
-- **Cash Balance** (Current cash on hand)
-- **Cash Runway** (Months until cash runs out)
+## Data Quality Tiles
 
-### Marketing Metrics
-- **Spend (Total)** (Total ad spend)
-- **Spend (Meta)** (Meta ad spend)
-- **Spend (TikTok)** (TikTok ad spend)
-- **Impressions** (Total ad impressions)
-- **Clicks** (Total ad clicks)
-- **Conversions** (Total conversions)
-- **CPC** (Cost Per Click)
-- **CPM** (Cost Per Mille)
+### Freshness Checks
+- **Events Data Freshness**: Last event timestamp (alert if >24h old)
+- **Spend Data Freshness**: Last spend record date (alert if >48h old)
+- **Metrics Daily Freshness**: Last metrics_daily record (alert if missing yesterday)
 
----
+### Completeness Checks
+- **Events Completeness**: % of expected events received (target: >95%)
+- **Spend Completeness**: % of platforms reporting (target: 100%)
+- **Orders Completeness**: % of orders with required fields (target: 100%)
 
-## Dashboard Views
+### Accuracy Checks
+- **Revenue Reconciliation**: Sum of orders vs. Stripe revenue (tolerance: ±1%)
+- **Spend Reconciliation**: Sum of spend vs. platform totals (tolerance: ±2%)
+- **Metrics Consistency**: Daily metrics sum matches raw data (tolerance: ±0.5%)
 
-### 1. Executive Dashboard
-**Metrics:** MRR, ARR, Customers, LTV:CAC, Cash Runway, Growth Rate  
-**Update Frequency:** Daily  
-**Purpose:** High-level business health
+### Duplicate Detection
+- **Duplicate Events**: Count of duplicate event IDs (target: 0)
+- **Duplicate Orders**: Count of duplicate order numbers (target: 0)
+- **Duplicate Spend**: Count of duplicate spend records (target: 0)
 
-### 2. Growth Dashboard
-**Metrics:** Signups, Activation Rate, Conversion Rate, CAC, Referral Rate  
-**Update Frequency:** Real-time  
-**Purpose:** Track growth channels and conversion
+## Dashboard Layout
 
-### 3. Retention Dashboard
-**Metrics:** D1/D7/D30 Retention, Cohort Retention, Churn Rate  
-**Update Frequency:** Daily  
-**Purpose:** Track retention and identify churn patterns
+### Row 1: Revenue & Customers
+- MRR, ARR, Revenue, Gross Margin %
+- Customers, New Customers, ARPU, Churn Rate
 
-### 4. Financial Dashboard
-**Metrics:** Revenue, COGS, Gross Margin, EBITDA, Cash Runway  
-**Update Frequency:** Daily  
-**Purpose:** Track profitability and cash position
+### Row 2: Growth & Unit Economics
+- Activation Rate, Conversion Rate, CAC, LTV, LTV:CAC
 
-### 5. Marketing Dashboard
-**Metrics:** Spend, Impressions, Clicks, Conversions, CAC by Channel  
-**Update Frequency:** Daily  
-**Purpose:** Track marketing performance and ROI
+### Row 3: Engagement
+- Sessions, Active Users, Workflows Created, Workflows Executed
 
----
+### Row 4: Data Quality
+- Freshness tiles (Events, Spend, Metrics)
+- Completeness tiles (Events, Spend, Orders)
+- Accuracy tiles (Revenue, Spend, Metrics)
+- Duplicate detection tiles
 
-## Data Sources
+## Alert Thresholds
 
-- **Supabase:** `metrics_daily`, `orders`, `spend`, `events`, `experiments`
-- **ETL Scripts:** `pull_ads_meta.ts`, `pull_ads_tiktok.ts`, `pull_shopify_orders.ts`, `compute_metrics.ts`
-- **Analytics:** PostHog/Mixpanel (events, funnels, cohorts)
+- **MRR Drop**: >10% MoM decrease → Alert
+- **Churn Rate**: >8% monthly → Alert
+- **LTV:CAC**: <3:1 → Alert
+- **Activation Rate**: <30% → Alert
+- **D7 Retention**: <20% → Alert
+- **Data Freshness**: >24h stale → Alert
+- **Completeness**: <90% → Alert
+- **Accuracy**: >2% variance → Alert
 
----
+## Refresh Frequency
 
-## Implementation Notes
+- **Real-time**: Revenue, Customers, Sessions
+- **Hourly**: Engagement metrics
+- **Daily**: All metrics (computed at 01:10 ET)
+- **Weekly**: Cohort analysis, retention curves
 
-1. **Real-time Metrics:** Use Supabase Realtime subscriptions for events
-2. **Aggregated Metrics:** Use `metrics_daily` table (updated nightly)
-3. **Cohort Analysis:** Use `events` table with `user_id` and `occurred_at`
-4. **Experiments:** Use `experiments` and `experiment_arms` tables
+## Notes
 
----
-
-## Alerts & Guardrails
-
-- **Cash Runway <3 months:** Alert executives
-- **Activation Rate <30%:** Alert product team
-- **D7 Retention <20%:** Alert growth team
-- **LTV:CAC <3:1:** Alert marketing team
-- **Churn Rate >10%:** Alert customer success team
-
----
-
-## Tools & Stack
-
-- **Dashboard:** Supabase Dashboard, Metabase, or custom React dashboard
-- **Visualization:** Chart.js, Recharts, or D3.js
-- **Data:** Supabase PostgreSQL (real-time subscriptions)
-- **ETL:** TypeScript scripts (nightly cron)
+- All monetary values in cents (integer) for precision
+- All percentages as decimals (0.25 = 25%)
+- Timezone: America/Toronto
+- Date ranges: Inclusive start, exclusive end
