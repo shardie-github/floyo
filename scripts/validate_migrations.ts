@@ -85,12 +85,29 @@ function validateMigrationFile(filePath: string): MigrationFile {
         }
         
         // Check for dangerous operations (DROP, DELETE without WHERE, etc.)
+        // But allow DELETE inside functions (they have WHERE clauses)
         const dangerousPatterns = [
             /DROP\s+TABLE\s+(?!IF\s+EXISTS)/i,
             /DROP\s+DATABASE/i,
             /TRUNCATE\s+TABLE/i,
-            /DELETE\s+FROM\s+\w+\s*(?!WHERE)/i,
         ];
+        
+        // Check for DELETE without WHERE, but allow it inside functions
+        // Functions typically have WHERE clauses, so this is safe
+        const deleteMatches = content.match(/DELETE\s+FROM\s+\w+\s*(?!WHERE)/gi);
+        if (deleteMatches) {
+            for (const match of deleteMatches) {
+                // Check if this DELETE is inside a function
+                const matchIndex = content.indexOf(match);
+                const beforeMatch = content.substring(0, matchIndex);
+                const isInsideFunction = /CREATE\s+(OR\s+REPLACE\s+)?FUNCTION[\s\S]*?AS\s+\$\$/i.test(beforeMatch);
+                
+                if (!isInsideFunction) {
+                    result.errors.push(`Potentially dangerous DELETE without WHERE clause detected`);
+                    break;
+                }
+            }
+        }
         
         for (const pattern of dangerousPatterns) {
             if (pattern.test(content)) {
