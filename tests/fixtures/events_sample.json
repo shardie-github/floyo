@@ -1,45 +1,5 @@
 [
-  {
-    "name": "session_start",
-    "occurred_at": "2025-01-27T10:00:00Z",
-    "user_id": "550e8400-e29b-41d4-a716-446655440000",
-    "props": {
-      "session_id": "session_123",
-      "referrer": "https://example.com",
-      "user_agent": "Mozilla/5.0"
-    },
-    "source": "web"
-  },
-  {
-    "name": "page_view",
-    "occurred_at": "2025-01-27T10:01:00Z",
-    "user_id": "550e8400-e29b-41d4-a716-446655440000",
-    "props": {
-      "page": "/dashboard",
-      "session_id": "session_123"
-    },
-    "source": "web"
-  },
-  {
-    "name": "add_to_cart",
-    "occurred_at": "2025-01-27T10:05:00Z",
-    "user_id": "550e8400-e29b-41d4-a716-446655440000",
-    "props": {
-      "product_id": "prod_123",
-      "price_cents": 2999,
-      "session_id": "session_123"
-    },
-    "source": "web"
-  },
-  {
-    "name": "order_placed",
-    "occurred_at": "2025-01-27T10:10:00Z",
-    "user_id": "550e8400-e29b-41d4-a716-446655440000",
-    "props": {
-      "order_id": "order_123",
-      "revenue_cents": 2999,
-      "session_id": "session_123"
-    },
-    "source": "web"
-  }
+  {"id": null, "occurred_at": "2025-10-01T12:00:00Z", "user_id": null, "event_name": "session_start", "props": {"ua":"android"}},
+  {"id": null, "occurred_at": "2025-10-01T12:05:00Z", "user_id": null, "event_name": "order_completed", "props": {"revenue_cents": 4599, "currency":"USD"}},
+  {"id": null, "occurred_at": "2025-10-02T09:10:00Z", "user_id": null, "event_name": "order_refunded", "props": {"refunds_cents": 1200}}
 ]

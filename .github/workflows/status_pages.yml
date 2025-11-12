@@ -1,0 +1,44 @@
+name: Deploy Status Page
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - "status/**"
+      - "scripts/agents/write_status_json.ts"
+      - "reports/status.json"
+      - "infra/gh-actions/status_pages.yml"
+permissions:
+  pages: write
+  id-token: write
+  contents: read
+  actions: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci || true
+      - name: Generate status.json (best effort)
+        env:
+          TZ: America/Toronto
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN || github.token }}
+        run: node scripts/agents/write_status_json.ts || true
+      - name: Prepare artifact
+        run: |
+          mkdir -p public/reports
+          cp -r status/* public/
+          cp -r reports/status.json public/reports/status.json || true
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with: { path: public }
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: ${{ steps.deployment.outputs.page_url }} }
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

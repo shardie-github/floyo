@@ -1,0 +1,33 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Status • Ops</title><script src="https://cdn.tailwindcss.com"></script>
+</head><body class="bg-slate-50 text-slate-800">
+<main class="max-w-4xl mx-auto p-6">
+  <h1 class="text-2xl font-semibold mb-1">Ops Status</h1>
+  <p id="updated" class="text-sm text-slate-500 mb-6"></p>
+  <section class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="rounded-xl border p-4 shadow-sm"><h2 class="font-medium">Database Verify</h2><p class="text-sm text-slate-500">Tables, indexes, RLS</p><div id="badge-db" class="mt-3 inline-block px-3 py-1 rounded-full text-white text-sm">…</div></div>
+    <div class="rounded-xl border p-4 shadow-sm"><h2 class="font-medium">Data Quality</h2><p class="text-sm text-slate-500">Freshness / Nulls</p><div id="badge-dq" class="mt-3 inline-block px-3 py-1 rounded-full text-white text-sm">…</div></div>
+  </section>
+  <section class="mt-6"><h2 class="font-medium mb-2">Key Workflows</h2><div id="wf-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div></section>
+  <section class="mt-6"><h2 class="font-medium mb-2">Reports</h2><ul id="reports" class="list-disc pl-5 text-blue-600"></ul></section>
+</main>
+<script>
+const green="bg-emerald-600",red="bg-rose-600",gray="bg-slate-400";
+function badge(el,ok){ el.className="mt-3 inline-block px-3 py-1 rounded-full text-white text-sm "+(ok?green:red); el.textContent=ok?"PASS":"FAIL"; }
+function linkItem(href,text){ const li=document.createElement("li"); if(href){ const a=document.createElement("a"); a.href=href; a.textContent=text; a.target="_blank"; li.appendChild(a);} else { li.textContent=text; } return li; }
+fetch("../reports/status.json",{cache:"no-store"}).then(r=>r.json()).then(data=>{
+  document.getElementById("updated").textContent=`Updated ${new Date(data.updatedAt).toLocaleString()} (${data.timezone})`;
+  badge(document.getElementById("badge-db"), data.checks.dbVerify);
+  badge(document.getElementById("badge-dq"), data.checks.dataQuality);
+  const wf=data.checks.workflows||{}; const wfList=document.getElementById("wf-list");
+  if(Object.keys(wf).length===0){ const d=document.createElement("div"); d.className="rounded-xl border p-4 shadow-sm text-slate-500"; d.textContent="No workflow data yet."; wfList.appendChild(d); }
+  else { for(const [name,s] of Object.entries(wf)){ const card=document.createElement("div"); card.className="rounded-xl border p-4 shadow-sm";
+      const t=document.createElement("div"); t.className="font-medium"; t.textContent=name;
+      const meta=document.createElement("div"); meta.className="text-sm text-slate-500"; meta.textContent=s.found?`#${s.run_number||"?"} • ${s.updated_at||"?"}`:"No recent run";
+      const badgeEl=document.createElement("div"); badgeEl.className="mt-3 inline-block px-3 py-1 rounded-full text-white text-sm "+(s.success?green:(s.found?red:gray)); badgeEl.textContent=s.success?"SUCCESS":(s.found?"FAILED":"MISSING");
+      card.appendChild(t); card.appendChild(meta); card.appendChild(badgeEl); wfList.appendChild(card); } }
+  const ul=document.getElementById("reports"); ul.appendChild(linkItem(data.links.postDeployReport,"Post-Deploy Verification")); ul.appendChild(linkItem(data.links.cadenceReport,"Cadence Orchestrator"));
+}).catch(()=>{ document.getElementById("updated").textContent="status.json not found yet. Run the status generator."; });
+</script>
+</body></html>

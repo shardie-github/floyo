@@ -1,18 +1,22 @@
-name: Preflight
-on: [workflow_dispatch, pull_request]
+name: Post-Deploy Verify (Supabase & DQ)
+on:
+  push: { branches: [ main ] }
+  workflow_dispatch:
 jobs:
-  run:
+  verify:
     runs-on: ubuntu-latest
+    permissions: { contents: read, actions: read }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm ci || true
-      - name: Preflight
+      - name: Post Deploy Verify
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           TZ: America/Toronto
-        run: node scripts/agents/preflight.ts
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN || github.token }}
+        run: node scripts/agents/post_deploy_verify.ts
       - name: Write status.json
         if: always()
         env:
