@@ -1,147 +1,130 @@
 {
-  "scenarios": {
-    "base": {
-      "description": "Most likely outcome based on current trajectory",
-      "confidence": 0.65
-    },
-    "optimistic": {
-      "description": "Best-case scenario with strong growth and efficiency gains",
-      "confidence": 0.25
-    },
-    "conservative": {
-      "description": "Worst-case scenario accounting for market headwinds",
-      "confidence": 0.10
-    }
-  },
-  "revenue": {
-    "starting_mrr": 0,
-    "monthly_growth_rate_base": {
-      "month_1": 0.0,
-      "month_2": 0.5,
-      "month_3": 0.33,
-      "month_4": 0.25,
-      "month_5": 0.20,
-      "month_6": 0.17,
-      "month_7": 0.14,
-      "month_8": 0.13,
-      "month_9": 0.11,
-      "month_10": 0.10,
-      "month_11": 0.09,
-      "month_12": 0.08
-    },
-    "monthly_growth_rate_optimistic": {
-      "month_1": 0.0,
-      "month_2": 0.5,
-      "month_3": 0.33,
-      "month_4": 0.25,
-      "month_5": 0.20,
-      "month_6": 0.17,
-      "month_7": 0.14,
-      "month_8": 0.13,
-      "month_9": 0.11,
-      "month_10": 0.10,
-      "month_11": 0.09,
-      "month_12": 0.08
-    },
-    "monthly_growth_rate_conservative": {
-      "month_1": 0.0,
-      "month_2": 0.43,
-      "month_3": 0.30,
-      "month_4": 0.23,
-      "month_5": 0.19,
-      "month_6": 0.16,
-      "month_7": 0.14,
-      "month_8": 0.12,
-      "month_9": 0.11,
-      "month_10": 0.10,
-      "month_11": 0.09,
-      "month_12": 0.08
-    }
-  },
-  "cogs": {
-    "base_cogs_percentage": 0.35,
-    "optimistic_cogs_percentage": 0.30,
-    "conservative_cogs_percentage": 0.40,
-    "includes": [
-      "Payment processing fees (2.9% + $0.30)",
-      "Hosting and infrastructure",
-      "Third-party API costs",
-      "Support tooling"
-    ]
-  },
-  "cac": {
-    "base": 50,
-    "optimistic": 40,
-    "conservative": 65,
-    "channels": {
-      "paid_ads": 0.60,
-      "organic": 0.25,
-      "referrals": 0.15
-    },
-    "notes": "CAC calculated as total sales & marketing spend divided by new customers acquired"
-  },
-  "ltv": {
-    "base": 300,
-    "optimistic": 400,
-    "conservative": 250,
-    "calculation": "Average monthly revenue per customer × Average customer lifetime (months)",
-    "average_customer_lifetime_months": {
-      "base": 6,
-      "optimistic": 10,
-      "conservative": 3.85
-    }
-  },
-  "refund_rate": {
-    "base": 0.05,
-    "optimistic": 0.03,
-    "conservative": 0.08,
-    "notes": "Percentage of revenue refunded due to cancellations, chargebacks, or customer satisfaction issues"
-  },
-  "operating_expenses": {
-    "sales_marketing": {
-      "base_month_1": 20000,
-      "growth_rate": 0.125,
-      "includes": [
-        "Paid advertising (Meta, TikTok)",
-        "Content marketing",
-        "Sales team salaries",
-        "Marketing tools"
-      ]
-    },
-    "product_development": {
-      "base_month_1": 12000,
-      "growth_rate": 0.125,
-      "includes": [
-        "Engineering salaries",
-        "Design tools",
-        "Infrastructure",
-        "Third-party services"
-      ]
-    },
-    "general_admin": {
-      "base_month_1": 8000,
-      "growth_rate": 0.125,
-      "includes": [
-        "Legal and compliance",
-        "Accounting",
-        "Office expenses",
-        "Insurance"
-      ]
-    }
-  },
-  "cash": {
-    "starting_balance": 500000,
-    "runway_calculation": "Cash balance / Average monthly burn",
-    "target_runway_months": 12,
-    "notes": "Conservative assumption: maintain 12+ months runway"
-  },
+  "version": "1.0",
+  "last_updated": "2025-01-27",
   "timezone": "America/Toronto",
-  "last_updated": "2025-01-15",
-  "assumptions_confidence": {
-    "revenue_growth": "Medium - based on historical patterns and market analysis",
-    "cogs": "High - well-understood cost structure",
-    "cac": "Medium - varies by channel and seasonality",
-    "ltv": "Low - requires more customer data to refine",
-    "refund_rate": "Medium - based on industry benchmarks"
-  }
+  "assumptions": {
+    "pricing": {
+      "free_tier": {
+        "price": 0,
+        "workflow_limit": 5,
+        "api_calls_per_month": 1000,
+        "retention_rate": 0.25
+      },
+      "pro_tier": {
+        "price_monthly": 29,
+        "price_yearly": 290,
+        "workflow_limit": "unlimited",
+        "api_calls_per_month": "unlimited",
+        "retention_rate": 0.40
+      },
+      "enterprise_tier": {
+        "price_monthly": 299,
+        "price_yearly": 2990,
+        "min_seats": 10,
+        "retention_rate": 0.60
+      }
+    },
+    "acquisition": {
+      "base_cac": 50,
+      "optimistic_cac": 28,
+      "conservative_cac": 45,
+      "channels": {
+        "meta_ads": {
+          "cac": 50,
+          "share": 0.60,
+          "conversion_rate": 0.02
+        },
+        "tiktok_ads": {
+          "cac": 45,
+          "share": 0.20,
+          "conversion_rate": 0.025
+        },
+        "referrals": {
+          "cac": 30,
+          "share": 0.15,
+          "conversion_rate": 0.05
+        },
+        "organic": {
+          "cac": 0,
+          "share": 0.05,
+          "conversion_rate": 0.01
+        }
+      },
+      "monthly_growth_rate_base": 0.50,
+      "monthly_growth_rate_optimistic": 0.70,
+      "monthly_growth_rate_conservative": 0.30
+    },
+    "retention": {
+      "d7_base": 0.15,
+      "d7_optimistic": 0.20,
+      "d7_conservative": 0.12,
+      "d30_base": 0.25,
+      "d30_optimistic": 0.35,
+      "d30_conservative": 0.20,
+      "monthly_churn_base": 0.08,
+      "monthly_churn_optimistic": 0.06,
+      "monthly_churn_conservative": 0.10,
+      "ltv_months_base": 10.3,
+      "ltv_months_optimistic": 12.5,
+      "ltv_months_conservative": 8.0
+    },
+    "activation": {
+      "rate_base": 0.25,
+      "rate_optimistic": 0.30,
+      "rate_conservative": 0.20,
+      "definition": "first_workflow_created",
+      "time_to_activate_hours": 24
+    },
+    "monetization": {
+      "free_to_pro_conversion": 0.05,
+      "free_to_pro_conversion_optimistic": 0.10,
+      "upsell_rate": 0.15,
+      "upsell_value_multiplier": 1.15,
+      "refund_rate_base": 0.05,
+      "refund_rate_target": 0.03
+    },
+    "costs": {
+      "infrastructure_monthly": 500,
+      "infrastructure_per_customer": 0.50,
+      "team_monthly": 1500,
+      "marketing_monthly_base": 2000,
+      "marketing_per_customer": 50,
+      "support_per_customer": 2
+    },
+    "margins": {
+      "gross_margin_base": 0.75,
+      "gross_margin_target": 0.82,
+      "operating_margin_target": 0.20
+    },
+    "experiments": {
+      "meta_ads_targeting": {
+        "cac_reduction": 0.20,
+        "confidence": 0.75,
+        "impact": "high"
+      },
+      "post_purchase_upsell": {
+        "ltv_increase": 0.15,
+        "confidence": 0.85,
+        "impact": "high"
+      },
+      "onboarding_refund_reduction": {
+        "refund_reduction": 0.40,
+        "confidence": 0.80,
+        "impact": "medium"
+      }
+    },
+    "timeline": {
+      "month_1": "Analytics + Activation",
+      "month_2": "Stripe + Retention",
+      "month_3": "Optimization + Growth",
+      "month_6": "Scale + Enterprise",
+      "month_12": "Profitability"
+    }
+  },
+  "confidence_levels": {
+    "high": 0.85,
+    "medium": 0.70,
+    "low": 0.50
+  },
+  "notes": "Assumptions based on industry benchmarks and Floyo's current state. Update monthly as data becomes available."
 }
