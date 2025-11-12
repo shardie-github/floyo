@@ -1,0 +1,25 @@
+name: Docs Guard
+on:
+  pull_request:
+  push:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure script exists
+        run: |
+          test -f tools/docs-tidy.sh || { echo "Missing tools/docs-tidy.sh"; exit 1; }
+          chmod +x tools/docs-tidy.sh
+      - name: Dry-run tidy
+        run: bash tools/docs-tidy.sh --plan
+      - name: Block draft leakage
+        run: |
+          set -e
+          leaks=$(git ls-files | grep -Ei '(^|/)(draft|wip|notes?|minutes|brainstorm|outline|deprecated|legacy|old|backup|copy)([-_. ]|/|$).*\.md$' || true)
+          echo "$leaks" | grep -E '^(docs/final/|README\.md|[^/]+\.md)' && {
+            echo "Draft-like file leaked into final/root:"; echo "$leaks"; exit 2;
+          } || true
+          if ! grep -q '^/internal/private/\*\*$' .gitignore 2>/dev/null; then
+            echo "/internal/private/** must be git-ignored"; exit 3;
+          fi

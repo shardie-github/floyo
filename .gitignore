@@ -65,3 +65,8 @@ logs/
 tmp/
 temp/
 .cache/
+
+# Docs tidy
+/internal/private/**
+!internal/private/.keep
+/tools/docs-tidy-report.md
