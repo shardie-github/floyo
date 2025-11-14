@@ -1,0 +1,82 @@
+---
+name: Env Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  env-smoke-test:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_JWT_SECRET: ${{ secrets.SUPABASE_JWT_SECRET }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Validate Required Environment Variables Exist
+        run: |
+          required_vars=(
+            DATABASE_URL
+            SUPABASE_URL
+            SUPABASE_ANON_KEY
+            SUPABASE_SERVICE_ROLE_KEY
+            SUPABASE_JWT_SECRET
+            NEXT_PUBLIC_SUPABASE_URL
+            NEXT_PUBLIC_SUPABASE_ANON_KEY
+          )
+          missing=0
+          for var in "${required_vars[@]}"; do
+            if [ -z "${!var}" ]; then
+              echo "❌ Missing: $var"
+              missing=1
+            else
+              echo "✅ Present: $var"
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Environment variable validation failed."
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
+        run: |
+          if [ -f pnpm-lock.yaml ]; then corepack enable && pnpm install; \
+          elif [ -f yarn.lock ]; then yarn install --frozen-lockfile; \
+          elif [ -f package-lock.json ]; then npm ci; \
+          else npm install; fi
+
+      - name: Prisma Checks (if applicable)
+        run: |
+          if [ -f prisma/schema.prisma ]; then
+            npx prisma generate
+            npx prisma migrate status || echo "Non-fatal: Prisma migration status warnings."
+          else
+            echo "No Prisma schema found."
+          fi
+
+      - name: Build App
+        run: |
+          if [ -f frontend/package.json ] && grep -q '"next"' frontend/package.json 2>/dev/null; then \
+            cd frontend && npm run build || (cd .. && pnpm --filter frontend build) || (cd .. && yarn workspace frontend build); \
+          elif grep -q '"next"' package.json 2>/dev/null; then \
+            npm run build || pnpm build || yarn build; \
+          else
+            echo "No Next.js build found; skipping.";
+          fi
+
+      - name: Summary
+        run: echo "✓ Env Smoke Test complete."
