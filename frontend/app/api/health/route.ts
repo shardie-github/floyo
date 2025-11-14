@@ -1,7 +1,7 @@
 /**
  * Enhanced Health Check API Route
  * 
- * Provides comprehensive health status including dependencies.
+ * Provides comprehensive health status including dependencies and environment variable validation.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -9,10 +9,22 @@ import { withErrorHandler } from '@/lib/api/error-handler';
 import { createClient } from '@supabase/supabase-js';
 import prisma from '@/lib/db/prisma';
 
+const REQUIRED_ENV_VARS = [
+  'DATABASE_URL',
+  'SUPABASE_URL',
+  'SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
+  'SUPABASE_JWT_SECRET',
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+];
+
 interface HealthStatus {
+  ok: boolean;
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: string;
   version: string;
+  missing: string[];
   checks: {
     database: {
       status: 'healthy' | 'unhealthy';
@@ -26,6 +38,9 @@ interface HealthStatus {
 }
 
 export const GET = withErrorHandler(async (_req: NextRequest) => {
+  // Validate required environment variables
+  const missing = REQUIRED_ENV_VARS.filter(key => !process.env[key]);
+
   const checks: HealthStatus['checks'] = {
     database: { status: 'unhealthy' },
     supabase: { status: 'unhealthy' },
@@ -62,8 +77,8 @@ export const GET = withErrorHandler(async (_req: NextRequest) => {
   }
 
   // Determine overall status
-  const allHealthy = Object.values(checks).every(check => check.status === 'healthy');
-  const anyUnhealthy = Object.values(checks).some(check => check.status === 'unhealthy');
+  const allHealthy = Object.values(checks).every(check => check.status === 'healthy') && missing.length === 0;
+  const anyUnhealthy = Object.values(checks).some(check => check.status === 'unhealthy') || missing.length > 0;
   
   const status: HealthStatus['status'] = allHealthy 
     ? 'healthy' 
@@ -72,9 +87,11 @@ export const GET = withErrorHandler(async (_req: NextRequest) => {
       : 'degraded';
 
   const healthStatus: HealthStatus = {
+    ok: missing.length === 0 && allHealthy,
     status,
     timestamp: new Date().toISOString(),
     version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0',
+    missing,
     checks,
   };
 
