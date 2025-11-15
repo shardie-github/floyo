@@ -68,7 +68,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\" && cd backend && black . && ruff format .",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\" && cd backend && black --check . && ruff format --check .",
     "bench": "tsx bench/example.bench.ts",
-    "bench:trend": "node scripts/bench-trend.js"
+    "bench:trend": "node scripts/bench-trend.js",
+    "openapi:generate": "tsx scripts/generate-openapi.ts",
+    "env:validate": "tsx -e \"import { validatePublicEnv } from './frontend/lib/env'; validatePublicEnv(); console.log('✅ Environment variables validated')\""
   },
   "dependencies": {
     "@octokit/rest": "^20.0.0",
