@@ -28,6 +28,7 @@ import { lintfix } from './commands/lintfix.js';
 import { docs } from './commands/docs.js';
 import { changelog } from './commands/changelog.js';
 import { orchestrate } from './commands/orchestrate.js';
+import { auroraPrime } from './commands/aurora-prime.js';
 
 program
   .name('ops')
@@ -156,6 +157,15 @@ program
   .option('--auto-pr', 'Create auto-PRs for safe fixes', false)
   .action(async (options) => {
     await orchestrate(options);
+  });
+
+program
+  .command('aurora-prime')
+  .description('Aurora Prime - Full Stack Autopilot (validate, heal, deploy)')
+  .option('--fix', 'Auto-fix issues when possible', false)
+  .option('--verbose', 'Show detailed output', false)
+  .action(async (options) => {
+    await auroraPrime(options);
   });
 
 program.parse(process.argv);
