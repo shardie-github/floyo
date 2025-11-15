@@ -12,6 +12,8 @@ import { createErrorResponse, withErrorHandler } from '@/lib/api/error-handler';
 import { ValidationError, AuthorizationError } from '@/src/lib/errors';
 import { PrivacyService } from '@/lib/services/privacy-service';
 
+export const runtime = 'nodejs'; // May require Node.js for file operations
+
 const ExportFormatSchema = z.enum(['json', 'csv']);
 
 // POST /api/privacy/export
