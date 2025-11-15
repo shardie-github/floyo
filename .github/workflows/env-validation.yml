@@ -1,0 +1,83 @@
+name: Environment Validation
+
+on:
+  pull_request:
+    paths:
+      - '.env.example'
+      - 'frontend/lib/env.ts'
+      - 'backend/env_validator.py'
+      - 'ENVIRONMENT.md'
+  push:
+    branches: [main]
+    paths:
+      - '.env.example'
+      - 'frontend/lib/env.ts'
+      - 'backend/env_validator.py'
+
+jobs:
+  validate-frontend-env:
+    name: Validate Frontend Environment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Validate environment variables
+        run: npm run env:validate
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://test.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: test-key
+          NODE_ENV: test
+
+  validate-backend-env:
+    name: Validate Backend Environment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Validate environment variables
+        run: |
+          cd backend
+          python -c "from env_validator import validate_env; validate_env()"
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+          SECRET_KEY: test-secret-key-minimum-32-characters-long
+          ENVIRONMENT: development
+
+  check-env-docs:
+    name: Check Environment Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check .env.example exists
+        run: test -f .env.example || exit 1
+      
+      - name: Check ENVIRONMENT.md exists
+        run: test -f ENVIRONMENT.md || exit 1
+      
+      - name: Validate .env.example format
+        run: |
+          # Check for required variables
+          grep -q "DATABASE_URL" .env.example || exit 1
+          grep -q "SUPABASE_URL" .env.example || exit 1
+          grep -q "SECRET_KEY" .env.example || exit 1
