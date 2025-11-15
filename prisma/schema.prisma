@@ -323,3 +323,124 @@ model MfaEnforcedSession {
   @@index([expiresAt])
   @@map("mfa_enforced_sessions")
 }
+
+// Extended tables (referenced in migrations)
+// Organizations
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  plan        String   @default("free") // free, pro, enterprise
+  settings    Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  members     OrganizationMember[]
+  workflows   Workflow[]
+  integrations UserIntegration[]
+  subscriptions Subscription[]
+  
+  @@index([slug])
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String   @id @default(uuid())
+  organizationId String
+  userId         String
+  role           String   @default("member") // owner, admin, member
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId])
+  @@map("organization_members")
+}
+
+// Workflows
+model Workflow {
+  id             String   @id @default(uuid())
+  userId         String?
+  organizationId String?
+  name           String
+  description    String?
+  definition     Json     // Workflow definition/configuration
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  versions       WorkflowVersion[]
+  executions     WorkflowExecution[]
+  
+  @@index([userId])
+  @@index([organizationId])
+  @@index([isActive])
+  @@map("workflows")
+}
+
+model WorkflowVersion {
+  id          String   @id @default(uuid())
+  workflowId  String
+  version     Int
+  definition  Json
+  createdAt   DateTime @default(now())
+  
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@unique([workflowId, version])
+  @@index([workflowId])
+  @@map("workflow_versions")
+}
+
+model WorkflowExecution {
+  id          String   @id @default(uuid())
+  workflowId  String
+  status      String   @default("pending") // pending, running, completed, failed
+  input       Json?
+  output      Json?
+  error       String?
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  
+  workflow    Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  
+  @@index([workflowId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("workflow_executions")
+}
+
+// User Integrations
+model UserIntegration {
+  id             String   @id @default(uuid())
+  userId         String?
+  organizationId String?
+  provider       String   // zapier, tiktok, meta, shopify, etc.
+  name           String
+  config         Json     // Encrypted configuration/credentials
+  isActive       Boolean  @default(true)
+  lastSyncAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([organizationId])
+  @@index([provider])
+  @@index([isActive])
+  @@map("user_integrations")
+}
+
+// Metrics Log (referenced in migrations)
+model MetricsLog {
+  id          String   @id @default(uuid())
+  source      String   // system, zapier, etc.
+  metric      Json     // Metric data
+  createdAt   DateTime @default(now())
+  
+  @@index([source])
+  @@index([createdAt])
+  @@map("metrics_log")
+}

@@ -6,6 +6,8 @@
 
 import { NextResponse } from 'next/server';
 import * as fs from 'fs';
+
+export const runtime = 'nodejs'; // Requires Node.js for file system access
 import * as path from 'path';
 
 export async function GET() {

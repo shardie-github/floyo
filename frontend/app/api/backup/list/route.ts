@@ -8,6 +8,8 @@ import { withErrorHandler } from '@/lib/api/error-handler';
 import { AuthorizationError } from '@/src/lib/errors';
 import { getUserId } from '@/lib/auth-utils';
 
+export const runtime = 'nodejs'; // May require Node.js for file operations
+
 // Only admins can access backups
 async function checkAdmin(userId: string): Promise<boolean> {
   // TODO: Implement admin check
