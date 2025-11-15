@@ -56,13 +56,66 @@ export async function POST(req: NextRequest) {
       timestamp: new Date(),
     });
 
-    // TODO: Implement actual Meta Ads API integration
-    // For now, this is a placeholder that logs the event
-    // When Meta Ads API is configured:
-    // 1. Fetch campaigns from Meta Ads API
-    // 2. Transform data
-    // 3. Store in database (e.g., meta_ads_campaigns table)
-    // 4. Trigger analytics updates
+    // Fetch campaigns from Meta Ads API
+    try {
+      // Get active Meta Ads integrations
+      const { data: integrations } = await supabase
+        .from('user_integrations')
+        .select('userId, config')
+        .eq('provider', 'meta_ads')
+        .eq('isActive', true);
+
+      if (integrations && integrations.length > 0) {
+        for (const integration of integrations) {
+          const config = integration.config as any;
+          const accessToken = config.accessToken;
+          const adAccountIds = config.adAccountIds || [];
+
+          if (!accessToken || !adAccountIds.length) continue;
+
+          // Fetch campaigns for each ad account
+          for (const adAccountId of adAccountIds) {
+            try {
+              const campaignsResponse = await fetch(
+                `https://graph.facebook.com/v18.0/${adAccountId}/campaigns?fields=id,name,status,objective,daily_budget,lifetime_budget&access_token=${accessToken}`
+              );
+
+              if (campaignsResponse.ok) {
+                const campaignsData = await campaignsResponse.json();
+                const campaigns = campaignsData.data || [];
+
+                // Store campaign data
+                for (const campaign of campaigns) {
+                  await supabase.from('audit_logs').insert({
+                    action: 'meta_campaign_synced',
+                    userId: integration.userId,
+                    resource: 'meta_ads',
+                    resourceId: campaign.id,
+                    metadata: {
+                      adAccountId,
+                      campaign: {
+                        id: campaign.id,
+                        name: campaign.name,
+                        status: campaign.status,
+                        objective: campaign.objective,
+                        dailyBudget: campaign.daily_budget,
+                        lifetimeBudget: campaign.lifetime_budget,
+                      },
+                    },
+                    timestamp: new Date(),
+                  });
+                }
+              }
+            } catch (campaignError) {
+              console.error(`Error fetching campaigns for ad account ${adAccountId}:`, campaignError);
+            }
+          }
+        }
+      }
+    } catch (apiError) {
+      console.error('Meta Ads API error:', apiError);
+      // Continue execution even if API call fails
+    }
 
     return NextResponse.json({
       ok: true,

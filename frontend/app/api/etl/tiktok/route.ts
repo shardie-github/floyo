@@ -56,13 +56,71 @@ export async function POST(req: NextRequest) {
       timestamp: new Date(),
     });
 
-    // TODO: Implement actual TikTok Ads API integration
-    // For now, this is a placeholder that logs the event
-    // When TikTok Ads API is configured:
-    // 1. Fetch campaigns from TikTok Ads API
-    // 2. Transform data
-    // 3. Store in database (e.g., tiktok_ads_campaigns table)
-    // 4. Trigger analytics updates
+    // Fetch campaigns from TikTok Ads API
+    try {
+      // Get active TikTok Ads integrations
+      const { data: integrations } = await supabase
+        .from('user_integrations')
+        .select('userId, config')
+        .eq('provider', 'tiktok_ads')
+        .eq('isActive', true);
+
+      if (integrations && integrations.length > 0) {
+        for (const integration of integrations) {
+          const config = integration.config as any;
+          const accessToken = config.accessToken;
+          const advertiserIds = config.advertiserIds || [];
+
+          if (!accessToken || !advertiserIds.length) continue;
+
+          // Fetch campaigns for each advertiser
+          for (const advertiserId of advertiserIds) {
+            try {
+              const campaignsResponse = await fetch(
+                `https://ads.tiktok.com/open_api/v1.3/campaign/get/?advertiser_id=${advertiserId}`,
+                {
+                  method: 'GET',
+                  headers: {
+                    'Access-Token': accessToken,
+                    'Content-Type': 'application/json',
+                  },
+                }
+              );
+
+              if (campaignsResponse.ok) {
+                const campaignsData = await campaignsResponse.json();
+                const campaigns = campaignsData.data?.list || [];
+
+                // Store campaign data (you may want to create a dedicated table)
+                for (const campaign of campaigns) {
+                  await supabase.from('audit_logs').insert({
+                    action: 'tiktok_campaign_synced',
+                    userId: integration.userId,
+                    resource: 'tiktok_ads',
+                    resourceId: campaign.campaign_id,
+                    metadata: {
+                      advertiserId,
+                      campaign: {
+                        id: campaign.campaign_id,
+                        name: campaign.campaign_name,
+                        status: campaign.status,
+                        budget: campaign.budget,
+                      },
+                    },
+                    timestamp: new Date(),
+                  });
+                }
+              }
+            } catch (campaignError) {
+              console.error(`Error fetching campaigns for advertiser ${advertiserId}:`, campaignError);
+            }
+          }
+        }
+      }
+    } catch (apiError) {
+      console.error('TikTok Ads API error:', apiError);
+      // Continue execution even if API call fails
+    }
 
     return NextResponse.json({
       ok: true,
