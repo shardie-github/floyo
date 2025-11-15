@@ -1,0 +1,90 @@
+name: Master Omega Prime
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: 'Specific phase to run (1-10)'
+        required: false
+        type: string
+      fix:
+        description: 'Apply fixes'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Master Omega Prime
+        run: |
+          if [ "${{ github.event.inputs.fix }}" == "true" ]; then
+            npm run master-omega-prime:fix ${{ github.event.inputs.phase && format('--phase={0}', github.event.inputs.phase) || '' }}
+          else
+            npm run master-omega-prime ${{ github.event.inputs.phase && format('--phase={0}', github.event.inputs.phase) || '' }}
+          fi
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: master-omega-prime-report
+          path: |
+            reports/master-omega-prime-report.json
+            docs/gtm/*.json
+            docs/content/*.json
+            docs/analytics/*.json
+            docs/synergy/*.json
+            docs/roadmap/*.json
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'reports/master-omega-prime-report.json';
+            if (fs.existsSync(reportPath)) {
+              const report = JSON.parse(fs.readFileSync(reportPath, 'utf-8'));
+              const summary = report.summary || {};
+              const comment = `## ⭐ MASTER OMEGA PRIME Report\n\n` +
+                `**Findings:** ${summary.totalFindings || 0}\n` +
+                `**Fixes Applied:** ${summary.totalFixes || 0}\n` +
+                `**Recommendations:** ${summary.totalRecommendations || 0}\n\n` +
+                `[View full report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }

@@ -22,6 +22,8 @@
     "ops:orchestrate": "npm run ops orchestrate",
     "ops:aurora-prime": "npm run ops aurora-prime",
     "aurora-prime": "tsx scripts/aurora-prime.ts",
+    "master-omega-prime": "tsx scripts/master-omega-prime.ts",
+    "master-omega-prime:fix": "tsx scripts/master-omega-prime.ts --fix",
     "wiring:run": "tsx tools/wiring/harness.ts",
     "wiring:doctor": "tsx tools/wiring/wire_doctor.ts",
     "wiring:report": "node -e \"console.log(JSON.stringify(require('./reports/connectivity/connectivity.json'), null, 2))\"",
