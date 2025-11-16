@@ -70,7 +70,9 @@ export async function middleware(request: NextRequest) {
     if (!envStatus.ok && pathname !== '/health') {
       // Log warning but don't block requests in middleware
       // Full validation happens in API routes and health checks
-      console.warn('Critical environment variables missing:', envStatus.missing);
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('Critical environment variables missing:', envStatus.missing);
+      }
     }
   }
 
@@ -89,9 +91,7 @@ export async function middleware(request: NextRequest) {
       }
     } catch (error) {
       // Fail silently, continue with normal routing
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Canary routing error:', error);
-      }
+      // Error logging handled by error tracking service in production
     }
   }
 
@@ -125,6 +125,14 @@ export async function middleware(request: NextRequest) {
   response.headers.set('X-Frame-Options', 'DENY');
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // HSTS (HTTP Strict Transport Security) - only in production with HTTPS
+  if (process.env.NODE_ENV === 'production' && request.url.startsWith('https://')) {
+    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+  
+  // Permissions Policy (formerly Feature Policy)
+  response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   
   // Cache control for static assets
   if (pathname.startsWith('/_next/static/') || pathname.startsWith('/assets/')) {

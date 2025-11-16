@@ -12,8 +12,22 @@ export const runtime = 'nodejs'; // May require Node.js for file operations
 
 // Only admins can access backups
 async function checkAdmin(userId: string): Promise<boolean> {
-  // TODO: Implement admin check
-  return process.env.NODE_ENV === 'development';
+  // Check if user is admin via environment variable or database
+  const adminUserIds = process.env.ADMIN_USER_IDS?.split(',') || [];
+  if (adminUserIds.includes(userId)) {
+    return true;
+  }
+  
+  // In development, allow if explicitly enabled
+  if (process.env.NODE_ENV === 'development' && process.env.ALLOW_DEV_ADMIN === 'true') {
+    return true;
+  }
+  
+  // TODO: Check database for admin role if user roles table exists
+  // const user = await db.user.findUnique({ where: { id: userId } });
+  // return user?.role === 'admin';
+  
+  return false;
 }
 
 export const GET = withErrorHandler(async (request: NextRequest) => {
