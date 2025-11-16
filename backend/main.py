@@ -100,6 +100,8 @@ from backend.guardian.api import router as guardian_router
 from backend.guardian.middleware import GuardianMiddleware
 from backend.ml.api import router as ml_router
 from backend.api_v1_workflow_automation import router as workflow_automation_router
+from backend.api_v1_billing import billing_router
+from backend.api_v1_workflows import workflow_router
 from fastapi.responses import Response
 
 # Configuration
@@ -967,6 +969,8 @@ app.include_router(ml_router)
 app.include_router(ml_enhanced_router)
 app.include_router(workflow_automation_router)
 app.include_router(notifications_router)
+app.include_router(billing_router)
+app.include_router(workflow_router)
 
 # Import and include webhook routes
 from backend.webhooks import router as webhook_router

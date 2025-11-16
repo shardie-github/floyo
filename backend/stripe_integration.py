@@ -326,23 +326,53 @@ class StripeIntegration:
     
     @staticmethod
     def create_checkout_session(
+        db: Session,
         user_id: UUID,
         plan_id: UUID,
-        success_url: str,
-        cancel_url: str,
-        billing_cycle: str = "monthly"
+        billing_cycle: str = "monthly",
+        success_url: Optional[str] = None,
+        cancel_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Create Stripe Checkout session for subscription."""
-        # This would require plan lookup and price ID
-        # Simplified version - in production, fetch plan and price ID from database
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("User not found")
+        
+        plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == plan_id).first()
+        if not plan:
+            raise ValueError("Plan not found")
+        
+        # Get or create Stripe customer
+        customer_data = StripeIntegration.create_customer(user)
+        customer_id = customer_data["customer_id"]
+        
+        # Get price ID from plan metadata or create price
+        plan_metadata = plan.features if isinstance(plan.features, dict) else {}
+        price_id = plan_metadata.get(f"stripe_price_id_{billing_cycle}")
+        
+        if not price_id:
+            # Create price in Stripe
+            price = stripe.Price.create(
+                unit_amount=int(plan.price_monthly * 100 if billing_cycle == "monthly" else plan.price_yearly * 100),
+                currency="usd",
+                recurring={"interval": billing_cycle},
+                product_data={"name": plan.name}
+            )
+            price_id = price.id
+        
+        # Default URLs
+        if not success_url:
+            success_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/billing?success=true"
+        if not cancel_url:
+            cancel_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/billing?canceled=true"
         
         try:
             session = stripe.checkout.Session.create(
+                customer=customer_id,
                 payment_method_types=["card"],
                 mode="subscription",
-                customer_email=None,  # Would get from user
                 line_items=[{
-                    "price": "price_xxx",  # Would get from plan
+                    "price": price_id,
                     "quantity": 1,
                 }],
                 success_url=success_url,
@@ -350,14 +380,92 @@ class StripeIntegration:
                 metadata={
                     "user_id": str(user_id),
                     "plan_id": str(plan_id),
-                    "billing_cycle": billing_cycle
-                }
+                    "billing_cycle": billing_cycle,
+                },
             )
             
             return {
-                "session_id": session.id,
-                "url": session.url
+                "id": session.id,
+                "url": session.url,
+                "customer_id": customer_id,
             }
         except Exception as e:
-            logger.error(f"Error creating Stripe checkout session: {e}")
+            logger.error(f"Error creating checkout session: {e}")
             raise
+    
+    @staticmethod
+    def get_payment_methods(
+        db: Session,
+        user_id: UUID,
+    ) -> List[Dict[str, Any]]:
+        """Get payment methods for a user."""
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("User not found")
+        
+        # Get Stripe customer ID from subscription or create customer
+        subscription = db.query(Subscription).filter(
+            Subscription.user_id == user_id
+        ).first()
+        
+        if not subscription or not subscription.stripe_subscription_id:
+            return []
+        
+        # Get customer from Stripe subscription
+        stripe_subscription = stripe.Subscription.retrieve(subscription.stripe_subscription_id)
+        customer_id = stripe_subscription.customer
+        
+        # Get payment methods
+        payment_methods = stripe.PaymentMethod.list(
+            customer=customer_id,
+            type="card"
+        )
+        
+        return [
+            {
+                "id": pm.id,
+                "type": pm.type,
+                "card": {
+                    "brand": pm.card.brand if pm.card else None,
+                    "last4": pm.card.last4 if pm.card else None,
+                    "exp_month": pm.card.exp_month if pm.card else None,
+                    "exp_year": pm.card.exp_year if pm.card else None,
+                } if pm.card else None,
+            }
+            for pm in payment_methods.data
+        ]
+    
+    @staticmethod
+    def add_payment_method(
+        db: Session,
+        user_id: UUID,
+        payment_method_id: str,
+    ) -> Dict[str, Any]:
+        """Add a payment method to user's Stripe customer."""
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise ValueError("User not found")
+        
+        # Get or create Stripe customer
+        customer_data = StripeIntegration.create_customer(user)
+        customer_id = customer_data["customer_id"]
+        
+        # Attach payment method to customer
+        stripe.PaymentMethod.attach(
+            payment_method_id,
+            customer=customer_id,
+        )
+        
+        # Set as default if no default payment method
+        customer = stripe.Customer.retrieve(customer_id)
+        if not customer.invoice_settings.default_payment_method:
+            stripe.Customer.modify(
+                customer_id,
+                invoice_settings={"default_payment_method": payment_method_id}
+            )
+        
+        return {
+            "payment_method_id": payment_method_id,
+            "customer_id": customer_id,
+            "message": "Payment method added successfully",
+        }
