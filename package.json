@@ -72,7 +72,8 @@
     "openapi:generate": "tsx scripts/generate-openapi.ts",
     "env:validate": "tsx -e \"import { validatePublicEnv } from './frontend/lib/env'; validatePublicEnv(); console.log('✅ Environment variables validated')\"",
     "api:audit": "tsx scripts/audit-api-endpoints.ts",
-    "migrations:align": "tsx scripts/align-migrations.ts"
+    "migrations:align": "tsx scripts/align-migrations.ts",
+    "schema:validate": "tsx scripts/validate-schema-alignment.ts"
   },
   "dependencies": {
     "@octokit/rest": "^20.0.0",

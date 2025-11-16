@@ -11,6 +11,7 @@ import { PerformanceHUD } from '@/components/PerformanceHUD'
 import { IntegrationsLoader } from '@/components/integrations/IntegrationsLoader'
 import { ConsentBanner } from '@/components/integrations/ConsentBanner'
 import { TelemetryBeacon } from '@/components/TelemetryBeacon'
+import { DiagnosticWorkflowTracker } from '@/components/DiagnosticWorkflowTracker'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -150,6 +151,7 @@ export default function RootLayout({
                 <PerformanceHUD />
                 <ConsentBanner />
                 <TelemetryBeacon />
+                <DiagnosticWorkflowTracker />
                 {/* [META:BEGIN:mounts] */}
                 {/* Example mounts — wire auth user ID + app meta in your layout or provider */}
                 {/* <meta name="x-app-id" content={process.env.NEXT_PUBLIC_APP_ID || 'generic'} /> */}
