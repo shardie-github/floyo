@@ -11,6 +11,7 @@ from datetime import datetime
 
 from backend.ml.workflow_model_builder import get_workflow_model_builder
 from backend.ml.automation_generator import get_automation_generator
+from backend.ml.gap_analyzer import get_gap_analyzer
 from backend.database import get_db
 from sqlalchemy.orm import Session
 
@@ -201,8 +202,77 @@ async def get_workflow_recommendations(
         # Build workflow model
         model_builder = get_workflow_model_builder()
         
-        # Fetch data and build model (simplified)
-        workflow_model = model_builder.analyze_interactions([], [], {})
+        # Fetch data from database
+        interactions_query = db.execute(
+            """
+            SELECT metadata_redacted_json
+            FROM telemetry_events
+            WHERE app_id = 'overlay-diagnostics'
+            AND user_id = :user_id
+            AND timestamp >= NOW() - INTERVAL '30 days'
+            """,
+            {"user_id": userId}
+        )
+        
+        interactions = []
+        for row in interactions_query:
+            metadata = row[0] if row[0] else {}
+            if metadata:
+                interactions.append({
+                    "type": metadata.get("target", {}).get("type", "unknown"),
+                    "overlay": metadata.get("overlay", {}),
+                    "target": metadata.get("target", {}),
+                    "timestamp": metadata.get("session", {}).get("timestamp", 0),
+                    "session": metadata.get("session", {}),
+                })
+        
+        telemetry_query = db.execute(
+            """
+            SELECT event_type, app_id, timestamp, metadata_redacted_json
+            FROM telemetry_events
+            WHERE user_id = :user_id
+            AND timestamp >= NOW() - INTERVAL '30 days'
+            """,
+            {"user_id": userId}
+        )
+        
+        telemetry_events = []
+        for row in telemetry_query:
+            telemetry_events.append({
+                "eventType": row[0],
+                "appId": row[1],
+                "timestamp": row[2].isoformat() if row[2] else None,
+                "metadataRedactedJson": row[3] if row[3] else {},
+            })
+        
+        cookie_query = db.execute(
+            """
+            SELECT metadata_redacted_json
+            FROM telemetry_events
+            WHERE app_id = 'indirect-inputs'
+            AND user_id = :user_id
+            AND timestamp >= NOW() - INTERVAL '30 days'
+            """,
+            {"user_id": userId}
+        )
+        
+        cookie_data = {"cookies": [], "referrers": [], "utm_params": {}}
+        for row in cookie_query:
+            metadata = row[0] if row[0] else {}
+            if metadata:
+                if metadata.get("cookies"):
+                    cookie_data["cookies"].extend(metadata["cookies"])
+                if metadata.get("referrers"):
+                    cookie_data["referrers"].extend(metadata["referrers"])
+                if metadata.get("utm_params"):
+                    cookie_data["utm_params"].update(metadata["utm_params"])
+        
+        # Build model
+        workflow_model = model_builder.analyze_interactions(
+            interactions,
+            telemetry_events,
+            cookie_data if cookie_data["cookies"] or cookie_data["referrers"] else None
+        )
         
         recommendations = workflow_model.get("recommendations", [])
         workflow_candidates = workflow_model.get("workflow_candidates", [])
@@ -218,4 +288,106 @@ async def get_workflow_recommendations(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get recommendations: {str(e)}"
+        )
+
+
+@router.get("/gap-analysis/{userId}", response_model=Dict[str, Any])
+async def get_gap_analysis(
+    userId: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Analyze workflow engine for gaps and missing logic.
+    """
+    try:
+        # Build workflow model first
+        model_builder = get_workflow_model_builder()
+        
+        # Fetch data (simplified - same as recommendations)
+        interactions_query = db.execute(
+            """
+            SELECT metadata_redacted_json
+            FROM telemetry_events
+            WHERE app_id = 'overlay-diagnostics'
+            AND user_id = :user_id
+            """,
+            {"user_id": userId}
+        )
+        
+        interactions = []
+        for row in interactions_query:
+            metadata = row[0] if row[0] else {}
+            if metadata:
+                interactions.append({
+                    "type": metadata.get("target", {}).get("type", "unknown"),
+                    "overlay": metadata.get("overlay", {}),
+                    "target": metadata.get("target", {}),
+                    "timestamp": metadata.get("session", {}).get("timestamp", 0),
+                })
+        
+        telemetry_query = db.execute(
+            """
+            SELECT event_type, app_id, timestamp, metadata_redacted_json
+            FROM telemetry_events
+            WHERE user_id = :user_id
+            """,
+            {"user_id": userId}
+        )
+        
+        telemetry_events = []
+        for row in telemetry_query:
+            telemetry_events.append({
+                "eventType": row[0],
+                "appId": row[1],
+                "timestamp": row[2].isoformat() if row[2] else None,
+                "metadataRedactedJson": row[3] if row[3] else {},
+            })
+        
+        cookie_query = db.execute(
+            """
+            SELECT metadata_redacted_json
+            FROM telemetry_events
+            WHERE app_id = 'indirect-inputs'
+            AND user_id = :user_id
+            """,
+            {"user_id": userId}
+        )
+        
+        cookie_data = {"cookies": [], "referrers": [], "utm_params": {}}
+        for row in cookie_query:
+            metadata = row[0] if row[0] else {}
+            if metadata:
+                if metadata.get("cookies"):
+                    cookie_data["cookies"].extend(metadata["cookies"])
+                if metadata.get("referrers"):
+                    cookie_data["referrers"].extend(metadata["referrers"])
+                if metadata.get("utm_params"):
+                    cookie_data["utm_params"].update(metadata["utm_params"])
+        
+        # Build model
+        workflow_model = model_builder.analyze_interactions(
+            interactions,
+            telemetry_events,
+            cookie_data if cookie_data["cookies"] or cookie_data["referrers"] else None
+        )
+        
+        # Analyze gaps
+        gap_analyzer = get_gap_analyzer()
+        gap_report = gap_analyzer.generate_gap_report(workflow_model)
+        
+        return {
+            "ok": True,
+            "gap_report": gap_report,
+            "workflow_model_summary": {
+                "patterns": len(workflow_model.get("patterns", {})),
+                "sequences": len(workflow_model.get("sequences", [])),
+                "candidates": len(workflow_model.get("workflow_candidates", [])),
+                "recommendations": len(workflow_model.get("recommendations", [])),
+            },
+        }
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to analyze gaps: {str(e)}"
         )
