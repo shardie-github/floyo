@@ -99,6 +99,7 @@ from backend.analytics import router as analytics_router
 from backend.guardian.api import router as guardian_router
 from backend.guardian.middleware import GuardianMiddleware
 from backend.ml.api import router as ml_router
+from backend.api_v1_workflow_automation import router as workflow_automation_router
 from fastapi.responses import Response
 
 # Configuration
@@ -964,6 +965,7 @@ app.include_router(analytics_router)
 app.include_router(guardian_router)
 app.include_router(ml_router)
 app.include_router(ml_enhanced_router)
+app.include_router(workflow_automation_router)
 app.include_router(notifications_router)
 
 # Import and include webhook routes
