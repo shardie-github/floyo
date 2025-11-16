@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { shouldRouteToCanary } from '@/lib/flags';
+import { getCriticalEnvStatus } from '@/lib/env-health';
 
 // Simple user ID extraction for middleware (doesn't require full auth)
 function getUserIdFromRequest(request: NextRequest): string | undefined {
@@ -62,6 +63,16 @@ function getCSPHeader(): string {
 export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const pathname = url.pathname;
+
+  // Environment validation check (only in production)
+  if (process.env.NODE_ENV === 'production' && !pathname.startsWith('/api/env')) {
+    const envStatus = getCriticalEnvStatus();
+    if (!envStatus.ok && pathname !== '/health') {
+      // Log warning but don't block requests in middleware
+      // Full validation happens in API routes and health checks
+      console.warn('Critical environment variables missing:', envStatus.missing);
+    }
+  }
 
   // Canary routing for checkout module
   if (pathname.startsWith('/checkout') || pathname.startsWith('/api/checkout')) {
