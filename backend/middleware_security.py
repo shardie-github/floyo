@@ -105,6 +105,12 @@ class ComprehensiveSecurityMiddleware(BaseHTTPMiddleware):
                 ),
             }
             
+            # Add HSTS header for HTTPS requests
+            if request.url.scheme == "https":
+                security_headers["Strict-Transport-Security"] = (
+                    "max-age=31536000; includeSubDomains; preload"
+                )
+            
             for header, value in security_headers.items():
                 response.headers[header] = value
             

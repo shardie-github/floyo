@@ -196,9 +196,25 @@ export function logError(error: Error | AppError, context?: Record<string, any>)
 
   // In production, send to error tracking service
   if (process.env.NODE_ENV === 'production') {
-    // TODO: Send to error tracking service (Sentry, etc.)
-    console.error('Error logged:', { ...errorData, ...context });
+    // Send to error tracking service (Sentry, etc.)
+    const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
+    if (sentryDsn) {
+      // Non-blocking error reporting
+      fetch('/api/monitoring/errors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...errorData, ...context }),
+      }).catch(() => {
+        // Fail silently to avoid disrupting application flow
+      });
+    }
+    
+    // Also log to console in production for debugging
+    if (process.env.NEXT_PUBLIC_ENABLE_CONSOLE_LOGS === 'true') {
+      console.error('Error logged:', { ...errorData, ...context });
+    }
   } else {
+    // Development: log to console with full details
     console.error('Error:', errorData, context);
   }
 }

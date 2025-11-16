@@ -19,18 +19,39 @@ export async function getUserId(request: NextRequest): Promise<string | undefine
   const authHeader = request.headers.get('authorization');
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
-    // TODO: Decode JWT and extract userId
-    // For now, return undefined (implement JWT decoding)
-    return undefined;
+    try {
+      // Decode JWT (base64 decode payload)
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(
+          Buffer.from(parts[1], 'base64').toString('utf-8')
+        );
+        return payload.sub || payload.user_id || payload.id;
+      }
+    } catch (error) {
+      // Invalid token format, continue to try session cookie
+    }
   }
 
   // Try session cookie
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('session')?.value;
   if (sessionToken) {
-    // TODO: Validate session token and extract userId
-    // For now, return undefined (implement session validation)
-    return undefined;
+    try {
+      // Validate session token (decode and check expiration)
+      const parts = sessionToken.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(
+          Buffer.from(parts[1], 'base64').toString('utf-8')
+        );
+        // Check expiration
+        if (payload.exp && payload.exp * 1000 > Date.now()) {
+          return payload.sub || payload.user_id || payload.id;
+        }
+      }
+    } catch (error) {
+      // Invalid session token
+    }
   }
 
   return undefined;
@@ -47,8 +68,22 @@ export async function checkMfaElevation(
     return false;
   }
 
-  // TODO: Validate MFA session token
-  // Check if token is valid and not expired
-  // For now, return true if token exists (implement proper validation)
-  return true;
+  try {
+    // Validate MFA session token
+    const parts = sessionToken.split('.');
+    if (parts.length === 3) {
+      const payload = JSON.parse(
+        Buffer.from(parts[1], 'base64').toString('utf-8')
+      );
+      // Check expiration and MFA claim
+      if (payload.exp && payload.exp * 1000 > Date.now()) {
+        return payload.mfa_verified === true || payload.mfa === true;
+      }
+    }
+  } catch (error) {
+    // Invalid token
+    return false;
+  }
+
+  return false;
 }

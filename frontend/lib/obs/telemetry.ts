@@ -80,8 +80,10 @@ async function trackMetric(metric: TelemetryMetrics): Promise<void> {
       // Ignore errors in telemetry collection
     }
   } else {
-    // In development, log to console
-    console.log('[Telemetry]', metric);
+    // In development, log to console only if enabled
+    if (process.env.NEXT_PUBLIC_ENABLE_TELEMETRY_LOGS === 'true') {
+      console.log('[Telemetry]', metric);
+    }
   }
 }
 
@@ -91,9 +93,36 @@ async function trackMetric(metric: TelemetryMetrics): Promise<void> {
 export function getUserIdFromRequest(request: NextRequest): string | undefined {
   // Try to get from auth header or cookie
   const authHeader = request.headers.get('authorization');
-  if (authHeader) {
-    // Extract user ID from token (simplified)
-    return undefined; // TODO: Implement JWT parsing
+  if (authHeader?.startsWith('Bearer ')) {
+    try {
+      const token = authHeader.substring(7);
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(
+          Buffer.from(parts[1], 'base64').toString('utf-8')
+        );
+        return payload.sub || payload.user_id || payload.id;
+      }
+    } catch (error) {
+      // Invalid token format
+    }
   }
+  
+  // Try session cookie
+  const sessionCookie = request.cookies.get('session')?.value;
+  if (sessionCookie) {
+    try {
+      const parts = sessionCookie.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(
+          Buffer.from(parts[1], 'base64').toString('utf-8')
+        );
+        return payload.sub || payload.user_id || payload.id;
+      }
+    } catch (error) {
+      // Invalid session token
+    }
+  }
+  
   return undefined;
 }

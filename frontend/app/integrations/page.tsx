@@ -4,6 +4,8 @@ import { useConsent } from "@/app/providers/consent-provider";
 import { HCaptchaIntegration } from "@/components/integrations/hCaptcha";
 import { LottiePlayerIntegration } from "@/components/integrations/LottiePlayer";
 import { CldImage } from "@/components/integrations/Cloudinary";
+import { ZapierIntegration } from "@/components/integrations/ZapierIntegration";
+import { MindStudioIntegration } from "@/components/integrations/MindStudioIntegration";
 import integrationsConfig from "@/config/integrations.json";
 import { motion } from "framer-motion";
 
@@ -210,6 +212,15 @@ export default function IntegrationsPage() {
           </p>
         </section>
       )}
+
+      {/* Zapier Integration */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold mb-4">Workflow Integrations</h2>
+        <div className="space-y-4">
+          <ZapierIntegration />
+          <MindStudioIntegration />
+        </div>
+      </section>
 
       {/* Analytics Note */}
       <section className="mb-12 p-6 border rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
