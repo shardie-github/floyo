@@ -1,6 +1,6 @@
-# Floyo - Autonomous Full-Stack Application
+# Floyo
 
-**File usage pattern tracking and integration suggestions**
+**Discover hidden connections in your workflow. Automate what you didn't know could be automated.**
 
 [![Deployment Status](https://img.shields.io/badge/deployment-vercel-blue)](https://vercel.com)
 [![Database](https://img.shields.io/badge/database-supabase-green)](https://supabase.com)
@@ -8,7 +8,115 @@
 
 ---
 
-## 🚀 Quick Start
+## What is Floyo?
+
+Floyo watches how you work—the files you open, the scripts you run, the tools you use—and finds patterns you didn't notice. Then it suggests concrete, actionable integrations that can automate the repetitive parts of your workflow.
+
+Think of it as a personal assistant that learns your habits and proposes smart connections between the tools you already use.
+
+### The Problem
+
+You're juggling multiple tools, scripts, and files every day. You know there's probably a way to automate some of it, but:
+
+- You don't have time to research every possible integration
+- You're not sure which automations would actually help
+- You don't want to set up complex workflows that break
+- You want suggestions based on *your actual work*, not generic examples
+
+### The Solution
+
+Floyo runs quietly in the background, learning your patterns. When it spots an opportunity—like "you always run this Python script and then manually upload the output to Dropbox"—it suggests a simple integration with actual code you can use.
+
+**No guessing. No generic advice. Just real suggestions based on what you actually do.**
+
+---
+
+## Key Features
+
+### 🎯 Pattern Recognition
+Floyo tracks file usage, script executions, and tool interactions to identify your unique workflow patterns.
+
+### 💡 Intelligent Suggestions
+Get concrete integration suggestions with sample code tailored to your actual files and workflows.
+
+### 🔒 Privacy-First
+All tracking happens locally. Your data stays on your machine unless you choose to sync it.
+
+### ⚡ Real-Time Monitoring
+Watch your file system in real-time and get instant insights into how you work.
+
+### 🔗 Relationship Mapping
+See how files, scripts, and tools connect in your workflow—discover dependencies you didn't know existed.
+
+### 📊 Usage Analytics
+Understand your work patterns with temporal analysis and usage statistics.
+
+---
+
+## Real-World Use Cases
+
+### The Data Analyst
+Sarah runs Python scripts to process CSV files, then manually emails the results. Floyo detects this pattern and suggests automating the email step with a simple integration.
+
+**Outcome:** Sarah saves 30 minutes per day and never forgets to send reports.
+
+### The Developer
+Mike frequently edits TypeScript files, runs tests, and then checks deployment logs. Floyo suggests connecting these steps into an automated workflow.
+
+**Outcome:** Mike catches deployment issues faster and reduces context switching.
+
+### The Content Creator
+Emma writes markdown files, converts them to PDFs, and uploads to a cloud service. Floyo spots this pattern and suggests a one-click automation.
+
+**Outcome:** Emma publishes content 3x faster with zero manual steps.
+
+### The Researcher
+David analyzes data files, generates visualizations, and shares them via Slack. Floyo proposes connecting these tools automatically.
+
+**Outcome:** David's team gets insights faster, and he focuses on analysis instead of file management.
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Floyo System                            │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────┐      ┌──────────────┐      ┌──────────┐ │
+│  │   Frontend   │◄─────►│   Backend    │◄─────►│ Database │ │
+│  │  (Next.js)   │      │  (FastAPI)   │      │(Supabase) │ │
+│  └──────────────┘      └──────────────┘      └──────────┘ │
+│         │                     │                            │
+│         │                     │                            │
+│         ▼                     ▼                            │
+│  ┌──────────────┐      ┌──────────────┐                  │
+│  │ File Watcher │      │  Pattern     │                  │
+│  │  (Local)     │      │  Analyzer    │                  │
+│  └──────────────┘      └──────────────┘                  │
+│         │                     │                            │
+│         └─────────────────────┘                            │
+│                    │                                        │
+│                    ▼                                        │
+│         ┌──────────────────────┐                          │
+│         │ Integration Suggester │                          │
+│         └──────────────────────┘                          │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Tech Stack:**
+- **Frontend:** Next.js 14+ (App Router), React, TypeScript, Tailwind CSS
+- **Backend:** Python (FastAPI), SQLAlchemy
+- **Database:** PostgreSQL (via Supabase)
+- **Authentication:** Supabase Auth
+- **Deployment:** Vercel (frontend), Supabase (database)
+- **CI/CD:** GitHub Actions
+
+---
+
+## Quick Start
 
 ### Prerequisites
 
@@ -17,7 +125,7 @@
 - PostgreSQL (via Supabase)
 - Vercel account (for deployment)
 
-### Local Development
+### Installation
 
 1. **Clone the repository**
    ```bash
@@ -35,6 +143,7 @@
    ```bash
    npm install
    cd frontend && npm install
+   cd ../backend && pip install -r requirements.txt
    ```
 
 4. **Set up database**
@@ -51,10 +160,10 @@
 
 5. **Start development servers**
    ```bash
-   # Frontend (Next.js)
+   # Frontend (Next.js) - Terminal 1
    cd frontend && npm run dev
    
-   # Backend (Python)
+   # Backend (Python) - Terminal 2
    cd backend && python -m uvicorn main:app --reload
    ```
 
@@ -65,45 +174,52 @@
 
 ---
 
-## 📚 Documentation
+## Project Structure
 
-- **[ENVIRONMENT.md](./ENVIRONMENT.md)** - Complete environment variables reference
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System architecture and design
-- **[API.md](./API.md)** - API endpoint documentation
-- **[WORKFLOW.md](./WORKFLOW.md)** - Development workflow and guidelines
-
-### Health Reports
-
-- **[Schema Health Report](./reports/SCHEMA_HEALTH_REPORT.md)** - Database schema analysis
-- **[Deployment Health Report](./reports/DEPLOYMENT_HEALTH_REPORT.md)** - Vercel deployment analysis
-- **[Repo Integrity Report](./reports/REPO_INTEGRITY_REPORT.md)** - Code organization analysis
-- **[Mesh Health Report](./reports/MESH_HEALTH_REPORT.md)** - Integration mesh analysis
+```
+floyo-monorepo/
+├── frontend/              # Next.js frontend application
+│   ├── app/              # App router pages
+│   ├── components/       # React components
+│   ├── lib/              # Utilities and helpers
+│   └── public/           # Static assets
+│
+├── backend/              # Python FastAPI backend
+│   ├── api/              # API route handlers
+│   ├── services/         # Business logic
+│   ├── models/           # Database models
+│   └── jobs/             # Background jobs
+│
+├── floyo/                # Core tracking library (CLI tool)
+│   ├── tracker.py        # Usage pattern tracking
+│   ├── suggester.py      # Integration suggestions
+│   ├── watcher.py        # File system monitoring
+│   └── cli.py            # Command-line interface
+│
+├── supabase/             # Database migrations and functions
+│   ├── migrations/       # SQL migration files
+│   └── functions/        # Edge functions
+│
+├── tests/                # Test suite
+│   ├── unit/             # Unit tests
+│   └── integration/      # Integration tests
+│
+├── scripts/              # Utility scripts
+├── docs/                 # Documentation
+└── infra/                # Infrastructure as code
+```
 
 ---
 
-## 🏗️ Architecture
+## Screenshots & Demos
 
-### Tech Stack
+> **Coming Soon:** Screenshots of the dashboard, suggestion interface, and workflow visualization.
 
-- **Frontend:** Next.js 14+ (App Router), React, TypeScript, Tailwind CSS
-- **Backend:** Python (FastAPI/Flask), SQLAlchemy
-- **Database:** PostgreSQL (via Supabase)
-- **Authentication:** Supabase Auth
-- **Deployment:** Vercel (frontend), Supabase (database)
-- **CI/CD:** GitHub Actions
-
-### Key Features
-
-- ✅ File usage pattern tracking
-- ✅ AI-powered integration suggestions
-- ✅ Privacy-first monitoring
-- ✅ Workflow automation
-- ✅ Multi-agent orchestration
-- ✅ Real-time analytics
+**Want to see Floyo in action?** Check out our [demo video](#) (coming soon) or [try it yourself](#quick-start).
 
 ---
 
-## 🛠️ Development
+## Development
 
 ### Available Scripts
 
@@ -118,28 +234,56 @@ npm run lint
 npm run format
 
 # Testing
-npm run test
+npm run test              # Run all tests
+npm run test:coverage     # Generate coverage report
+npm run test:e2e          # Run end-to-end tests
 
 # Build
 npm run build
 
 # Database
-npm run prisma:generate  # Generate Prisma client
-npm run prisma:migrate   # Run migrations
-npm run prisma:studio    # Open Prisma Studio
+npm run prisma:generate   # Generate Prisma client
+npm run prisma:migrate    # Run migrations
+npm run prisma:studio     # Open Prisma Studio
 ```
 
-### Code Quality
+### Running Tests Locally
 
-- **TypeScript** for type safety
-- **ESLint** for code linting
-- **Prettier** for code formatting
-- **Jest** for unit testing
-- **Playwright** for E2E testing
+```bash
+# Python tests
+cd backend
+pytest tests/unit/ -v
+
+# TypeScript tests
+cd frontend
+npm test
+
+# End-to-end tests
+npm run test:e2e
+```
+
+See [CI Configuration](.github/workflows/ci.yml) for the full test suite that runs on every commit.
 
 ---
 
-## 🔐 Security
+## Documentation
+
+- **[ENVIRONMENT.md](./ENVIRONMENT.md)** - Complete environment variables reference
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System architecture and design
+- **[API.md](./docs/API.md)** - API endpoint documentation
+- **[WORKFLOW.md](./docs/WORKFLOW.md)** - Development workflow and guidelines
+- **[VALUE_PROPOSITION.md](./VALUE_PROPOSITION.md)** - Why Floyo exists
+- **[USE_CASES.md](./USE_CASES.md)** - Detailed use cases and examples
+
+### Health Reports
+
+- **[Schema Health Report](./reports/SCHEMA_HEALTH_REPORT.md)** - Database schema analysis
+- **[Deployment Health Report](./reports/DEPLOYMENT_HEALTH_REPORT.md)** - Vercel deployment analysis
+- **[Repo Integrity Report](./reports/REPO_INTEGRITY_REPORT.md)** - Code organization analysis
+
+---
+
+## Security
 
 ### Environment Variables
 
@@ -161,7 +305,7 @@ See [ENVIRONMENT.md](./ENVIRONMENT.md) for complete variable reference.
 
 ---
 
-## 🚢 Deployment
+## Deployment
 
 ### Vercel Deployment
 
@@ -195,66 +339,45 @@ supabase db remote commit --dry-run
 
 ---
 
-## 🤖 Autonomous Systems
+## Contributing
 
-This repository includes autonomous orchestration systems:
+We welcome contributions! Here's how to get started:
 
-- **Aurora Prime** - Full-stack orchestrator (see [AURORA_PRIME_README.md](./AURORA_PRIME_README.md))
-- **Master Omega Prime** - Multi-system orchestrator (see [MASTER_OMEGA_PRIME_README.md](./MASTER_OMEGA_PRIME_README.md))
-- **Autonomous Full-Stack Guardian** - Continuous health monitoring
+1. **Fork the repository**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Make your changes**
+4. **Run tests and linting**
+   ```bash
+   npm run test
+   npm run lint
+   npm run format
+   ```
+5. **Create a pull request**
+6. **Ensure CI/CD passes**
 
-These systems automatically:
-- ✅ Detect and fix environment variable drift
-- ✅ Validate schema alignment
-- ✅ Monitor deployment health
-- ✅ Maintain code integrity
-- ✅ Orchestrate AI agent mesh
-
----
-
-## 📊 Monitoring
-
-### Health Checks
-
-- `/api/health` - Application health
-- `/api/monitoring/health` - Detailed health check
-- `/api/metrics` - Application metrics
-
-### Observability
-
-- **Sentry** - Error tracking (if configured)
-- **PostHog** - Analytics (if configured)
-- **Vercel Analytics** - Performance monitoring
+See [WORKFLOW.md](./docs/WORKFLOW.md) for detailed workflow guidelines.
 
 ---
 
-## 🤝 Contributing
-
-1. Create a feature branch
-2. Make your changes
-3. Run tests and linting
-4. Create a pull request
-5. Ensure CI/CD passes
-
-See [WORKFLOW.md](./WORKFLOW.md) for detailed workflow guidelines.
-
----
-
-## 📝 License
+## License
 
 See [LICENSE](./LICENSE) file for details.
 
 ---
 
-## 🆘 Support
+## Support
 
 - **Documentation:** See `/docs` directory
-- **Issues:** Create an issue on GitHub
+- **Issues:** Create an issue on [GitHub Issues](#)
 - **Health Reports:** See `/reports` directory
+- **Questions?** Open a discussion on [GitHub Discussions](#)
 
 ---
 
-## 🔄 Status
+## Status
 
 **Last Updated:** Auto-maintained by Autonomous Full-Stack Guardian
 
@@ -266,3 +389,13 @@ This repository is continuously monitored and maintained by autonomous systems t
 - ✅ Integration health
 
 See health reports in `/reports` for current status.
+
+---
+
+## Star This Repo ⭐
+
+If Floyo helps you discover and automate your workflow patterns, please consider giving us a star! It helps others discover the project and motivates us to keep improving.
+
+---
+
+**Built with ❤️ for developers who want to work smarter, not harder.**
