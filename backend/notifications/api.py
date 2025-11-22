@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from backend.database import get_db
-from backend.main import get_current_user
+from backend.auth.utils import get_current_user
 from backend.notifications.service import NotificationService
 from backend.notifications.email import EmailNotificationService
 from backend.notifications.websocket import websocket_manager

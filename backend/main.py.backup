@@ -103,11 +103,6 @@ from backend.endpoints.insights import router as insights_router
 from backend.api.privacy import router as privacy_router
 from fastapi.responses import Response
 
-# Import analytics helpers for endpoints still in main.py
-from backend.auth.analytics_helpers import (
-    track_event, check_user_activation, mark_user_activated, get_user_retention_metrics
-)
-
 # Configuration
 from backend.config import settings
 
@@ -238,9 +233,50 @@ app = FastAPI(
 api_v1_router = APIRouter(prefix="/api/v1", tags=["v1"])
 api_router = APIRouter(prefix="/api", tags=["legacy"])
 
-# Setup middleware using the new middleware module
-from backend.middleware import setup_middleware
-setup_middleware(app)
+# Request ID middleware (first - for tracing)
+app.add_middleware(RequestIDMiddleware)
+
+# Comprehensive Security Middleware (early - before CORS)
+from backend.middleware_security import ComprehensiveSecurityMiddleware
+app.add_middleware(ComprehensiveSecurityMiddleware)
+
+# CORS middleware (must be early)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# API versioning middleware (adds deprecation warnings)
+app.middleware("http")(VersionDeprecationMiddleware())
+
+# CSRF protection middleware (early in stack, after CORS)
+if settings.environment == "production":
+    app.add_middleware(CSRFProtectionMiddleware)
+
+# API response standardization middleware (before routes)
+app.add_middleware(APIResponseMiddleware)
+
+# Compression middleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Guardian privacy middleware
+app.add_middleware(GuardianMiddleware)
+
+# Security headers middleware
+app.add_middleware(SecurityHeadersMiddlewareClass)
+
+# Rate limiting
+app.state.limiter = limiter
+from slowapi.errors import RateLimitExceeded
+app.add_exception_handler(RateLimitExceeded, get_rate_limit_exceeded_handler())
+
+# Global error handlers
+app.add_exception_handler(APIError, error_handler)
+app.add_exception_handler(HTTPException, error_handler)
+app.add_exception_handler(Exception, error_handler)
 
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -922,25 +958,23 @@ async def system_selfcheck():
 # Include versioned routes (we'll add these to api_v1_router)
 # For now, keep existing routes and add version prefix in the future
 
-# Register routes using the new API registration module
-from backend.api import register_routes
-register_routes(app)
+# Mount versioned router
+app.include_router(api_v1_router)
+app.include_router(api_router)
+app.include_router(monitoring_router)
+app.include_router(analytics_router)
+app.include_router(insights_router)
+app.include_router(privacy_router)
+app.include_router(guardian_router)
+app.include_router(ml_router)
+app.include_router(workflow_automation_router)
+app.include_router(notifications_router)
+app.include_router(billing_router)
+app.include_router(workflow_router)
 
-# TODO: Migrate remaining endpoints from main.py to appropriate modules:
-# - Auth endpoints -> backend/api/auth.py (DONE)
-# - Health endpoints -> backend/api/health.py (DONE)  
-# - Events endpoints -> backend/api/events.py (TODO)
-# - Suggestions endpoints -> backend/api/suggestions.py (TODO)
-# - Patterns endpoints -> backend/api/patterns.py (TODO)
-# - Organizations endpoints -> backend/api/organizations.py (TODO)
-# - Workflows endpoints -> backend/api/workflows.py (TODO)
-# - Integrations endpoints -> backend/api/integrations.py (TODO)
-# - Growth endpoints -> backend/api/growth.py (TODO)
-# - Operational endpoints -> backend/api/operational.py (TODO)
-# - Autonomous endpoints -> backend/api/autonomous.py (TODO)
-# - Enterprise endpoints -> backend/api/enterprise.py (TODO)
-# - Security endpoints -> backend/api/security.py (TODO)
-# - Admin endpoints -> backend/api/admin.py (TODO)
+# Import and include webhook routes
+from backend.webhooks import router as webhook_router
+app.include_router(webhook_router)
 
 
 @app.post("/api/auth/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)

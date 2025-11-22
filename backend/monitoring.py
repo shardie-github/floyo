@@ -13,7 +13,7 @@ from backend.database import get_db, get_pool_status
 from backend.cache import redis_client
 from backend.logging_config import get_logger
 from backend.rate_limit import limiter
-from backend.main import get_current_user
+from backend.auth.utils import get_current_user
 from database.models import User as UserModel
 
 logger = get_logger(__name__)
