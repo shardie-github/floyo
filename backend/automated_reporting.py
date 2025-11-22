@@ -3,7 +3,7 @@
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from sqlalchemy.orm import Session
-from backend.analytics_dashboard import AnalyticsDashboard
+from backend.services.analytics_service import AnalyticsService as AnalyticsDashboard
 from backend.operational_alignment import OperationalAlignment, OperationalMetrics
 from backend.kpi_alerts import KPIAlertSystem
 from backend.data_quality import DataQualityMonitor

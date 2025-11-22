@@ -24,8 +24,7 @@ from passlib.hash import bcrypt
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Removed sys.path.insert - use proper package imports instead
 
 from backend.database import SessionLocal, init_db, get_db
 from backend.logging_config import setup_logging, get_logger
@@ -99,9 +98,7 @@ from backend.analytics import router as analytics_router
 from backend.guardian.api import router as guardian_router
 from backend.guardian.middleware import GuardianMiddleware
 from backend.ml.api import router as ml_router
-from backend.api_v1_workflow_automation import router as workflow_automation_router
-from backend.api_v1_billing import billing_router
-from backend.api_v1_workflows import workflow_router
+from backend.api.v1 import billing_router, workflow_router, workflow_automation_router
 from backend.endpoints.insights import router as insights_router
 from backend.api.privacy import router as privacy_router
 from fastapi.responses import Response
@@ -970,7 +967,6 @@ app.include_router(insights_router)
 app.include_router(privacy_router)
 app.include_router(guardian_router)
 app.include_router(ml_router)
-app.include_router(ml_enhanced_router)
 app.include_router(workflow_automation_router)
 app.include_router(notifications_router)
 app.include_router(billing_router)
@@ -3135,7 +3131,7 @@ from backend.monetization import SubscriptionManager, UsageTracker, BillingManag
 from backend.enterprise import SSOManager, EnterpriseAdmin, ComplianceManager, EcosystemManager
 from backend.stripe_integration import StripeIntegration
 from backend.retention_campaigns import RetentionCampaignService
-from backend.analytics_dashboard import AnalyticsDashboard
+from backend.services.analytics_service import AnalyticsService as AnalyticsDashboard
 from backend.usage_limit_middleware import UsageLimitMiddleware
 from backend.operational_alignment import OperationalAlignment, OperationalMetrics
 from backend.kpi_alerts import KPIAlertSystem

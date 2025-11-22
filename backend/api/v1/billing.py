@@ -15,7 +15,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-billing_router = APIRouter(prefix="/api/billing", tags=["billing"])
+billing_router = APIRouter(prefix="/api/v1/billing", tags=["billing"])
 
 
 @billing_router.post("/subscribe")
