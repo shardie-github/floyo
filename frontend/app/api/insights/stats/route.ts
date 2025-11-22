@@ -5,9 +5,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const daysBack = parseInt(searchParams.get('days_back') || '30', 10);
     
-    // Forward to backend API
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:8000';
-    const response = await fetch(`${backendUrl}/api/insights?days_back=${daysBack}`, {
+    const response = await fetch(`${backendUrl}/api/insights/stats?days_back=${daysBack}`, {
       headers: {
         'Authorization': request.headers.get('Authorization') || '',
         'Cookie': request.headers.get('Cookie') || '',
@@ -16,15 +15,15 @@ export async function GET(request: Request) {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to fetch insights');
+      throw new Error('Failed to fetch stats');
     }
     
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Error fetching insights:', error);
+    console.error('Error fetching stats:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch insights' },
+      { error: error instanceof Error ? error.message : 'Failed to fetch stats' },
       { status: 500 }
     );
   }

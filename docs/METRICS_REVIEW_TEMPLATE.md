@@ -1,94 +1,100 @@
 # Weekly Metrics Review Template
 
-**Review Date:** [DATE]  
-**Week:** Week [N] of Sprint  
-**Reviewer:** [NAME]
+**Date:** [DATE]
+**Review Period:** [Start Date] to [End Date]
+**Participants:** [Names]
 
 ---
 
-## Sprint Goal Progress
+## Activation Metrics
 
-**Sprint Goal:** Achieve 40%+ activation rate (signup → first insight) and <5 min time-to-first-insight for 50+ users.
+| Metric | Target | Current | Trend | Status | Notes |
+|--------|--------|---------|-------|--------|-------|
+| Activation Rate | 40%+ | - | - | ❌ Not Measured | - |
+| Time to First Insight | <5 min | - | - | ❌ Not Measured | - |
+| Onboarding Completion | 80%+ | - | - | ❌ Not Measured | - |
 
-**Current Status:**
-- Activation Rate: [X]% (Target: 40%+)
-- Time to First Insight: [X] minutes (Target: <5 min)
-- Users Tracked: [X] (Target: 50+)
+**Analysis:**
+- [Analysis of activation metrics]
 
-**Trend:** ⬆️ Improving / ➡️ Stable / ⬇️ Declining
-
----
-
-## Key Metrics This Week
-
-### Acquisition
-- **New Signups:** [X]
-- **Signup Conversion Rate:** [X]%
-- **Acquisition Channels:** [Breakdown]
-
-### Activation
-- **Onboarding Completion Rate:** [X]% (Target: 80%+)
-- **Activation Rate:** [X]% (Target: 40%+)
-- **Time to First Insight:** [X] minutes (Target: <5 min)
-- **Core Loop Completion Rate:** [X]% (Target: 70%+)
-
-### Engagement
-- **Daily Active Users (DAU):** [X]
-- **Weekly Active Users (WAU):** [X]
-- **Events Per Active User:** [X]
-- **Dashboard Views:** [X]
-
-### Retention
-- **1-Day Retention:** [X]% (Target: 50%+)
-- **7-Day Retention:** [X]% (Target: 30%+)
-- **30-Day Retention:** [X]% (Target: 20%+)
-
-### Technical Performance
-- **Dashboard Load Time (p95):** [X]s (Target: <2s)
-- **API Latency (p95):** [X]ms (Target: <500ms)
-- **Error Rate:** [X]% (Target: <2%)
-- **Event Ingestion Success Rate:** [X]% (Target: >99%)
+**Actions:**
+- [ ] [Action item]
 
 ---
 
-## What's Working Well
+## Engagement Metrics
 
-1. 
-2. 
-3. 
+| Metric | Target | Current | Trend | Status | Notes |
+|--------|--------|---------|-------|--------|-------|
+| Daily Active Users | - | - | - | ❌ Not Measured | - |
+| Weekly Active Users | - | - | - | ❌ Not Measured | - |
+| Events per User | - | - | - | ❌ Not Measured | - |
+
+**Analysis:**
+- [Analysis of engagement metrics]
+
+**Actions:**
+- [ ] [Action item]
 
 ---
 
-## What Needs Attention
+## Retention Metrics
 
-1. 
-2. 
-3. 
+| Metric | Target | Current | Trend | Status | Notes |
+|--------|--------|---------|-------|--------|-------|
+| 7-Day Retention | 30%+ | - | - | ❌ Not Measured | - |
+| 30-Day Retention | 20%+ | - | - | ❌ Not Measured | - |
+
+**Analysis:**
+- [Analysis of retention metrics]
+
+**Actions:**
+- [ ] [Action item]
+
+---
+
+## Technical Metrics
+
+| Metric | Target | Current | Trend | Status | Notes |
+|--------|--------|---------|-------|--------|-------|
+| Dashboard Load Time | <2s (p95) | - | - | ❌ Not Measured | - |
+| API Latency | <500ms (p95) | - | - | ❌ Not Measured | - |
+| Error Rate | <2% | - | - | ❌ Not Measured | - |
+
+**Analysis:**
+- [Analysis of technical metrics]
+
+**Actions:**
+- [ ] [Action item]
+
+---
+
+## Key Insights
+
+1. [Insight 1]
+2. [Insight 2]
+3. [Insight 3]
 
 ---
 
 ## Decisions Made
 
-1. **Decision:** [Description]
-   - **Rationale:** [Why]
-   - **Impact:** [What changes]
-
----
-
-## Action Items
-
-| Action Item | Owner | Due Date | Status |
-|-------------|-------|----------|--------|
-| | | | |
+1. [Decision 1]
+   - Rationale: [reason]
+   - Impact: [description]
 
 ---
 
 ## Next Week Focus
 
-1. 
-2. 
-3. 
+1. [Focus area 1]
+2. [Focus area 2]
+3. [Focus area 3]
 
 ---
 
-**Next Review:** [DATE]
+## Action Items
+
+- [ ] [Action item]
+  - Owner: [name]
+  - Due: [date]

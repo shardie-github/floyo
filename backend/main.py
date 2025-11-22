@@ -102,6 +102,8 @@ from backend.ml.api import router as ml_router
 from backend.api_v1_workflow_automation import router as workflow_automation_router
 from backend.api_v1_billing import billing_router
 from backend.api_v1_workflows import workflow_router
+from backend.endpoints.insights import router as insights_router
+from backend.api.privacy import router as privacy_router
 from fastapi.responses import Response
 
 # Configuration
@@ -964,6 +966,8 @@ app.include_router(api_v1_router)
 app.include_router(api_router)
 app.include_router(monitoring_router)
 app.include_router(analytics_router)
+app.include_router(insights_router)
+app.include_router(privacy_router)
 app.include_router(guardian_router)
 app.include_router(ml_router)
 app.include_router(ml_enhanced_router)

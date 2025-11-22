@@ -71,6 +71,21 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
+      - name: Generate test coverage report
+        if: matrix.test-type == 'unit'
+        run: |
+          npm run test -- --coverage --coverageReporters=json --coverageReporters=text || true
+          # Coverage report will be in coverage/coverage-final.json
+
+      - name: Upload coverage reports
+        if: matrix.test-type == 'unit'
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage/coverage-final.json
+          flags: ${{ matrix.test-type }}
+          name: ${{ matrix.test-type }}-coverage
+          fail_ci_if_error: false
+
   doctor:
     name: Ops Doctor
     runs-on: ubuntu-latest

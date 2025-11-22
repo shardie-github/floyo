@@ -12,6 +12,12 @@ import { IntegrationsLoader } from '@/components/integrations/IntegrationsLoader
 import { ConsentBanner } from '@/components/integrations/ConsentBanner'
 import { TelemetryBeacon } from '@/components/TelemetryBeacon'
 import { DiagnosticWorkflowTracker } from '@/components/DiagnosticWorkflowTracker'
+import { initSentry } from '@/lib/monitoring/sentry'
+
+// Initialize Sentry error tracking
+if (typeof window !== 'undefined') {
+  initSentry();
+}
 
 const inter = Inter({ subsets: ['latin'] })
 

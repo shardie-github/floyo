@@ -16,6 +16,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { ActivationFunnelDashboard } from '@/components/analytics/ActivationFunnelDashboard';
 
 interface AnalyticsData {
   period_days: number;
@@ -141,6 +142,9 @@ export default function AnalyticsDashboard() {
           <option value={90}>Last 90 days</option>
         </select>
       </div>
+
+      {/* Activation Funnel Dashboard */}
+      <ActivationFunnelDashboard />
 
       {/* Activation Metrics */}
       <div className="bg-white rounded-lg shadow p-6">
