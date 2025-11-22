@@ -186,58 +186,58 @@ class UsageTracker:
         try:
             if len(self.events) < 2:
                 return
-        
-        # Look for sequences in recent events (last 10 events)
-        recent_events = self.events[-10:]
-        
-        # Detect common sequences
-        sequences = []
-        for i in range(len(recent_events) - 1):
-            prev_event = recent_events[i]
-            curr_event = recent_events[i + 1]
             
-            prev_type = prev_event.get("type")
-            curr_type = curr_event.get("type")
-            prev_file = prev_event.get("details", {}).get("file_path")
-            curr_file = curr_event.get("details", {}).get("file_path")
+            # Look for sequences in recent events (last 10 events)
+            recent_events = self.events[-10:]
             
-            if prev_type and curr_type:
-                # Calculate time gap
-                prev_time = datetime.fromisoformat(prev_event["timestamp"])
-                curr_time = datetime.fromisoformat(curr_event["timestamp"])
-                time_gap = (curr_time - prev_time).total_seconds()
+            # Detect common sequences
+            sequences = []
+            for i in range(len(recent_events) - 1):
+                prev_event = recent_events[i]
+                curr_event = recent_events[i + 1]
                 
-                # Only consider sequences within 5 minutes
-                if time_gap < 300:  # 5 minutes
-                    sequence_key = f"{prev_type} -> {curr_type}"
+                prev_type = prev_event.get("type")
+                curr_type = curr_event.get("type")
+                prev_file = prev_event.get("details", {}).get("file_path")
+                curr_file = curr_event.get("details", {}).get("file_path")
+                
+                if prev_type and curr_type:
+                    # Calculate time gap
+                    prev_time = datetime.fromisoformat(prev_event["timestamp"])
+                    curr_time = datetime.fromisoformat(curr_event["timestamp"])
+                    time_gap = (curr_time - prev_time).total_seconds()
                     
-                    pattern = {
-                        "sequence": sequence_key,
-                        "time_gap_seconds": time_gap,
-                        "timestamp": curr_event["timestamp"],
-                        "files": {
-                            "prev": prev_file,
-                            "curr": curr_file
-                        },
-                        "count": 1
-                    }
-                    
-                    # Check if this pattern already exists
-                    existing = None
-                    for tp in self.temporal_patterns:
-                        if tp.get("sequence") == sequence_key:
-                            existing = tp
-                            break
-                    
-                    if existing:
-                        existing["count"] += 1
-                        # Update average time gap
-                        avg_gap = existing.get("avg_time_gap", time_gap)
-                        existing["avg_time_gap"] = (avg_gap + time_gap) / 2
-                    else:
-                        pattern["avg_time_gap"] = time_gap
-                        self.temporal_patterns.append(pattern)
-        
+                    # Only consider sequences within 5 minutes
+                    if time_gap < 300:  # 5 minutes
+                        sequence_key = f"{prev_type} -> {curr_type}"
+                        
+                        pattern = {
+                            "sequence": sequence_key,
+                            "time_gap_seconds": time_gap,
+                            "timestamp": curr_event["timestamp"],
+                            "files": {
+                                "prev": prev_file,
+                                "curr": curr_file
+                            },
+                            "count": 1
+                        }
+                        
+                        # Check if this pattern already exists
+                        existing = None
+                        for tp in self.temporal_patterns:
+                            if tp.get("sequence") == sequence_key:
+                                existing = tp
+                                break
+                        
+                        if existing:
+                            existing["count"] += 1
+                            # Update average time gap
+                            avg_gap = existing.get("avg_time_gap", time_gap)
+                            existing["avg_time_gap"] = (avg_gap + time_gap) / 2
+                        else:
+                            pattern["avg_time_gap"] = time_gap
+                            self.temporal_patterns.append(pattern)
+            
             # Keep only last 100 patterns
             if len(self.temporal_patterns) > 100:
                 self.temporal_patterns = self.temporal_patterns[-100:]
@@ -256,44 +256,44 @@ class UsageTracker:
         try:
             event_type = event.get("type")
             details = event.get("details", {})
-        
-        file_path = details.get("file_path")
-        if not file_path:
-            return
-        
-        file_path_obj = Path(file_path)
-        
-        # Track file relationships based on event type
-        if event_type == "command_executed":
-            script_path = details.get("script_path")
-            output_path = details.get("output_path")
             
-            if script_path:
-                # Script -> Output relationship
-                if output_path:
-                    self._add_relationship(script_path, output_path, "generates")
-                
-                # Script -> Input relationship (from dependencies)
-                dependencies = details.get("dependencies", [])
-                for dep in dependencies:
-                    if isinstance(dep, str) and Path(dep).exists():
-                        self._add_relationship(dep, script_path, "consumes")
-        
-        # Track files accessed together (within short time window)
-        if len(self.events) >= 2:
-            current_time = datetime.fromisoformat(event["timestamp"])
-            # Look at last 5 events
-            for prev_event in self.events[-5:-1]:
-                prev_time = datetime.fromisoformat(prev_event["timestamp"])
-                time_diff = (current_time - prev_time).total_seconds()
-                
-                # If accessed within 30 seconds, they might be related
-                if time_diff < 30:
-                    prev_file = prev_event.get("details", {}).get("file_path")
-                    if prev_file and prev_file != file_path:
-                        self._add_relationship(prev_file, file_path, "accessed_together", weight=1)
+            file_path = details.get("file_path")
+            if not file_path:
+                return
             
-            self._save_relationships()
+            file_path_obj = Path(file_path)
+            
+            # Track file relationships based on event type
+            if event_type == "command_executed":
+                script_path = details.get("script_path")
+                output_path = details.get("output_path")
+                
+                if script_path:
+                    # Script -> Output relationship
+                    if output_path:
+                        self._add_relationship(script_path, output_path, "generates")
+                    
+                    # Script -> Input relationship (from dependencies)
+                    dependencies = details.get("dependencies", [])
+                    for dep in dependencies:
+                        if isinstance(dep, str) and Path(dep).exists():
+                            self._add_relationship(dep, script_path, "consumes")
+            
+            # Track files accessed together (within short time window)
+            if len(self.events) >= 2:
+                current_time = datetime.fromisoformat(event["timestamp"])
+                # Look at last 5 events
+                for prev_event in self.events[-5:-1]:
+                    prev_time = datetime.fromisoformat(prev_event["timestamp"])
+                    time_diff = (current_time - prev_time).total_seconds()
+                    
+                    # If accessed within 30 seconds, they might be related
+                    if time_diff < 30:
+                        prev_file = prev_event.get("details", {}).get("file_path")
+                        if prev_file and prev_file != file_path:
+                            self._add_relationship(prev_file, file_path, "accessed_together", weight=1)
+                
+                self._save_relationships()
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"Error analyzing relationships: {e}")

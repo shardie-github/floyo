@@ -1,308 +1,393 @@
 # Contributing to Floyo
 
-Thank you for your interest in contributing to Floyo! This document provides guidelines and instructions for contributing.
+First off, thank you for considering contributing to Floyo! 🎉
 
-## Table of Contents
+Whether you're fixing a bug, adding a feature, improving documentation, or just asking questions, your contributions make Floyo better for everyone.
 
-- [Code of Conduct](#code-of-conduct)
-- [Getting Started](#getting-started)
-- [Development Workflow](#development-workflow)
-- [Coding Standards](#coding-standards)
-- [Testing](#testing)
-- [Pull Request Process](#pull-request-process)
-- [Documentation](#documentation)
+---
 
-## Code of Conduct
+## How Can I Contribute?
 
-- Be respectful and inclusive
-- Focus on constructive feedback
-- Help others learn and grow
-- Follow the project's coding standards
+### 🐛 Report Bugs
 
-## Getting Started
+Found something that's not working? Let us know!
 
-### Prerequisites
+1. **Check existing issues** - Someone might have already reported it
+2. **Create a new issue** - Use the bug report template
+3. **Include details:**
+   - What you expected to happen
+   - What actually happened
+   - Steps to reproduce
+   - Your environment (OS, browser, etc.)
 
-- Node.js 18+ and npm
-- Python 3.9+ (for backend)
-- PostgreSQL (via Supabase)
-- Git
+### 💡 Suggest Features
 
-### Setup
+Have an idea that would make Floyo better? We'd love to hear it!
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd floyo-monorepo
-   ```
+1. **Check existing feature requests** - See if it's already been suggested
+2. **Open a discussion** - Start a GitHub Discussion to get feedback
+3. **Create an issue** - Use the feature request template if you're ready to propose it
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   cd frontend && npm install
-   cd ../backend && pip install -r requirements.txt
-   ```
+### 📝 Improve Documentation
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env.local
-   # Fill in values from Supabase Dashboard
-   ```
+Good documentation helps everyone. You can help by:
 
-4. **Set up database**
-   ```bash
-   npm run prisma:generate
-   supabase db push
-   ```
+- Fixing typos or unclear explanations
+- Adding examples or use cases
+- Translating docs to other languages
+- Improving code comments
 
-5. **Start development servers**
-   ```bash
-   # Frontend
-   cd frontend && npm run dev
-   
-   # Backend (in another terminal)
-   cd backend && python -m uvicorn main:app --reload
-   ```
+### 💻 Write Code
+
+Ready to dive into the code? Awesome! Here's how to get started.
+
+---
+
+## Your First 10 Minutes
+
+### 1. Fork and Clone
+
+```bash
+# Fork the repo on GitHub, then:
+git clone https://github.com/your-username/floyo-monorepo.git
+cd floyo-monorepo
+```
+
+### 2. Set Up Your Environment
+
+```bash
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Install Node dependencies
+cd frontend && npm install && cd ..
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your values
+```
+
+### 3. Run the Tests
+
+```bash
+# Python tests
+pytest tests/unit/ -v
+
+# TypeScript tests
+cd frontend && npm test
+
+# Make sure everything passes!
+```
+
+### 4. Pick an Issue
+
+- Look for issues labeled `good first issue`
+- Comment on the issue to let others know you're working on it
+- Ask questions if anything is unclear
+
+---
 
 ## Development Workflow
 
-### Branch Naming
+### 1. Create a Branch
 
+```bash
+git checkout -b feature/your-feature-name
+# or
+git checkout -b fix/bug-description
+```
+
+**Branch naming:**
 - `feature/` - New features
 - `fix/` - Bug fixes
-- `docs/` - Documentation updates
+- `docs/` - Documentation changes
 - `refactor/` - Code refactoring
-- `test/` - Test additions/updates
+- `test/` - Test additions/changes
 
-### Commit Messages
+### 2. Make Your Changes
 
-Follow conventional commits:
+- Write clean, readable code
+- Follow existing code style
+- Add comments for complex logic
+- Update tests if needed
+- Update documentation if you're changing behavior
 
-```
-type(scope): subject
+### 3. Test Your Changes
 
-body (optional)
+```bash
+# Run all tests
+npm run test
+pytest tests/unit/ -v
 
-footer (optional)
-```
+# Run linters
+npm run lint
+cd backend && ruff check . && black --check .
 
-Types:
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation
-- `style`: Formatting
-- `refactor`: Code refactoring
-- `test`: Tests
-- `chore`: Maintenance
-
-Example:
-```
-feat(auth): add OAuth2 support
-
-Implement OAuth2 authentication flow with Google and GitHub providers.
-Includes token refresh and error handling.
+# Fix any issues before committing
 ```
 
-## Coding Standards
+### 4. Commit Your Changes
 
-### TypeScript/JavaScript
+We use [Conventional Commits](https://www.conventionalcommits.org/) to keep our git history clean:
 
-- Use TypeScript for all new code
-- Follow ESLint configuration
-- Use Prettier for formatting
-- Write self-documenting code with clear variable names
-- Add JSDoc comments for public APIs
+```bash
+# Format: <type>(<scope>): <description>
+
+# Examples:
+git commit -m "feat(api): add user authentication endpoint"
+git commit -m "fix(backend): resolve database connection timeout"
+git commit -m "docs(readme): update installation instructions"
+git commit -m "test(tracker): add tests for pattern detection"
+```
+
+**Types:**
+- `feat:` - New feature
+- `fix:` - Bug fix
+- `docs:` - Documentation changes
+- `style:` - Code style (formatting, etc.)
+- `refactor:` - Code refactoring
+- `test:` - Adding or updating tests
+- `chore:` - Maintenance tasks
+
+### 5. Push and Create a Pull Request
+
+```bash
+git push origin feature/your-feature-name
+```
+
+Then:
+1. Go to GitHub and create a Pull Request
+2. Fill out the PR template
+3. Link to any related issues
+4. Request review from maintainers
+
+---
+
+## Code Style Guidelines
 
 ### Python
 
-- Follow PEP 8 style guide
-- Use type hints
-- Write docstrings for all functions and classes
-- Use Black for formatting
-- Use Ruff for linting
+- Follow [PEP 8](https://pep8.org/)
+- Use type hints where helpful
+- Keep functions focused and small
+- Add docstrings for public functions/classes
 
-### File Organization
+```python
+def process_file(file_path: str) -> dict:
+    """Process a file and return metadata.
+    
+    Args:
+        file_path: Path to the file to process
+        
+    Returns:
+        Dictionary with file metadata
+    """
+    # Your code here
+```
 
-- Group related files in feature-based directories
+**Before committing:**
+```bash
+cd backend
+ruff check .
+black .
+```
+
+### TypeScript/JavaScript
+
+- Follow the ESLint configuration
+- Use TypeScript for new code
+- Prefer functional programming patterns
 - Keep components small and focused
-- Use index files for clean imports
-- Follow the existing project structure
 
-## Testing
+```typescript
+interface FileMetadata {
+  path: string;
+  size: number;
+}
+
+function processFile(file: FileMetadata): Promise<void> {
+  // Your code here
+}
+```
+
+**Before committing:**
+```bash
+cd frontend
+npm run lint
+npm run format
+```
+
+---
+
+## Testing Guidelines
+
+### Write Tests
+
+- **New features** should include tests
+- **Bug fixes** should include a test that reproduces the bug
+- Aim for good coverage, but don't obsess over 100%
+
+### Test Structure
+
+```python
+# tests/test_feature.py
+def test_feature_happy_path():
+    """Test the happy path."""
+    # Arrange
+    input_data = {...}
+    
+    # Act
+    result = process(input_data)
+    
+    # Assert
+    assert result.success is True
+
+def test_feature_edge_case():
+    """Test edge case handling."""
+    # Test error conditions, empty inputs, etc.
+```
 
 ### Running Tests
 
 ```bash
-# Frontend tests
-cd frontend && npm test
+# Run all tests
+pytest tests/unit/ -v
 
-# Backend tests
-cd backend && pytest
+# Run specific test file
+pytest tests/test_tracker.py -v
 
-# E2E tests
-npm run test:e2e
+# Run with coverage
+pytest tests/unit/ --cov=backend --cov-report=html
 ```
 
-### Writing Tests
-
-- Write tests for all new features
-- Aim for >80% code coverage
-- Test edge cases and error conditions
-- Use descriptive test names
-- Keep tests independent and isolated
-
-### Test Structure
-
-```typescript
-describe('FeatureName', () => {
-  it('should do something specific', () => {
-    // Arrange
-    // Act
-    // Assert
-  })
-})
-```
+---
 
 ## Pull Request Process
 
-1. **Create a feature branch**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
+### Before Submitting
 
-2. **Make your changes**
-   - Write code following coding standards
-   - Add tests
-   - Update documentation
-   - Ensure all tests pass
-
-3. **Validate environment**
-   ```bash
-   npm run env:validate
-   ```
-
-4. **Run CI checks locally (recommended before pushing)**
-   ```bash
-   # Run all CI checks (lint, type-check, tests, build)
-   npm run ci
-   
-   # Or run backend/frontend separately
-   npm run ci:backend
-   npm run ci:frontend
-   
-   # Individual checks
-   npm run lint
-   npm run type-check
-   ```
-   
-   **Note:** Running `npm run ci` locally ensures your PR will pass CI checks. This runs the same checks that GitHub Actions runs on every PR.
-
-5. **Commit your changes**
-   ```bash
-   git add .
-   git commit -m "feat(scope): your commit message"
-   ```
-
-6. **Push to your fork**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
-
-7. **Create a Pull Request**
-   - Fill out the PR template
-   - Link related issues
-   - Request reviews
-   - Ensure CI passes
+- [ ] Code follows style guidelines
+- [ ] Tests pass locally
+- [ ] Documentation updated (if needed)
+- [ ] No console.logs or debug code left behind
+- [ ] Commit messages follow conventional commits
 
 ### PR Checklist
 
-- [ ] Code follows project style guidelines
-- [ ] `npm run ci` passes locally (lint, type-check, tests, build)
-- [ ] Tests added/updated and passing
+- [ ] Clear description of changes
+- [ ] Link to related issues
+- [ ] Screenshots (for UI changes)
+- [ ] Tests added/updated
 - [ ] Documentation updated
-- [ ] Environment variables validated
-- [ ] No console errors or warnings
-- [ ] TypeScript types are correct
-- [ ] No breaking changes (or documented)
 
-### CI Checks
+### Review Process
 
-Every PR runs the following checks (via `.github/workflows/ci.yml`):
+1. **Automated checks** - CI runs tests and linters
+2. **Code review** - At least one maintainer will review
+3. **Feedback** - We'll provide constructive feedback
+4. **Approval** - Once approved, we'll merge!
 
-1. **Lint** - Python (ruff, black) and TypeScript (eslint, prettier)
-2. **Type Check** - Python (mypy) and TypeScript (tsc)
-3. **Test Fast** - Unit tests only (no database required)
-4. **Build** - Frontend production build
+**Don't worry** - It's normal for PRs to go through a few iterations. We're all here to learn and improve together.
 
-**Required checks** (must pass to merge):
-- `ci/lint`
-- `ci/type-check`
-- `ci/test-fast`
-- `ci/build`
+---
 
-**Optional checks** (informational, don't block merge):
-- `ci/coverage` - Test coverage report
-- `ci/bundle-size` - Bundle size warnings
+## Code Review Guidelines
 
-To run these checks locally before pushing:
-```bash
-npm run ci
+### For Reviewers
+
+- Be respectful and constructive
+- Explain *why* you're suggesting changes
+- Ask questions if something is unclear
+- Focus on the code, not the person
+- Appreciate the effort - contributing is awesome!
+
+### For Contributors
+
+- Don't take feedback personally - it's about the code
+- Ask questions if feedback is unclear
+- Be open to suggestions
+- Remember: we're all on the same team
+
+---
+
+## Project Structure
+
+```
+floyo-monorepo/
+├── frontend/          # Next.js frontend
+│   ├── app/          # App router pages
+│   ├── components/   # React components
+│   └── lib/          # Utilities
+├── backend/helpers
+│
+├── backend/          # Python FastAPI backend
+│   ├── api/          # API route handlers
+│   ├── services/     # Business logic
+│   └── models/      # Database models
+│
+├── floyo/            # Core tracking library
+│   ├── tracker.py    # Usage pattern tracking
+│   └── suggester.py  # Integration suggestions
+│
+├── tests/            # Test suite
+└── docs/             # Documentation
 ```
 
-## Documentation
+**Not sure where to put something?** Ask in an issue or discussion!
 
-### Code Documentation
+---
 
-- Add JSDoc comments for public APIs
-- Document complex algorithms
-- Explain "why" not just "what"
-- Keep comments up-to-date with code
+## Getting Help
 
-### API Documentation
+### Questions?
 
-- Update `API.md` for API changes
-- Generate OpenAPI spec: `npm run openapi:generate`
-- Include request/response examples
+- **GitHub Discussions** - For general questions and ideas
+- **GitHub Issues** - For bugs and feature requests
+- **Discord** - For real-time chat (coming soon!)
 
-### User Documentation
-
-- Update `README.md` for user-facing changes
-- Add examples and use cases
-- Keep setup instructions current
-
-## Environment Variables
-
-When adding new environment variables:
-
-1. Add to `.env.example`
-2. Add to `ENVIRONMENT.md`
-3. Add validation in `frontend/lib/env.ts` (Zod schema)
-4. Add validation in `backend/env_validator.py` (Pydantic)
-5. Document in relevant code files
-
-## Database Changes
-
-When making database changes:
-
-1. Create migration files (Prisma or Alembic)
-2. Update Prisma schema if using Prisma
-3. Test migrations up and down
-4. Update RLS policies if needed
-5. Document schema changes
-
-## Security
-
-- Never commit secrets or API keys
-- Use environment variables for configuration
-- Validate all user input
-- Follow security best practices
-- Report security issues privately
-
-## Questions?
+### Stuck?
 
 - Check existing documentation
-- Search closed issues
-- Ask in discussions
-- Create an issue for clarification
+- Search closed issues for similar problems
+- Ask in a GitHub Discussion
+- Open an issue with the `question` label
 
-Thank you for contributing to Floyo! 🚀
+**Remember:** There are no stupid questions. We're all here to help!
+
+---
+
+## Recognition
+
+Contributors are recognized in:
+- Our README.md
+- Release notes
+- (Coming soon) A contributors page on the website
+
+Thank you for making Floyo better! 🙏
+
+---
+
+## Code of Conduct
+
+### Our Standards
+
+- Be respectful and inclusive
+- Welcome newcomers
+- Focus on constructive feedback
+- Celebrate diversity
+
+### Enforcement
+
+We're committed to maintaining a welcoming community. Unacceptable behavior will be addressed appropriately.
+
+---
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the same license as the project (see LICENSE file).
+
+---
+
+**Ready to contribute?** Pick an issue, create a branch, and let's build something awesome together! 🚀
+
+**Questions?** Open a GitHub Discussion or issue - we're here to help!

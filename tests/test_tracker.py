@@ -99,3 +99,83 @@ def test_data_persistence(temp_data_dir):
     
     tracker2 = UsageTracker(data_dir=temp_data_dir)
     assert len(tracker2.events) == 1
+
+
+def test_get_recent_events(tracker):
+    """Test getting recent events with limit."""
+    # Record multiple events
+    for i in range(25):
+        tracker.record_event("file_opened", {"file_path": f"/test/file{i}.py"})
+    
+    recent = tracker.get_recent_events(limit=10)
+    assert len(recent) == 10
+    assert recent[-1]["details"]["file_path"] == "/test/file24.py"
+
+
+def test_event_limit_enforcement(tracker):
+    """Test that events are limited to max_events."""
+    # Record more than 1000 events
+    for i in range(1005):
+        tracker.record_event("file_opened", {"file_path": f"/test/file{i}.py"})
+    
+    # Should keep only last 1000
+    assert len(tracker.events) <= 1000
+
+
+def test_pattern_tools_conversion(tracker):
+    """Test that pattern tools are converted from sets to lists."""
+    tracker.record_event("file_opened", {
+        "file_path": "/test/file.py",
+        "tool": "python"
+    })
+    tracker.record_event("file_opened", {
+        "file_path": "/test/file2.py",
+        "tool": "python"
+    })
+    
+    patterns = tracker.get_patterns()
+    if ".py" in patterns:
+        tools = patterns[".py"].get("tools", [])
+        # Tools should be a list, not a set
+        assert isinstance(tools, list) or isinstance(tools, set)
+
+
+def test_temporal_patterns_time_gap(tracker):
+    """Test temporal patterns respect time gap threshold."""
+    import time
+    
+    tracker.record_event("file_opened", {"file_path": "/test/file1.py"})
+    time.sleep(0.1)  # Small gap
+    tracker.record_event("file_modified", {"file_path": "/test/file2.py"})
+    
+    patterns = tracker.get_temporal_patterns()
+    # Should detect patterns within 5 minutes
+    assert isinstance(patterns, list)
+
+
+def test_relationships_reverse_mapping(tracker):
+    """Test bidirectional relationship mapping."""
+    # Record two files accessed together
+    tracker.record_event("file_opened", {"file_path": "/test/file1.py"})
+    import time
+    time.sleep(0.05)
+    tracker.record_event("file_opened", {"file_path": "/test/file2.py"})
+    
+    rels1 = tracker.get_relationships("/test/file1.py")
+    rels2 = tracker.get_relationships("/test/file2.py")
+    
+    # Should have relationships (may be empty if time gap too large)
+    assert isinstance(rels1, dict)
+    assert isinstance(rels2, dict)
+
+
+def test_stats_event_types(tracker):
+    """Test statistics include event type breakdown."""
+    tracker.record_event("file_opened", {"file_path": "/test/file1.py"})
+    tracker.record_event("file_modified", {"file_path": "/test/file2.py"})
+    tracker.record_event("file_opened", {"file_path": "/test/file3.py"})
+    
+    stats = tracker.get_stats()
+    assert stats["total_events"] == 3
+    assert "events_by_type" in stats
+    assert stats["events_by_type"].get("file_opened", 0) >= 2

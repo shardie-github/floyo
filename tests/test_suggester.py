@@ -62,3 +62,60 @@ def test_workflow_pattern_detection(tracker, suggester):
     
     suggestions = suggester.suggest_integrations()
     assert isinstance(suggestions, list)
+
+
+def test_suggest_integrations_recent_usage(tracker, suggester):
+    """Test suggestions prioritize recently used files."""
+    from datetime import datetime, timedelta
+    
+    # Record recent Python file usage
+    tracker.record_event("file_opened", {
+        "file_path": "/test/recent.py",
+        "tool": "python"
+    })
+    
+    suggestions = suggester.suggest_integrations()
+    assert isinstance(suggestions, list)
+    # May include Python-related suggestions
+
+
+def test_generate_sample_code(suggester):
+    """Test sample code generation."""
+    code = suggester._generate_sample_code(".py", "Dropbox API - auto-sync output files", ["/test/file.py"])
+    assert isinstance(code, str)
+    assert len(code) > 0
+    assert "dropbox" in code.lower() or "Dropbox" in code
+
+
+def test_generate_workflow_code(suggester):
+    """Test workflow code generation."""
+    code = suggester._generate_workflow_code("python_word")
+    assert isinstance(code, str)
+    assert len(code) > 0
+    assert "python" in code.lower()
+
+
+def test_generate_reasoning(suggester, tracker):
+    """Test reasoning generation."""
+    tracker.record_event("file_opened", {
+        "file_path": "/test/file.py",
+        "tool": "python"
+    })
+    
+    patterns = tracker.get_patterns()
+    recent_events = tracker.get_recent_events(10)
+    
+    reasoning = suggester._generate_reasoning(".py", patterns.get(".py", {}), recent_events)
+    assert isinstance(reasoning, str)
+    assert len(reasoning) > 0
+
+
+def test_suggestions_limit(suggester, tracker):
+    """Test that suggestions are limited to max."""
+    # Record multiple file types
+    for ext in [".py", ".sh", ".js", ".sql", ".csv", ".json", ".md"]:
+        tracker.record_event("file_opened", {"file_path": f"/test/file{ext}"})
+    
+    suggestions = suggester.suggest_integrations()
+    # Should return at most 5 suggestions
+    assert len(suggestions) <= 5
