@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
 from backend.database import get_db
-from backend.main import get_current_user
+from backend.auth.utils import get_current_user
 from database.models import User, GuardianEvent, TrustLedgerRoot, GuardianSettings, TrustFabricModel
 from backend.guardian.service import get_guardian_service
 from backend.guardian.inspector import GuardianInspector

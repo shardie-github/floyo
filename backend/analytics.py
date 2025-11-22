@@ -9,6 +9,9 @@ from datetime import datetime
 from uuid import UUID
 from backend.database import get_db
 from backend.logging_config import get_logger
+from backend.auth.utils import get_current_user
+from backend.auth.analytics_helpers import check_user_activation, get_user_retention_metrics
+from backend.services.analytics_service import AnalyticsService as AnalyticsDashboard
 from database.models import User, AuditLog
 
 logger = get_logger(__name__)
@@ -69,6 +72,107 @@ async def track_web_vitals(
     except Exception as e:
         logger.error(f"Error tracking Web Vitals: {e}")
         return {"status": "error", "message": str(e)}
+
+
+@router.get("/activation")
+async def get_activation_status(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get user activation status."""
+    is_activated = check_user_activation(db, str(current_user.id))
+    retention_metrics = get_user_retention_metrics(db, str(current_user.id))
+    
+    return {
+        "is_activated": is_activated,
+        "retention": retention_metrics
+    }
+
+
+@router.get("/funnel")
+async def get_funnel_metrics_endpoint(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get funnel metrics (admin only or for own data)."""
+    # For now, return user-specific metrics
+    # In production, this would be admin-only for full funnel
+    retention_metrics = get_user_retention_metrics(db, str(current_user.id))
+    
+    return {
+        "user_retention": retention_metrics,
+        "period_days": days
+    }
+
+
+@router.get("/dashboard")
+async def get_analytics_dashboard(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get comprehensive analytics dashboard (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    dashboard = AnalyticsDashboard.get_comprehensive_dashboard(db, days)
+    return dashboard
+
+
+@router.get("/activation-metrics")
+async def get_activation_metrics(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get activation metrics (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    metrics = AnalyticsDashboard.get_activation_metrics(db, days)
+    return metrics
+
+
+@router.get("/retention-cohorts")
+async def get_retention_cohorts(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get retention cohort data (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    cohorts = AnalyticsDashboard.get_retention_cohorts(db)
+    return cohorts
+
+
+@router.get("/conversion-funnel")
+async def get_conversion_funnel(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get conversion funnel metrics (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    funnel = AnalyticsDashboard.get_conversion_funnel(db, days)
+    return funnel
+
+
+@router.get("/revenue-metrics")
+async def get_revenue_metrics(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get revenue metrics (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    metrics = AnalyticsDashboard.get_revenue_metrics(db, days)
+    return metrics
 
 
 @router.post("/track")

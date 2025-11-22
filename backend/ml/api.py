@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 
 from backend.database import get_db
-from backend.main import get_current_user
+from backend.auth.utils import get_current_user
 from backend.ml.model_manager import ModelManager
 from backend.ml.training_pipeline import TrainingPipeline
 from backend.ml.workflow_recommender import WorkflowRecommender

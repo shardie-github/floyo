@@ -1,14 +1,14 @@
-"""FastAPI backend application for Floyo - Minimal initialization file."""
+"""FastAPI backend application for Floyo - Refactored minimal version."""
 
-from fastapi import FastAPI
 from backend.logging_config import setup_logging, get_logger
 from backend.sentry_config import init_sentry
 from backend.cache import init_cache
-from backend.database import SessionLocal, init_db
+from backend.database import init_db, SessionLocal
 from backend.config import settings
 from backend.connectors import initialize_connectors
 from backend.middleware import setup_middleware
 from backend.api import register_routes
+from fastapi import FastAPI
 
 # Set up logging
 setup_logging()
@@ -23,20 +23,19 @@ init_cache()
 # Initialize database
 init_db()
 
-# Check migration status on startup
+
 def check_migration_status():
     """Check if database migrations are up to date."""
     try:
         from alembic.config import Config
         from alembic import script
         from alembic.runtime.migration import MigrationContext
-        from sqlalchemy import create_engine
+        from backend.database import engine
         
         alembic_cfg = Config("alembic.ini")
         script_dir = script.ScriptDirectory.from_config(alembic_cfg)
         
         # Get current database revision
-        from backend.database import engine
         with engine.connect() as conn:
             context = MigrationContext.configure(conn)
             current_rev = context.get_current_revision()
@@ -58,6 +57,7 @@ def check_migration_status():
         logger.warning(f"Could not check migration status: {e}")
         # Don't fail startup if migration check fails (might be in dev)
 
+
 # Check migrations on startup
 try:
     check_migration_status()
@@ -73,7 +73,7 @@ try:
 finally:
     db_init.close()
 
-# FastAPI app
+# FastAPI app initialization
 app = FastAPI(
     title="Floyo API",
     description="""
@@ -89,6 +89,7 @@ app = FastAPI(
     * **Pattern Analysis**: Discover usage patterns from tracked events
     * **Integration Suggestions**: Get intelligent suggestions for API integrations
     * **File Upload**: Upload files and track them as events
+    * **Workflow Automation**: Create and execute automated workflows
     
     ### Authentication
     
@@ -130,11 +131,11 @@ app = FastAPI(
 # Setup middleware
 setup_middleware(app)
 
-# Register all API routes
+# Register all routes
 register_routes(app)
 
+logger.info("Floyo API application initialized successfully")
 
-# Routes - All endpoints have been migrated to backend/api/ modules
 
 if __name__ == "__main__":
     import uvicorn

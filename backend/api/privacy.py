@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from backend.database import get_db
 from backend.logging_config import get_logger
-from backend.main import get_current_user
+from backend.auth.utils import get_current_user
 from database.models import User, PrivacyPrefs
 
 logger = get_logger(__name__)
