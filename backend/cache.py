@@ -1,195 +1,193 @@
-"""Caching layer for FastAPI using Redis (with fallback to in-memory cache)."""
+"""Caching layer for dashboard data and frequently accessed queries."""
 
+import sys
+from pathlib import Path
+from typing import Any, Optional
+from datetime import datetime, timedelta
 import json
-import os
-from typing import Optional, Any, Callable
-from functools import wraps
 import hashlib
-import time
 
-try:
-    import redis
-    REDIS_AVAILABLE = True
-except ImportError:
-    REDIS_AVAILABLE = False
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# In-memory cache fallback
-_memory_cache: dict = {}
-_memory_cache_ttl: dict = {}
+from backend.logging_config import setup_logging, get_logger
 
-# Redis connection
-redis_client: Optional[redis.Redis] = None
+setup_logging()
+logger = get_logger(__name__)
 
-def init_cache():
-    """Initialize Redis cache if available, otherwise use in-memory cache."""
-    global redis_client
-    from backend.config import settings
-    
-    if REDIS_AVAILABLE:
-        redis_url = settings.redis_url or "redis://localhost:6379/0"
-        try:
-            redis_client = redis.from_url(redis_url, decode_responses=True)
-            # Test connection
-            redis_client.ping()
-            print("Redis cache initialized successfully")
-        except Exception as e:
-            print(f"Redis connection failed, using in-memory cache: {e}")
-            redis_client = None
-            if settings.environment == "production":
-                print("WARNING: Redis unavailable in production - using in-memory cache (not recommended)")
-    else:
-        print("Redis not available, using in-memory cache")
-        if settings.environment == "production":
-            print("WARNING: Redis not installed - using in-memory cache (not recommended)")
+# In-memory cache (for development)
+# In production, use Redis or similar
+_cache: dict[str, tuple[Any, datetime]] = {}
+_cache_stats = {
+    'hits': 0,
+    'misses': 0,
+    'sets': 0,
+}
 
 
-def _get_cache_key(key: str) -> str:
-    """Generate cache key."""
-    return f"floyo:{key}"
+def get_cache_key(prefix: str, *args, **kwargs) -> str:
+    """Generate a cache key from prefix and arguments."""
+    key_data = {
+        'prefix': prefix,
+        'args': args,
+        'kwargs': kwargs,
+    }
+    key_str = json.dumps(key_data, sort_keys=True)
+    return f"{prefix}:{hashlib.md5(key_str.encode()).hexdigest()}"
 
 
 def get(key: str, default: Any = None) -> Optional[Any]:
     """Get value from cache."""
-    cache_key = _get_cache_key(key)
+    if key not in _cache:
+        _cache_stats['misses'] += 1
+        return default
     
-    if redis_client:
-        try:
-            value = redis_client.get(cache_key)
-            if value:
-                return json.loads(value)
-        except Exception:
-            pass
-    else:
-        # In-memory cache
-        if key in _memory_cache:
-            ttl = _memory_cache_ttl.get(key, 0)
-            if ttl == 0 or time.time() < ttl:
-                return _memory_cache[key]
-            else:
-                # Expired
-                del _memory_cache[key]
-                del _memory_cache_ttl[key]
+    value, expiry = _cache[key]
     
-    return default
-
-
-def set(key: str, value: Any, ttl: int = 300) -> bool:
-    """Set value in cache with TTL in seconds."""
-    cache_key = _get_cache_key(key)
+    # Check if expired
+    if datetime.utcnow() > expiry:
+        del _cache[key]
+        _cache_stats['misses'] += 1
+        return default
     
-    if redis_client:
-        try:
-            serialized = json.dumps(value)
-            return redis_client.setex(cache_key, ttl, serialized)
-        except Exception:
-            return False
-    else:
-        # In-memory cache
-        _memory_cache[key] = value
-        if ttl > 0:
-            _memory_cache_ttl[key] = time.time() + ttl
-        return True
+    _cache_stats['hits'] += 1
+    return value
 
 
-def delete(key: str) -> bool:
-    """Delete value from cache."""
-    cache_key = _get_cache_key(key)
+def set(key: str, value: Any, ttl_seconds: int = 300) -> None:
+    """Set value in cache with TTL."""
+    expiry = datetime.utcnow() + timedelta(seconds=ttl_seconds)
+    _cache[key] = (value, expiry)
+    _cache_stats['sets'] += 1
     
-    if redis_client:
-        try:
-            return bool(redis_client.delete(cache_key))
-        except Exception:
-            return False
+    # Clean up expired entries periodically
+    if len(_cache) > 1000:
+        _cleanup_expired()
+
+
+def delete(key: str) -> None:
+    """Delete key from cache."""
+    if key in _cache:
+        del _cache[key]
+
+
+def invalidate_pattern(pattern: str) -> None:
+    """Invalidate all keys matching pattern."""
+    keys_to_delete = [k for k in _cache.keys() if pattern in k]
+    for key in keys_to_delete:
+        delete(key)
+    logger.info(f"Invalidated {len(keys_to_delete)} cache entries matching pattern: {pattern}")
+
+
+def invalidate_user_cache(user_id: str) -> None:
+    """Invalidate all cache entries for a user."""
+    invalidate_pattern(f"user:{user_id}")
+
+
+def invalidate_resource_cache(resource_type: str, resource_id: Optional[str] = None) -> None:
+    """Invalidate cache entries for a resource."""
+    if resource_id:
+        invalidate_pattern(f"{resource_type}:{resource_id}")
     else:
-        if key in _memory_cache:
-            del _memory_cache[key]
-            if key in _memory_cache_ttl:
-                del _memory_cache_ttl[key]
-            return True
-        return False
+        invalidate_pattern(f"{resource_type}:")
 
 
-def clear_pattern(pattern: str) -> int:
-    """Clear all keys matching a pattern."""
-    if redis_client:
-        try:
-            # Replace * with Redis pattern
-            redis_pattern = pattern.replace('*', '*')
-            keys = redis_client.keys(_get_cache_key(redis_pattern))
-            if keys:
-                return redis_client.delete(*keys)
-            return 0
-        except Exception:
-            return 0
-    else:
-        # In-memory cache - simple pattern matching
-        prefix_pattern = pattern.replace('*', '')
-        deleted = 0
-        keys_to_delete = []
-        for k in list(_memory_cache.keys()):
-            if prefix_pattern.replace('floyo:', '') in str(k):
-                keys_to_delete.append(k)
-        for key in keys_to_delete:
-            if key in _memory_cache:
-                del _memory_cache[key]
-                if key in _memory_cache_ttl:
-                    del _memory_cache_ttl[key]
-                deleted += 1
-        return deleted
+def _cleanup_expired() -> None:
+    """Remove expired entries from cache."""
+    now = datetime.utcnow()
+    expired_keys = [
+        key for key, (_, expiry) in _cache.items()
+        if now > expiry
+    ]
+    for key in expired_keys:
+        del _cache[key]
+    if expired_keys:
+        logger.debug(f"Cleaned up {len(expired_keys)} expired cache entries")
 
 
-def cached(ttl: int = 300, key_prefix: str = ""):
-    """Decorator for caching function results."""
-    def decorator(func: Callable) -> Callable:
-        @wraps(func)
-        async def async_wrapper(*args, **kwargs):
-            # Generate cache key from function name and arguments
-            key_parts = [key_prefix, func.__name__]
-            if args:
-                key_parts.append(str(hash(str(args))))
-            if kwargs:
-                key_parts.append(str(hash(str(sorted(kwargs.items())))))
-            cache_key = ":".join(filter(None, key_parts))
+def get_cache_stats() -> dict[str, Any]:
+    """Get cache statistics."""
+    total_requests = _cache_stats['hits'] + _cache_stats['misses']
+    hit_rate = (_cache_stats['hits'] / total_requests * 100) if total_requests > 0 else 0
+    
+    return {
+        'size': len(_cache),
+        'hits': _cache_stats['hits'],
+        'misses': _cache_stats['misses'],
+        'sets': _cache_stats['sets'],
+        'hit_rate': round(hit_rate, 2),
+    }
+
+
+def clear_cache() -> None:
+    """Clear all cache entries."""
+    _cache.clear()
+    _cache_stats['hits'] = 0
+    _cache_stats['misses'] = 0
+    _cache_stats['sets'] = 0
+    logger.info("Cache cleared")
+
+
+# Decorator for caching function results
+def cached(ttl_seconds: int = 300, key_prefix: Optional[str] = None):
+    """Decorator to cache function results."""
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            prefix = key_prefix or f"{func.__module__}.{func.__name__}"
+            cache_key = get_cache_key(prefix, *args, **kwargs)
             
-            # Check cache
+            # Try to get from cache
             cached_value = get(cache_key)
             if cached_value is not None:
                 return cached_value
             
-            # Execute function
-            result = await func(*args, **kwargs)
-            
-            # Store in cache
-            set(cache_key, result, ttl)
-            return result
-        
-        @wraps(func)
-        def sync_wrapper(*args, **kwargs):
-            # Generate cache key from function name and arguments
-            key_parts = [key_prefix, func.__name__]
-            if args:
-                key_parts.append(str(hash(str(args))))
-            if kwargs:
-                key_parts.append(str(hash(str(sorted(kwargs.items())))))
-            cache_key = ":".join(filter(None, key_parts))
-            
-            # Check cache
-            cached_value = get(cache_key)
-            if cached_value is not None:
-                return cached_value
-            
-            # Execute function
+            # Call function and cache result
             result = func(*args, **kwargs)
-            
-            # Store in cache
-            set(cache_key, result, ttl)
+            set(cache_key, result, ttl_seconds)
             return result
         
-        # Return appropriate wrapper based on function type
-        import inspect
-        if inspect.iscoroutinefunction(func):
-            return async_wrapper
-        else:
-            return sync_wrapper
-    
+        return wrapper
     return decorator
+
+
+def invalidate_user_cache(user_id: str) -> int:
+    """Invalidate all cache entries for a user."""
+    return clear_pattern(f"user:{user_id}:*")
+
+
+def invalidate_resource_cache(resource_type: str, resource_id: Optional[str] = None) -> int:
+    """Invalidate cache entries for a resource."""
+    if resource_id:
+        return clear_pattern(f"{resource_type}:{resource_id}:*")
+    else:
+        return clear_pattern(f"{resource_type}:*")
+
+
+def get_cache_stats() -> dict[str, Any]:
+    """Get cache statistics."""
+    if redis_client:
+        try:
+            info = redis_client.info('stats')
+            return {
+                'type': 'redis',
+                'hits': info.get('keyspace_hits', 0),
+                'misses': info.get('keyspace_misses', 0),
+                'keys': redis_client.dbsize(),
+            }
+        except Exception:
+            return {'type': 'redis', 'error': 'Failed to get stats'}
+    else:
+        return {
+            'type': 'memory',
+            'size': len(_memory_cache),
+            'keys': len(_memory_cache),
+        }
+
+
+def init_cache() -> None:
+    """Initialize cache (placeholder for Redis initialization in production)."""
+    logger.info("Cache initialized (in-memory)")
+    # In production, initialize Redis connection here
+    # Example:
+    # import redis
+    # global redis_client
+    # redis_client = redis.Redis(host=settings.redis_host, port=settings.redis_port)
