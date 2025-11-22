@@ -178,6 +178,55 @@ class AnalyticsService {
   }
 
   /**
+   * Track activation event (signup, onboarding completion, first insight view, etc.)
+   */
+  trackActivationEvent(
+    eventType: 'signup' | 'onboarding_completion' | 'first_insight_view' | 'first_event_tracked',
+    properties?: Record<string, unknown>
+  ): void {
+    const event = {
+      event_type: eventType,
+      user_id: this.userId || undefined,
+      timestamp: new Date().toISOString(),
+      properties: properties || {},
+      session_id: this.getSessionId(),
+    };
+
+    // Track in PostHog
+    if (this.posthog) {
+      this.posthog.capture(`activation_event_${eventType}`, {
+        ...event.properties,
+        timestamp: event.timestamp,
+      });
+    }
+
+    // Queue for backend tracking
+    this.events.push({
+      name: `activation_event_${eventType}`,
+      userId: event.user_id,
+      timestamp: event.timestamp,
+      properties: event.properties,
+    });
+
+    // Flush immediately for activation events
+    this.flush();
+  }
+
+  /**
+   * Get session ID (create if doesn't exist)
+   */
+  private getSessionId(): string {
+    if (typeof window === 'undefined') return '';
+    
+    let sessionId = sessionStorage.getItem('analytics_session_id');
+    if (!sessionId) {
+      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      sessionStorage.setItem('analytics_session_id', sessionId);
+    }
+    return sessionId;
+  }
+
+  /**
    * Track engagement
    */
   engagement(action: string, properties?: Record<string, unknown>): void {
@@ -224,11 +273,31 @@ class AnalyticsService {
     this.events = [];
 
     try {
-      await fetch('/api/analytics/track', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ events: eventsToSend }),
-      });
+      // Transform events to match backend API format
+      const activationEvents = eventsToSend
+        .filter(e => e.name.startsWith('activation_event_'))
+        .map(e => ({
+          event_type: e.name.replace('activation_event_', ''),
+          user_id: e.userId || this.userId || undefined,
+          timestamp: e.timestamp || new Date().toISOString(),
+          properties: e.properties || {},
+          session_id: this.getSessionId(),
+        }));
+
+      if (activationEvents.length > 0) {
+        await fetch('/api/analytics/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ events: activationEvents }),
+        });
+      }
+
+      // Also send to PostHog if configured
+      if (this.posthog && eventsToSend.length > 0) {
+        eventsToSend.forEach(event => {
+          this.posthog.capture(event.name, event.properties);
+        });
+      }
     } catch (error) {
       // Re-add events if flush failed
       this.events.unshift(...eventsToSend);
