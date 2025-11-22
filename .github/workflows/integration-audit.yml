@@ -1,16 +1,9 @@
 name: Integration Audit
 
 on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/integration-audit.yml'
-  pull_request:
-    branches: [main, develop]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/integration-audit.yml'
+  schedule:
+    # Weekly performance audit - Monday at 2 AM UTC
+    - cron: '0 2 * * 1'
   workflow_dispatch:
 
 jobs:

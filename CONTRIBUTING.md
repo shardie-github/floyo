@@ -181,11 +181,21 @@ describe('FeatureName', () => {
    npm run env:validate
    ```
 
-4. **Run linting and type checking**
+4. **Run CI checks locally (recommended before pushing)**
    ```bash
+   # Run all CI checks (lint, type-check, tests, build)
+   npm run ci
+   
+   # Or run backend/frontend separately
+   npm run ci:backend
+   npm run ci:frontend
+   
+   # Individual checks
    npm run lint
    npm run type-check
    ```
+   
+   **Note:** Running `npm run ci` locally ensures your PR will pass CI checks. This runs the same checks that GitHub Actions runs on every PR.
 
 5. **Commit your changes**
    ```bash
@@ -207,12 +217,37 @@ describe('FeatureName', () => {
 ### PR Checklist
 
 - [ ] Code follows project style guidelines
+- [ ] `npm run ci` passes locally (lint, type-check, tests, build)
 - [ ] Tests added/updated and passing
 - [ ] Documentation updated
 - [ ] Environment variables validated
 - [ ] No console errors or warnings
 - [ ] TypeScript types are correct
 - [ ] No breaking changes (or documented)
+
+### CI Checks
+
+Every PR runs the following checks (via `.github/workflows/ci.yml`):
+
+1. **Lint** - Python (ruff, black) and TypeScript (eslint, prettier)
+2. **Type Check** - Python (mypy) and TypeScript (tsc)
+3. **Test Fast** - Unit tests only (no database required)
+4. **Build** - Frontend production build
+
+**Required checks** (must pass to merge):
+- `ci/lint`
+- `ci/type-check`
+- `ci/test-fast`
+- `ci/build`
+
+**Optional checks** (informational, don't block merge):
+- `ci/coverage` - Test coverage report
+- `ci/bundle-size` - Bundle size warnings
+
+To run these checks locally before pushing:
+```bash
+npm run ci
+```
 
 ## Documentation
 

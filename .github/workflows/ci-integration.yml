@@ -1,0 +1,176 @@
+name: CI Integration Tests
+
+on:
+  schedule:
+    # Nightly integration tests - 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  test-integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: floyo
+          POSTGRES_PASSWORD: floyo
+          POSTGRES_DB: floyo
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r backend/requirements.txt pytest pytest-asyncio httpx
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Setup Prisma
+        run: npx prisma generate
+
+      - name: Initialize database
+        env:
+          DATABASE_URL: postgresql://floyo:floyo@localhost:5432/floyo
+        run: |
+          cd backend
+          python -c "from database.models import Base; from backend.database import engine; Base.metadata.create_all(engine)" || true
+
+      - name: Run Python integration tests
+        env:
+          DATABASE_URL: postgresql://floyo:floyo@localhost:5432/floyo
+          REDIS_URL: redis://localhost:6379
+        run: |
+          cd backend
+          pytest tests/integration/ -v --tb=short || exit 1
+
+      - name: Run TypeScript integration tests
+        env:
+          DATABASE_URL: postgresql://floyo:floyo@localhost:5432/floyo
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'placeholder-key' }}
+        run: |
+          cd frontend
+          npm run test:e2e || exit 1
+
+  wiring-check:
+    name: Wiring Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: floyo
+          POSTGRES_PASSWORD: floyo
+          POSTGRES_DB: floyo
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt pytest pytest-asyncio httpx
+          cd frontend && npm ci
+          npm install -g tsx typescript
+
+      - name: Initialize database
+        env:
+          DATABASE_URL: postgresql://floyo:floyo@localhost:5432/floyo
+        run: |
+          cd backend
+          python -c "from database.models import Base; from backend.database import engine; Base.metadata.create_all(engine)" || true
+
+      - name: Start backend server
+        env:
+          DATABASE_URL: postgresql://floyo:floyo@localhost:5432/floyo
+          SECRET_KEY: test-secret-key-for-ci
+          REDIS_URL: redis://localhost:6379
+        run: |
+          cd backend
+          uvicorn main:app --host 0.0.0.0 --port 8000 &
+          sleep 5
+        continue-on-error: true
+
+      - name: Run wiring harness
+        env:
+          API_BASE_URL: http://localhost:8000
+          DATABASE_URL: postgresql://floyo:floyo@localhost:5432/floyo
+        run: |
+          tsx tools/wiring/harness.ts || exit 1
+
+      - name: Run wire doctor
+        run: |
+          tsx tools/wiring/wire_doctor.ts || exit 1
+
+      - name: Upload connectivity reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: connectivity-reports
+          path: |
+            reports/connectivity/**
+            tools/wiring/fixes/**

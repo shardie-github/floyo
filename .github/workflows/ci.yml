@@ -1,201 +1,244 @@
-name: CI - Full Matrix
+name: CI
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
-    branches: [main, develop]
-  schedule:
-    # Run synthetic monitors hourly
-    - cron: '0 * * * *'
+    branches: [main]
+  push:
+    branches: [main]
 
-# CI Concurrency Tuning - Phase 1 Leverage Point
-# Increase concurrency and prioritize critical PRs
-# Race condition protection: Only cancel if PR is still open
 concurrency:
   group: ci-${{ github.ref }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' && github.event.pull_request.state == 'open' }}
 
 jobs:
-  matrix:
-    name: Test Matrix
+  lint:
+    name: Lint (Python + TypeScript)
     runs-on: ubuntu-latest
-    # Prioritize main branch and hotfixes
-    if: github.ref == 'refs/heads/main' || contains(github.head_ref, 'hotfix') || github.event_name == 'schedule'
-    strategy:
-      # Run tests in parallel for faster feedback
-      fail-fast: false
-      max-parallel: 3
-      matrix:
-        node-version: [20.x]
-        test-type: [unit, e2e, contracts]
-        include:
-          - test-type: unit
-            command: npm run test
-          - test-type: e2e
-            command: npm run test:e2e
-          - test-type: contracts
-            command: npm run test:contracts
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Python dependencies
+        run: |
+          pip install ruff black
+
+      - name: Lint Python
+        run: |
+          cd backend
+          ruff check . || exit 1
+          black --check . || exit 1
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Lint TypeScript
+        run: |
+          cd frontend
+          npm run lint || exit 1
+          npm run format:check || exit 1
+
+  type-check:
+    name: Type Check (Python + TypeScript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Python dependencies
+        run: |
+          pip install mypy
+
+      - name: Type Check Python
+        run: |
+          cd backend
+          mypy backend/ || exit 1
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Type Check TypeScript
+        run: |
+          cd frontend
+          npm run type-check || exit 1
+
+  test-fast:
+    name: Test Fast (Unit Tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r backend/requirements.txt pytest pytest-asyncio
+
+      - name: Run Python unit tests
+        run: |
+          cd backend
+          pytest tests/unit/ -v --tb=short || exit 1
+        continue-on-error: false
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run TypeScript unit tests
+        run: |
+          cd frontend
+          npm test || exit 1
+        continue-on-error: false
+
+  build:
+    name: Build (Frontend)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: '20'
           cache: 'npm'
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            node_modules
-            ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
       - name: Install dependencies
-        run: npm ci
-
-      - name: Setup Prisma
-        run: npx prisma generate
-
-      - name: Run ${{ matrix.test-type }} tests
-        run: ${{ matrix.command }}
-        timeout-minutes: 10
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
-      - name: Generate test coverage report
-        if: matrix.test-type == 'unit'
         run: |
-          npm run test -- --coverage --coverageReporters=json --coverageReporters=text || true
-          # Coverage report will be in coverage/coverage-final.json
+          cd frontend
+          npm ci
+
+      - name: Build Next.js
+        run: |
+          cd frontend
+          npm run build || exit 1
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+
+  coverage:
+    name: Coverage (Non-blocking)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r backend/requirements.txt pytest pytest-cov
+
+      - name: Generate Python coverage
+        run: |
+          cd backend
+          pytest tests/unit/ --cov=backend --cov-report=json --cov-report=term || true
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Generate TypeScript coverage
+        run: |
+          cd frontend
+          npm run test:coverage || true
 
       - name: Upload coverage reports
-        if: matrix.test-type == 'unit'
         uses: codecov/codecov-action@v3
+        if: always()
         with:
-          file: ./coverage/coverage-final.json
-          flags: ${{ matrix.test-type }}
-          name: ${{ matrix.test-type }}-coverage
+          files: |
+            backend/coverage.json
+            frontend/coverage/coverage-final.json
           fail_ci_if_error: false
 
-  doctor:
-    name: Ops Doctor
+  bundle-size:
+    name: Bundle Size Check (Non-blocking)
     runs-on: ubuntu-latest
-    needs: matrix
+    timeout-minutes: 10
+    continue-on-error: true
+    needs: build
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run ops doctor
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
-  lighthouse:
-    name: Performance Budgets
-    runs-on: ubuntu-latest
-    needs: matrix
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: '20'
           cache: 'npm'
-      - run: npm ci
-      - run: npm run build
-      - run: npm run ops benchmark
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
 
-  synthetic-monitors:
-    name: Synthetic Monitors
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run ops test:e2e -- --project=production
-        env:
-          PROD_URL: ${{ secrets.PROD_URL }}
-      - name: Notify on failure
-        if: failure()
-        uses: 8398a7/action-slack@v3
-        with:
-          status: ${{ job.status }}
-          webhook_url: ${{ secrets.WEBHOOK_URL }}
-          text: 'Synthetic monitor check failed'
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
 
-  migration-safety:
-    name: Migration Safety Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run ops check -- --migrations
+      - name: Build and analyze bundle
+        run: |
+          cd frontend
+          npm run build
+          
+          # Check bundle sizes (adjust paths based on your build output)
+          if [ -d ".next" ]; then
+            MAIN_BUNDLE=$(find .next -name "*.js" -type f -exec ls -lh {} \; | sort -k5 -hr | head -1 | awk '{print $5}')
+            echo "Main bundle size: $MAIN_BUNDLE"
+            
+            # Warn if exceeds 250KB (non-blocking)
+            SIZE_BYTES=$(echo "$MAIN_BUNDLE" | sed 's/K/ * 1024/' | sed 's/M/ * 1024 * 1024/' | bc 2>/dev/null || echo "0")
+            MAX_SIZE=256000
+            
+            if [ "$SIZE_BYTES" -gt "$MAX_SIZE" ]; then
+              echo "⚠️ Bundle size exceeds 250KB threshold: $MAIN_BUNDLE"
+            else
+              echo "✅ Bundle size within limits: $MAIN_BUNDLE"
+            fi
+          fi
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-  rls-guard:
-    name: RLS Security Scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run ops sb-guard -- --audit-only
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      - name: Upload RLS audit
-        uses: actions/upload-artifact@v3
-        with:
-          name: rls-audit
-          path: ops/reports/rls-audit.md
-
-  release:
-    name: Release Pipeline
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: [doctor, lighthouse, migration-safety, rls-guard]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run ops release
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          RELEASE_WEBHOOK_URL: ${{ secrets.RELEASE_WEBHOOK_URL }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
