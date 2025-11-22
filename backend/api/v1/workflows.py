@@ -13,7 +13,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-workflow_router = APIRouter(prefix="/api/workflows", tags=["workflows"])
+workflow_router = APIRouter(prefix="/api/v1/workflows", tags=["workflows"])
 
 
 class WorkflowStep(BaseModel):

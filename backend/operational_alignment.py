@@ -9,7 +9,7 @@ from database.models import (
     User, Event, Workflow, Suggestion, Subscription, UsageMetric,
     Organization, BillingEvent, Pattern
 )
-from backend.analytics_dashboard import AnalyticsDashboard
+from backend.services.analytics_service import AnalyticsService as AnalyticsDashboard
 from backend.growth import GrowthAnalytics
 from backend.monetization import PricingCalculator
 import logging

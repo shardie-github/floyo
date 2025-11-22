@@ -1,10 +1,9 @@
-"""Analytics dashboard endpoints for business metrics."""
+"""Analytics service for business metrics calculations."""
 
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Any
-from uuid import UUID
+from typing import Dict, Any
 from sqlalchemy.orm import Session
-from sqlalchemy import func, and_, or_, extract
+from sqlalchemy import func, and_
 from database.models import (
     User, Event, Workflow, Suggestion, Subscription, UsageMetric,
     Organization, OrganizationMember
@@ -16,8 +15,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class AnalyticsDashboard:
-    """Analytics dashboard for business metrics."""
+class AnalyticsService:
+    """Analytics service for business metrics."""
     
     @staticmethod
     def get_activation_metrics(db: Session, days: int = 30) -> Dict[str, Any]:
@@ -257,11 +256,15 @@ class AnalyticsDashboard:
         """Get comprehensive analytics dashboard."""
         return {
             "period_days": days,
-            "activation": AnalyticsDashboard.get_activation_metrics(db, days),
-            "retention": AnalyticsDashboard.get_retention_cohorts(db),
-            "conversion_funnel": AnalyticsDashboard.get_conversion_funnel(db, days),
-            "growth": AnalyticsDashboard.get_growth_metrics(db, days),
-            "revenue": AnalyticsDashboard.get_revenue_metrics(db, days),
-            "engagement": AnalyticsDashboard.get_engagement_metrics(db, days),
+            "activation": AnalyticsService.get_activation_metrics(db, days),
+            "retention": AnalyticsService.get_retention_cohorts(db),
+            "conversion_funnel": AnalyticsService.get_conversion_funnel(db, days),
+            "growth": AnalyticsService.get_growth_metrics(db, days),
+            "revenue": AnalyticsService.get_revenue_metrics(db, days),
+            "engagement": AnalyticsService.get_engagement_metrics(db, days),
             "generated_at": datetime.utcnow().isoformat()
         }
+
+
+# Backward compatibility alias
+AnalyticsDashboard = AnalyticsService

@@ -12,7 +12,7 @@ from database.models import (
 from backend.operational_alignment import OperationalAlignment, OperationalMetrics
 from backend.kpi_alerts import KPIAlertSystem
 from backend.data_quality import DataQualityMonitor
-from backend.analytics_dashboard import AnalyticsDashboard
+from backend.services.analytics_service import AnalyticsService as AnalyticsDashboard
 from backend.retention_campaigns import RetentionCampaignService
 from backend.monetization import UsageTracker
 from backend.email_service import email_service

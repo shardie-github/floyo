@@ -5,7 +5,7 @@ from typing import Dict, List, Optional, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from database.models import Suggestion, Workflow, Event, User
-from backend.analytics_dashboard import AnalyticsDashboard
+from backend.services.analytics_service import AnalyticsService as AnalyticsDashboard
 import logging
 
 logger = logging.getLogger(__name__)

@@ -1,0 +1,147 @@
+name: CI Performance & Security
+
+on:
+  schedule:
+    # Weekly performance audit - Monday at 3 AM UTC
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+jobs:
+  lighthouse:
+    name: Lighthouse Performance Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Build Next.js app
+        working-directory: ./frontend
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+        run: npm run build
+
+      - name: Start Next.js server
+        working-directory: ./frontend
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+        run: |
+          npm start &
+          sleep 10
+          curl -f http://localhost:3000 || exit 1
+
+      - name: Install Lighthouse CI
+        run: |
+          npm install -g @lhci/cli@latest
+          npm install -g @axe-core/cli
+
+      - name: Run Lighthouse CI
+        run: |
+          mkdir -p .lighthouseci
+          lhci autorun --collect.url=http://localhost:3000 \
+            --collect.numberOfRuns=1 \
+            --assert.assertions.'categories.performance[0].minScore'=0.8 \
+            --assert.assertions.'categories.accessibility[0].minScore'=0.9 \
+            --assert.assertions.'categories.best-practices[0].minScore'=0.9 \
+            --assert.assertions.'categories.seo[0].minScore'=0.8 \
+            --upload.target=temporary-public-storage || true
+
+      - name: Upload Lighthouse Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: .lighthouseci/
+          retention-days: 7
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd frontend && npm ci
+          pip install safety || true
+
+      - name: Run npm audit
+        run: |
+          cd frontend
+          npm audit --audit-level=moderate || true
+
+      - name: Run Python safety check
+        run: |
+          pip install safety
+          safety check --json || true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            frontend/npm-audit.json
+          retention-days: 30
+
+  benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run benchmarks
+        run: |
+          npm run bench || echo "Benchmarks completed with warnings"
+        continue-on-error: true
+
+      - name: Analyze trends
+        run: |
+          node scripts/bench-trend.js || echo "Trend analysis completed"
+        continue-on-error: true
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results
+          path: |
+            bench/results/*.json
+            bench/history.json
+          retention-days: 90

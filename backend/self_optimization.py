@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
 from database.models import User, Event, Workflow, Suggestion, Subscription
 from backend.operational_alignment import OperationalAlignment
-from backend.analytics_dashboard import AnalyticsDashboard
+from backend.services.analytics_service import AnalyticsService as AnalyticsDashboard
 from backend.retention_campaigns import RetentionCampaignService
 from backend.monetization import UsageTracker
 import logging
