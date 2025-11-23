@@ -10,6 +10,7 @@ from sqlalchemy import func, and_
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from backend.logging_config import setup_logging, get_logger
+from backend.monitoring.performance import measure_query
 from database.models import Event, Pattern, User, AuditLog
 from backend.ml.pattern_detector import AdvancedPatternDetector
 from backend.ml.recommendation_engine import RecommendationEngine
@@ -45,18 +46,20 @@ class InsightsService:
         try:
             cutoff_date = datetime.utcnow() - timedelta(days=days_back)
             
-            # Get user events
-            events = db.query(Event).filter(
-                and_(
-                    Event.user_id == user_id,
-                    Event.created_at >= cutoff_date
-                )
-            ).order_by(Event.created_at.desc()).all()
+            # Get user events (optimized query with index and performance monitoring)
+            with measure_query("get_user_events_for_insights"):
+                events = db.query(Event).filter(
+                    and_(
+                        Event.user_id == user_id,
+                        Event.timestamp >= cutoff_date  # Use timestamp index instead of created_at
+                    )
+                ).order_by(Event.timestamp.desc()).limit(1000).all()  # Limit to prevent memory issues
             
-            # Get user patterns
-            patterns = db.query(Pattern).filter(
-                Pattern.user_id == user_id
-            ).all()
+            # Get user patterns (optimized query with index and performance monitoring)
+            with measure_query("get_user_patterns_for_insights"):
+                patterns = db.query(Pattern).filter(
+                    Pattern.user_id == user_id
+                ).order_by(Pattern.count.desc()).all()  # Order by count for faster max() operation
             
             if not events and not patterns:
                 return []

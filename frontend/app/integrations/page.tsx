@@ -184,11 +184,15 @@ export default function IntegrationsPage() {
             <HCaptchaIntegration
               onVerify={(token) => {
                 setCaptchaToken(token);
-                console.log("Captcha verified:", token);
+                if (process.env.NODE_ENV === 'development') {
+                  console.debug("Captcha verified:", token);
+                }
               }}
               onExpire={() => {
                 setCaptchaToken(null);
-                console.log("Captcha expired");
+                if (process.env.NODE_ENV === 'development') {
+                  console.debug("Captcha expired");
+                }
               }}
               onError={(error) => {
                 console.error("Captcha error:", error);

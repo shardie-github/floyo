@@ -99,7 +99,10 @@ export function AutonomousDashboard() {
         method: 'POST',
         body: JSON.stringify({ dry_run: dryRun }),
       })
-      console.log('Self-healing results:', results)
+      // Self-healing results logged for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('Self-healing results:', results);
+      }
       await loadSystemState()
     } catch (error) {
       console.error('Failed to trigger self-healing:', error)

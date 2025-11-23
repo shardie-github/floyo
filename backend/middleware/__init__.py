@@ -16,6 +16,12 @@ from backend.api_versioning import VersionDeprecationMiddleware
 from backend.response_middleware import APIResponseMiddleware
 from backend.guardian.middleware import GuardianMiddleware
 from backend.security import SecurityHeadersMiddleware
+try:
+    from backend.middleware.performance import PerformanceMonitoringMiddleware
+    PERFORMANCE_MONITORING_AVAILABLE = True
+except ImportError:
+    PERFORMANCE_MONITORING_AVAILABLE = False
+    PerformanceMonitoringMiddleware = None
 from fastapi import HTTPException
 from backend.error_handling import (
     error_handler, APIError
@@ -54,6 +60,10 @@ def setup_middleware(app: FastAPI) -> None:
     """
     # Request ID middleware (first - for tracing)
     app.add_middleware(RequestIDMiddleware)
+    
+    # Performance monitoring middleware (early - to track all requests)
+    if PERFORMANCE_MONITORING_AVAILABLE and PerformanceMonitoringMiddleware:
+        app.add_middleware(PerformanceMonitoringMiddleware)
     
     # Comprehensive Security Middleware (early - before CORS)
     app.add_middleware(ComprehensiveSecurityMiddleware)

@@ -15,6 +15,7 @@ from backend.batch_processor import process_event_batch
 from backend.export import export_events_csv, export_events_json
 from backend.auth.utils import get_current_user
 from backend.api.models import EventCreate, EventResponse, PaginatedResponse
+from backend.services.event_service import EventService
 from database.models import User, Event
 from fastapi.responses import Response
 
@@ -87,21 +88,21 @@ async def create_event(
     Track file operations, tool usage, and other activities to enable
     intelligent pattern detection and workflow suggestions.
     """
+    # Use service layer for business logic
+    event_service = EventService(db)
+    
     # Clear cache
     delete(f"events:{current_user.id}:*")
     
-    db_event = Event(
-        user_id=current_user.id,
+    # Create event via service
+    db_event = event_service.create_event(
+        user_id=str(current_user.id),
         event_type=event.event_type,
         file_path=event.file_path,
         tool=event.tool,
         operation=event.operation,
         details=event.details,
-        timestamp=datetime.utcnow()
     )
-    db.add(db_event)
-    db.commit()
-    db.refresh(db_event)
     
     # Audit log
     log_audit(
