@@ -1,0 +1,60 @@
+Contact: security@floyo.dev
+Expires: 2026-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://floyo.dev/.well-known/security.txt
+Policy: https://floyo.dev/security-policy
+
+# Security Policy
+
+We take security seriously. If you discover a security vulnerability, please follow these guidelines:
+
+## Reporting Security Issues
+
+Please report security vulnerabilities to: security@floyo.dev
+
+Do NOT report security vulnerabilities through public GitHub issues.
+
+## What to Include
+
+- Description of the vulnerability
+- Steps to reproduce
+- Potential impact
+- Suggested fix (if any)
+
+## Response Timeline
+
+- Initial response: Within 48 hours
+- Status update: Within 7 days
+- Resolution: Depends on severity
+
+## Scope
+
+### In Scope
+- Authentication and authorization flaws
+- Data exposure vulnerabilities
+- Injection vulnerabilities
+- Cross-site scripting (XSS)
+- Cross-site request forgery (CSRF)
+- Server-side request forgery (SSRF)
+- Remote code execution
+
+### Out of Scope
+- Denial of service (DoS) attacks
+- Social engineering
+- Physical security issues
+- Issues requiring physical access
+- Issues in third-party dependencies (report to maintainers)
+
+## Recognition
+
+We appreciate responsible disclosure and will credit security researchers who report valid vulnerabilities.
+
+## Legal
+
+We will not take legal action against security researchers who:
+- Act in good faith
+- Do not access or modify data beyond what is necessary
+- Do not disrupt our services
+- Report vulnerabilities promptly
+
+Thank you for helping keep Floyo secure!

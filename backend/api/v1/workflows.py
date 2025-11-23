@@ -245,16 +245,35 @@ async def execute_workflow(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Execute a workflow."""
+    """
+    Execute a workflow.
+    
+    **Status:** Workflow execution engine is planned for future release.
+    Currently returns a placeholder response indicating the feature is in development.
+    
+    **Future Implementation:**
+    - Workflow definition parsing and validation
+    - Step-by-step execution with error handling
+    - Progress tracking and status updates
+    - Integration with external APIs/services
+    - Retry logic and failure handling
+    
+    **See:** `backend/workflow_execution_engine.py` (planned)
+    """
     try:
-        # TODO: Implement workflow execution engine
-        # For now, return a mock execution result
+        # Workflow execution engine implementation planned
+        # See docs/WORKFLOW_ENGINE_USAGE.md for planned API
         
+        # For now, create a placeholder execution record
         execution = WorkflowExecution(
             user_id=current_user.id,
             workflow_name=workflow.name,
-            status="running",
-            result={},
+            status="pending",  # Changed from "running" to indicate not yet implemented
+            result={
+                "message": "Workflow execution engine is in development",
+                "workflow_name": workflow.name,
+                "status": "not_implemented",
+            },
         )
         db.add(execution)
         db.commit()
