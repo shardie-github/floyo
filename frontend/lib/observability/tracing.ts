@@ -55,22 +55,23 @@ class SimpleTracer implements Tracer {
     const span: Span = {
       setAttribute: (key: string, value: string | number | boolean) => {
         if (env.NODE_ENV === 'development') {
-          console.log(`[Trace] ${name} attribute: ${key} = ${value}`);
+          // Using console.debug for trace logs (acceptable in dev)
+          console.debug(`[Trace] ${name} attribute: ${key} = ${value}`);
         }
       },
       setStatus: (status: { code: number; message?: string }) => {
         if (env.NODE_ENV === 'development') {
-          console.log(`[Trace] ${name} status:`, status);
+          console.debug(`[Trace] ${name} status:`, status);
         }
       },
       addEvent: (eventName: string, attributes?: Record<string, string | number | boolean>) => {
         if (env.NODE_ENV === 'development') {
-          console.log(`[Trace] ${name} event: ${eventName}`, attributes);
+          console.debug(`[Trace] ${name} event: ${eventName}`, attributes);
         }
       },
       end: () => {
         if (env.NODE_ENV === 'development') {
-          console.log(`[Trace] ${name} ended`);
+          console.debug(`[Trace] ${name} ended`);
         }
         if (this.activeSpan === span) {
           this.activeSpan = null;
@@ -127,7 +128,7 @@ export function initTracing(): void {
   tracer = new SimpleTracer();
 
   if (env.NODE_ENV === 'development') {
-    console.log('[Tracing] Initialized');
+    console.debug('[Tracing] Initialized');
   }
 }
 
