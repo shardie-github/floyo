@@ -1,9 +1,10 @@
 """Admin API endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 from backend.data_retention import get_retention_policy
 from backend.audit import log_audit
 from backend.auth.utils import get_current_user
@@ -13,7 +14,9 @@ router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 
 @router.post("/data-retention/cleanup")
+@limiter.limit("5/hour")  # Very restrictive - admin operation
 async def run_data_retention_cleanup(
+    request: Request,
     dry_run: bool = False,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -45,7 +48,9 @@ async def run_data_retention_cleanup(
 
 
 @router.get("/data-retention/policy")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_data_retention_policy(
+    request: Request,
     current_user: User = Depends(get_current_user)
 ):
     """

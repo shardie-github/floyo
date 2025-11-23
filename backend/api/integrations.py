@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 from backend.connectors import get_available_connectors, create_user_integration
 from backend.audit import log_audit
 from backend.auth.utils import get_current_user
@@ -16,7 +17,9 @@ router = APIRouter(prefix="/api/integrations", tags=["integrations"])
 
 
 @router.get("/connectors")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def list_connectors(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -31,7 +34,9 @@ async def list_connectors(
 
 
 @router.get("")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def list_integrations(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -43,11 +48,12 @@ async def list_integrations(
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/hour")  # Restrictive for integration creation
 async def create_integration(
+    request: Request,
     integration_data: IntegrationCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    request: Request = None
+    db: Session = Depends(get_db)
 ):
     """
     Create a new integration.
@@ -77,7 +83,9 @@ async def create_integration(
 
 
 @router.get("/{integration_id}")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_integration(
+    request: Request,
     integration_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -95,12 +103,13 @@ async def get_integration(
 
 
 @router.put("/{integration_id}")
+@limiter.limit("30/minute")
 async def update_integration(
+    request: Request,
     integration_id: UUID,
     integration_data: IntegrationUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    request: Request = None
+    db: Session = Depends(get_db)
 ):
     """Update an integration."""
     integration = db.query(UserIntegration).filter(
@@ -135,11 +144,12 @@ async def update_integration(
 
 
 @router.delete("/{integration_id}")
+@limiter.limit("10/hour")  # Restrictive for destructive operations
 async def delete_integration(
+    request: Request,
     integration_id: UUID,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    request: Request = None
+    db: Session = Depends(get_db)
 ):
     """Delete an integration."""
     integration = db.query(UserIntegration).filter(
@@ -166,7 +176,9 @@ async def delete_integration(
 
 
 @router.post("/{integration_id}/test")
+@limiter.limit("10/minute")  # Restrictive for testing (can be resource-intensive)
 async def test_integration(
+    request: Request,
     integration_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

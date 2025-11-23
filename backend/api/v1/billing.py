@@ -1,6 +1,6 @@
 """Billing and subscription API endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from typing import Optional
 from uuid import UUID
@@ -11,6 +11,7 @@ from database.models import User, Subscription, SubscriptionPlan, BillingEvent
 from backend.monetization import SubscriptionManager, BillingManager
 from backend.stripe_integration import StripeIntegration
 from backend.security import get_current_user
+from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,9 @@ billing_router = APIRouter(prefix="/api/v1/billing", tags=["billing"])
 
 
 @billing_router.post("/subscribe")
+@limiter.limit("10/hour")  # Restrictive for payment operations
 async def subscribe(
+    request: Request,
     plan_id: UUID,
     billing_cycle: str = "monthly",
     current_user: User = Depends(get_current_user),
@@ -74,7 +77,9 @@ async def subscribe(
 
 
 @billing_router.post("/cancel")
+@limiter.limit("5/hour")  # Restrictive for cancellation
 async def cancel_subscription(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -113,7 +118,9 @@ async def cancel_subscription(
 
 
 @billing_router.get("/invoices")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_invoices(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     limit: int = 10,
@@ -154,7 +161,9 @@ async def get_invoices(
 
 
 @billing_router.get("/payment-methods")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_payment_methods(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -175,7 +184,9 @@ async def get_payment_methods(
 
 
 @billing_router.post("/payment-methods")
+@limiter.limit("10/hour")  # Restrictive for payment method operations
 async def add_payment_method(
+    request: Request,
     payment_method_id: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

@@ -1,10 +1,11 @@
 """Operational and monitoring API endpoints."""
 
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 from backend.operational_alignment import OperationalAlignment, OperationalMetrics
 from backend.kpi_alerts import KPIAlertSystem
 from backend.data_quality import DataQualityMonitor
@@ -16,7 +17,9 @@ router = APIRouter(prefix="/api/operational", tags=["operational"])
 
 
 @router.get("/alignment-score")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_alignment_score(
+    request: Request,
     days: int = 30,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -30,7 +33,9 @@ async def get_alignment_score(
 
 
 @router.get("/kpi-status")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_kpi_status(
+    request: Request,
     days: int = 30,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -44,7 +49,9 @@ async def get_kpi_status(
 
 
 @router.get("/priority-actions")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_priority_actions(
+    request: Request,
     days: int = 30,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -58,7 +65,9 @@ async def get_priority_actions(
 
 
 @router.get("/real-time-metrics")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")  # Can be polled frequently
 async def get_real_time_metrics(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -71,7 +80,9 @@ async def get_real_time_metrics(
 
 
 @router.get("/system-health")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")  # Can be polled frequently
 async def get_system_health(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -84,7 +95,9 @@ async def get_system_health(
 
 
 @router.get("/kpi-alerts")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def check_kpi_alerts(
+    request: Request,
     days: int = 30,
     send_email: bool = False,
     current_user: User = Depends(get_current_user),
@@ -99,7 +112,9 @@ async def check_kpi_alerts(
 
 
 @router.get("/data-quality")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def check_data_quality(
+    request: Request,
     days: int = 7,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -113,7 +128,9 @@ async def check_data_quality(
 
 
 @router.get("/daily-report")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_daily_report(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -126,7 +143,9 @@ async def get_daily_report(
 
 
 @router.get("/weekly-report")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_weekly_report(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -139,7 +158,9 @@ async def get_weekly_report(
 
 
 @router.post("/send-daily-report")
+@limiter.limit("5/hour")  # Very restrictive - email sending
 async def send_daily_report_email(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -152,7 +173,9 @@ async def send_daily_report_email(
 
 
 @router.post("/send-weekly-report")
+@limiter.limit("5/hour")  # Very restrictive - email sending
 async def send_weekly_report_email(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

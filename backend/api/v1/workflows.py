@@ -1,6 +1,6 @@
 """Workflow API endpoints."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from database import get_db
 from database.models import User, Workflow, WorkflowExecution
 from backend.security import get_current_user
+from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 import logging
 
 logger = logging.getLogger(__name__)
@@ -44,10 +45,12 @@ class WorkflowUpdate(BaseModel):
 
 
 @workflow_router.post("")
+@limiter.limit("20/hour")  # Restrictive for workflow creation
 async def create_workflow(
+    request: Request,
     workflow: WorkflowCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db)
 ):
     """Create a new workflow."""
     try:
@@ -81,7 +84,9 @@ async def create_workflow(
 
 
 @workflow_router.get("")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def list_workflows(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     limit: int = 20,
@@ -113,7 +118,9 @@ async def list_workflows(
 
 
 @workflow_router.get("/{workflow_id}")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_workflow(
+    request: Request,
     workflow_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -154,7 +161,9 @@ async def get_workflow(
 
 
 @workflow_router.put("/{workflow_id}")
+@limiter.limit("30/minute")
 async def update_workflow(
+    request: Request,
     workflow_id: UUID,
     workflow_update: WorkflowUpdate,
     current_user: User = Depends(get_current_user),
@@ -206,7 +215,9 @@ async def update_workflow(
 
 
 @workflow_router.delete("/{workflow_id}")
+@limiter.limit("10/hour")  # Restrictive for destructive operations
 async def delete_workflow(
+    request: Request,
     workflow_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -240,7 +251,9 @@ async def delete_workflow(
 
 
 @workflow_router.post("/execute")
+@limiter.limit("30/minute")  # Allow more frequent executions
 async def execute_workflow(
+    request: Request,
     workflow: WorkflowCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -305,7 +318,9 @@ async def execute_workflow(
 
 
 @workflow_router.post("/{workflow_id}/test")
+@limiter.limit("10/minute")  # Restrictive for testing
 async def test_workflow(
+    request: Request,
     workflow_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),

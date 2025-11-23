@@ -2,10 +2,11 @@
 
 from typing import Optional
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 from backend.monetization import SubscriptionManager, UsageTracker, PricingCalculator
 from backend.stripe_integration import StripeIntegration
 from backend.logging_config import get_logger
@@ -17,7 +18,9 @@ router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 
 @router.get("/plans")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_subscription_plans(
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -41,7 +44,9 @@ async def get_subscription_plans(
 
 
 @router.get("/subscription")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_subscription(
+    request: Request,
     organization_id: Optional[UUID] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -73,7 +78,9 @@ async def get_subscription(
 
 
 @router.post("/subscribe")
+@limiter.limit("10/hour")  # Restrictive for subscription creation
 async def create_subscription(
+    request: Request,
     plan_id: UUID,
     billing_cycle: str = "monthly",
     organization_id: Optional[UUID] = None,
@@ -92,7 +99,9 @@ async def create_subscription(
 
 
 @router.post("/subscription/{subscription_id}/cancel")
+@limiter.limit("5/hour")  # Restrictive for cancellation
 async def cancel_subscription(
+    request: Request,
     subscription_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -103,7 +112,9 @@ async def cancel_subscription(
 
 
 @router.get("/usage")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_usage(
+    request: Request,
     metric_type: str = "events",
     organization_id: Optional[UUID] = None,
     current_user: User = Depends(get_current_user),
@@ -140,7 +151,9 @@ async def get_usage(
 
 
 @router.get("/ltv-cac")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_ltv_cac(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -152,7 +165,9 @@ async def get_ltv_cac(
 
 
 @router.post("/stripe/subscribe")
+@limiter.limit("10/hour")  # Restrictive for payment operations
 async def create_stripe_subscription(
+    request: Request,
     plan_id: UUID,
     payment_method_id: Optional[str] = None,
     billing_cycle: str = "monthly",
@@ -181,7 +196,9 @@ async def create_stripe_subscription(
 
 
 @router.post("/stripe/subscription/{subscription_id}/cancel")
+@limiter.limit("5/hour")  # Restrictive for cancellation
 async def cancel_stripe_subscription(
+    request: Request,
     subscription_id: UUID,
     cancel_immediately: bool = False,
     current_user: User = Depends(get_current_user),

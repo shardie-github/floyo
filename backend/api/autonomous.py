@@ -1,10 +1,11 @@
 """Autonomous system management API endpoints."""
 
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 from backend.autonomous_engine import AutonomousEngine
 from backend.self_healing import SelfHealingEngine
 from backend.self_optimization import SelfOptimizationEngine
@@ -17,7 +18,9 @@ router = APIRouter(prefix="/api/autonomous", tags=["autonomous"])
 
 
 @router.get("/system-state")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_autonomous_system_state(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -30,7 +33,9 @@ async def get_autonomous_system_state(
 
 
 @router.post("/auto-remediate")
+@limiter.limit("5/hour")  # Very restrictive - admin operation
 async def auto_remediate_issues(
+    request: Request,
     dry_run: bool = True,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -44,7 +49,9 @@ async def auto_remediate_issues(
 
 
 @router.post("/self-optimize")
+@limiter.limit("5/hour")  # Very restrictive - admin operation
 async def self_optimize_system(
+    request: Request,
     optimization_type: str = "all",
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -58,7 +65,9 @@ async def self_optimize_system(
 
 
 @router.post("/run-cycle")
+@limiter.limit("5/hour")  # Very restrictive - admin operation
 async def run_autonomous_cycle(
+    request: Request,
     dry_run: bool = True,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -72,7 +81,9 @@ async def run_autonomous_cycle(
 
 
 @router.get("/decisions")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_autonomous_decisions(
+    request: Request,
     decision_type: str = "resource_allocation",
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -86,7 +97,9 @@ async def get_autonomous_decisions(
 
 
 @router.get("/learning")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_continuous_learning(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -99,7 +112,9 @@ async def get_continuous_learning(
 
 
 @router.post("/self-heal")
+@limiter.limit("5/hour")  # Very restrictive - admin operation
 async def trigger_self_healing(
+    request: Request,
     dry_run: bool = True,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -113,7 +128,9 @@ async def trigger_self_healing(
 
 
 @router.get("/optimization-opportunities")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_optimization_opportunities(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -126,7 +143,9 @@ async def get_optimization_opportunities(
 
 
 @router.post("/monitor-and-respond")
+@limiter.limit("5/hour")  # Very restrictive - admin operation
 async def monitor_and_respond(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -139,7 +158,9 @@ async def monitor_and_respond(
 
 
 @router.get("/ml/feedback")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_ml_feedback(
+    request: Request,
     days: int = 30,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -153,7 +174,9 @@ async def get_ml_feedback(
 
 
 @router.get("/ml/optimize-thresholds")
+@limiter.limit("5/hour")  # Very restrictive - admin operation
 async def optimize_ml_thresholds(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -166,7 +189,9 @@ async def optimize_ml_thresholds(
 
 
 @router.get("/ml/suggestion-quality")
+@limiter.limit("10/hour")  # Admin endpoint, restrictive
 async def get_suggestion_quality(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

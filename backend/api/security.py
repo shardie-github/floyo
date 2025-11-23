@@ -1,10 +1,11 @@
 """Security API endpoints."""
 
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 from backend.security import TwoFactorAuthManager, SecurityAuditor, InputSanitizer
 from backend.logging_config import get_logger
 from backend.auth.utils import get_current_user
@@ -15,7 +16,9 @@ router = APIRouter(prefix="/api/security", tags=["security"])
 
 
 @router.post("/2fa/setup")
+@limiter.limit("5/hour")  # Restrictive for security operations
 async def setup_2fa(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -43,7 +46,9 @@ async def setup_2fa(
 
 
 @router.post("/2fa/verify")
+@limiter.limit("10/minute")  # More restrictive to prevent brute force
 async def verify_and_enable_2fa(
+    request: Request,
     token: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -72,7 +77,9 @@ async def verify_and_enable_2fa(
 
 
 @router.post("/2fa/disable")
+@limiter.limit("5/hour")  # Restrictive for security operations
 async def disable_2fa(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -93,7 +100,9 @@ async def disable_2fa(
 
 
 @router.get("/2fa/status")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_2fa_status(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -111,7 +120,9 @@ async def get_2fa_status(
 
 
 @router.get("/audit")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_security_audit(
+    request: Request,
     severity: Optional[str] = None,
     limit: int = 100,
     current_user: User = Depends(get_current_user),
@@ -133,7 +144,9 @@ async def get_security_audit(
 
 
 @router.get("/suspicious-activity")
+@limiter.limit("10/hour")  # Restrictive for security checks
 async def check_suspicious_activity(
+    request: Request,
     time_window_minutes: int = 15,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -150,7 +163,9 @@ async def check_suspicious_activity(
 
 
 @router.post("/validate-password")
+@limiter.limit("30/minute")  # Can be called frequently during password setup
 async def validate_password_strength(
+    request: Request,
     password: str,
     db: Session = Depends(get_db)
 ):
