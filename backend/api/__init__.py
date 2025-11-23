@@ -23,9 +23,11 @@ from backend.monitoring import router as monitoring_router
 from backend.analytics import router as analytics_router
 from backend.endpoints.insights import router as insights_router
 from backend.api.privacy import router as privacy_router
+from backend.api.telemetry import router as telemetry_router
 from backend.guardian.api import router as guardian_router
 from backend.ml.api import router as ml_router
 from backend.api.v1 import billing_router as v1_billing_router, workflow_router as v1_workflow_router, workflow_automation_router
+from backend.api.v1 import v1_router
 from backend.notifications.api import router as notifications_router
 from backend.webhooks import router as webhook_router
 
@@ -49,8 +51,8 @@ def register_routes(app):
     # WebSocket routes (no prefix)
     app.include_router(websocket_router)
     
-    # Versioned API routes
-    app.include_router(api_v1_router)
+    # Versioned API routes (v1)
+    app.include_router(v1_router)
     
     # Legacy API routes
     app.include_router(api_router)
@@ -111,6 +113,9 @@ def register_routes(app):
     
     # Privacy routes
     app.include_router(privacy_router)
+    
+    # Telemetry routes
+    app.include_router(telemetry_router)
     
     # Guardian routes
     app.include_router(guardian_router)

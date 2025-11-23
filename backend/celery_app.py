@@ -17,6 +17,7 @@ celery_app = Celery(
         'backend.automated_reporting_job',
         'backend.kpi_alerts_job',
         'backend.autonomous_orchestrator_job',
+        'backend.jobs.pattern_detection',  # Pattern detection job
     ]
 )
 
@@ -85,6 +86,11 @@ celery_app.conf.beat_schedule = {
     'evaluate-ml-models': {
         'task': 'backend.ml.evaluator.evaluate_all_models',
         'schedule': crontab(hour=1, minute=0),  # 1 AM daily
+    },
+    # Pattern detection (every hour)
+    'detect-patterns': {
+        'task': 'pattern_detection.process_events',
+        'schedule': crontab(minute='*/30'),  # Every 30 minutes
     },
 }
 
