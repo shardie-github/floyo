@@ -39,8 +39,26 @@ class Logger {
 
     // In production, send to logging service (Sentry, Logtail, etc.)
     if (!this.isDevelopment) {
-      // TODO: Send to logging service
-      // Example: sendToLoggingService(logEntry);
+      // Send to Sentry if available
+      if (typeof window !== 'undefined' && (window as any).Sentry) {
+        const Sentry = (window as any).Sentry;
+        if (level === 'error') {
+          Sentry.captureException(new Error(message), { extra: context });
+        } else {
+          Sentry.captureMessage(message, { level, extra: context });
+        }
+      }
+      
+      // Send to API logging endpoint if available
+      if (typeof fetch !== 'undefined') {
+        fetch('/api/logging', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(logEntry),
+        }).catch(() => {
+          // Silently fail - logging should never break the app
+        });
+      }
     }
   }
 

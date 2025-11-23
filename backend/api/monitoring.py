@@ -4,6 +4,7 @@ Performance Monitoring API Endpoints
 Provides endpoints to view performance metrics.
 """
 
+from datetime import datetime
 from fastapi import APIRouter, Depends
 from backend.monitoring.performance import get_performance_monitor
 from backend.auth.utils import get_current_user
@@ -26,7 +27,7 @@ async def get_performance_metrics(
     
     return {
         "metrics": stats,
-        "timestamp": "2025-01-XXT00:00:00Z",  # TODO: Use actual timestamp
+        "timestamp": datetime.utcnow().isoformat() + "Z",
     }
 
 
