@@ -15,6 +15,7 @@ from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 from backend.auth.utils import get_current_user_optional, get_current_user
 from backend.logging_config import get_logger
 from backend.services.event_service import EventService
+from backend.monitoring.performance import measure_query
 from database.models import User, Event
 try:
     from backend.jobs.pattern_detection import trigger_pattern_detection
@@ -97,15 +98,16 @@ async def ingest_telemetry(
         # Use service layer for business logic
         event_service = EventService(db)
         
-        # Create event via service
-        db_event = event_service.create_event(
-            user_id=user_id,
-            event_type=event.type,
-            file_path=event.path,
-            tool=event.meta.get('tool') if event.meta else None,
-            operation=event.type,
-            details=event.meta,
-        )
+        # Create event via service (with query performance monitoring)
+        with measure_query("create_telemetry_event"):
+            db_event = event_service.create_event(
+                user_id=user_id,
+                event_type=event.type,
+                file_path=event.path,
+                tool=event.meta.get('tool') if event.meta else None,
+                operation=event.type,
+                details=event.meta,
+            )
         
         logger.info(
             f"Telemetry event ingested: user_id={user_id}, type={event.type}, "

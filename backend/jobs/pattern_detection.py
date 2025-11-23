@@ -82,24 +82,37 @@ def process_events_task(self, user_id: str = None, hours_back: int = 1):
                     min_frequency=3
                 )
                 
+                # Batch load existing patterns to avoid N+1 queries
+                file_extensions = [
+                    _extract_file_extension(p) for p in patterns
+                    if _extract_file_extension(p)
+                ]
+                
+                existing_patterns = {
+                    p.file_extension: p
+                    for p in db.query(Pattern).filter(
+                        Pattern.user_id == user_id,
+                        Pattern.file_extension.in_(file_extensions)
+                    ).all()
+                }
+                
                 # Update or create Pattern records
                 for pattern_data in patterns:
                     file_extension = _extract_file_extension(pattern_data)
                     if not file_extension:
                         continue
                     
-                    # Get or create pattern
-                    pattern = db.query(Pattern).filter(
-                        Pattern.user_id == user_id,
-                        Pattern.file_extension == file_extension
-                    ).first()
+                    # Get existing pattern from batch-loaded dict
+                    pattern = existing_patterns.get(file_extension)
                     
                     if pattern:
                         # Update existing pattern
                         pattern.count += pattern_data.get('frequency', 0)
                         pattern.last_used = datetime.utcnow()
                         if 'tools' in pattern_data:
-                            pattern.tools = list(set(pattern.tools + pattern_data['tools']))
+                            existing_tools = set(pattern.tools or [])
+                            new_tools = set(pattern_data.get('tools', []))
+                            pattern.tools = list(existing_tools | new_tools)
                         patterns_updated += 1
                     else:
                         # Create new pattern
@@ -112,6 +125,8 @@ def process_events_task(self, user_id: str = None, hours_back: int = 1):
                         )
                         db.add(pattern)
                         patterns_created += 1
+                        # Add to dict to avoid duplicates
+                        existing_patterns[file_extension] = pattern
                 
                 total_processed += len(user_events)
                 

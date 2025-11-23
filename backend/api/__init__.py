@@ -20,6 +20,7 @@ from backend.api.stats import router as stats_router
 from backend.api.billing import router as billing_router
 from backend.api.websocket import router as websocket_router
 from backend.monitoring import router as monitoring_router
+from backend.api.monitoring import router as performance_monitoring_router
 from backend.analytics import router as analytics_router
 from backend.endpoints.insights import router as insights_router
 from backend.api.privacy import router as privacy_router
@@ -104,6 +105,9 @@ def register_routes(app):
     
     # Monitoring routes
     app.include_router(monitoring_router)
+    
+    # Performance monitoring routes
+    app.include_router(performance_monitoring_router)
     
     # Analytics routes
     app.include_router(analytics_router)
