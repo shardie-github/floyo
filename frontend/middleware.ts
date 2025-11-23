@@ -3,21 +3,50 @@ import type { NextRequest } from 'next/server';
 import { shouldRouteToCanary } from '@/lib/flags';
 import { getCriticalEnvStatus } from '@/lib/env-health';
 
-// Simple user ID extraction for middleware (doesn't require full auth)
+/**
+ * Extract user ID from JWT token in request.
+ * 
+ * This is a lightweight extraction for feature flagging/canary routing.
+ * Full authentication validation happens in API routes.
+ */
 function getUserIdFromRequest(request: NextRequest): string | undefined {
-  // Try to get from cookie or header
+  // Try to get from Authorization header
   const authHeader = request.headers.get('authorization');
   if (authHeader?.startsWith('Bearer ')) {
-    // In production, decode JWT token here
-    // For now, return undefined (canary will work for authenticated users via API routes)
-    return undefined;
+    const token = authHeader.substring(7);
+    try {
+      // Decode JWT without verification (for feature flags only)
+      // Full verification happens in API routes
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(
+          Buffer.from(parts[1], 'base64url').toString('utf-8')
+        );
+        return payload.sub || payload.user_id || payload.id;
+      }
+    } catch (error) {
+      // Invalid token format - ignore for middleware purposes
+      // Full validation happens in API routes
+    }
   }
-  // Check cookie
+  
+  // Check session cookie (if using cookie-based auth)
   const sessionCookie = request.cookies.get('session');
   if (sessionCookie?.value) {
-    // In production, decode session token here
-    return undefined;
+    try {
+      // Try to decode session token
+      const parts = sessionCookie.value.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(
+          Buffer.from(parts[1], 'base64url').toString('utf-8')
+        );
+        return payload.sub || payload.user_id || payload.id;
+      }
+    } catch (error) {
+      // Invalid token format - ignore
+    }
   }
+  
   return undefined;
 }
 

@@ -73,7 +73,9 @@ try:
 finally:
     db_init.close()
 
-# FastAPI app
+# FastAPI app with graceful shutdown
+from backend.graceful_shutdown import lifespan
+
 app = FastAPI(
     title="Floyo API",
     description="""
@@ -124,7 +126,8 @@ app = FastAPI(
     },
     docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    openapi_url="/openapi.json",
+    lifespan=lifespan
 )
 
 # Setup middleware
