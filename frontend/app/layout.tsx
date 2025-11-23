@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google'
 import { Providers } from './providers'
 import { AnalyticsProvider } from './analytics-provider'
 import { PrivacyHUD } from '@/components/PrivacyHUD'
-import { ThemeProvider } from '@/components/ThemeProvider'
+import { ThemeInitializer } from '@/components/ThemeInitializer'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistration'
 import { PerformanceHUD } from '@/components/PerformanceHUD'
@@ -94,80 +94,79 @@ export default function RootLayout({
         <a href="#main" className="skip-link">
           Skip to content
         </a>
-        <ThemeProvider>
-          <Providers>
-            <AnalyticsProvider>
-              <IntegrationsLoader>
-                <header className="sticky top-0 z-50 backdrop-blur bg-bg/70 border-b border-border">
-                  <div className="container flex items-center justify-between h-14">
-                    <a href="/" className="font-bold">
-                      Hardonia
+        <Providers>
+          <ThemeInitializer />
+          <AnalyticsProvider>
+            <IntegrationsLoader>
+              <header className="sticky top-0 z-50 backdrop-blur bg-bg/70 border-b border-border">
+                <div className="container flex items-center justify-between h-14">
+                  <a href="/" className="font-bold">
+                    Hardonia
+                  </a>
+                  <nav aria-label="Primary" className="flex items-center gap-4">
+                    <a className="px-3 py-2 hover:underline" href="/shop">
+                      Shop
                     </a>
-                    <nav aria-label="Primary" className="flex items-center gap-4">
-                      <a className="px-3 py-2 hover:underline" href="/shop">
-                        Shop
+                    <a className="px-3 py-2 hover:underline" href="/about">
+                      About
+                    </a>
+                    <ThemeToggle />
+                  </nav>
+                </div>
+              </header>
+              <main id="main" className="container py-6">
+                {children}
+              </main>
+              <footer className="border-t border-border py-10 text-sm text-muted-foreground mt-auto">
+                <div className="container">
+                  {/* [STAKE+TRUST:BEGIN:footer_links] */}
+                  <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div>
+                      © {new Date().getFullYear()} Hardonia
+                    </div>
+                    <nav aria-label="Footer" className="flex flex-wrap gap-4">
+                      <a href="/privacy/policy" className="hover:underline">
+                        Privacy
                       </a>
-                      <a className="px-3 py-2 hover:underline" href="/about">
-                        About
+                      {/* Trust links - gated by feature flags in production */}
+                      {process.env.NEXT_PUBLIC_TRUST_STATUS_PAGE === 'true' && (
+                        <a href="/status" className="hover:underline">
+                          Status
+                        </a>
+                      )}
+                      {process.env.NEXT_PUBLIC_TRUST_HELP_CENTER === 'true' && (
+                        <a href="/help" className="hover:underline">
+                          Help
+                        </a>
+                      )}
+                      {process.env.NEXT_PUBLIC_TRUST_EXPORT === 'true' && (
+                        <a href="/account/export" className="hover:underline">
+                          Export Data
+                        </a>
+                      )}
+                      <a href="/trust" className="hover:underline">
+                        Trust & Transparency
                       </a>
-                      <ThemeToggle />
                     </nav>
                   </div>
-                </header>
-                <main id="main" className="container py-6">
-                  {children}
-                </main>
-                <footer className="border-t border-border py-10 text-sm text-muted-foreground mt-auto">
-                  <div className="container">
-                    {/* [STAKE+TRUST:BEGIN:footer_links] */}
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                      <div>
-                        © {new Date().getFullYear()} Hardonia
-                      </div>
-                      <nav aria-label="Footer" className="flex flex-wrap gap-4">
-                        <a href="/privacy/policy" className="hover:underline">
-                          Privacy
-                        </a>
-                        {/* Trust links - gated by feature flags in production */}
-                        {process.env.NEXT_PUBLIC_TRUST_STATUS_PAGE === 'true' && (
-                          <a href="/status" className="hover:underline">
-                            Status
-                          </a>
-                        )}
-                        {process.env.NEXT_PUBLIC_TRUST_HELP_CENTER === 'true' && (
-                          <a href="/help" className="hover:underline">
-                            Help
-                          </a>
-                        )}
-                        {process.env.NEXT_PUBLIC_TRUST_EXPORT === 'true' && (
-                          <a href="/account/export" className="hover:underline">
-                            Export Data
-                          </a>
-                        )}
-                        <a href="/trust" className="hover:underline">
-                          Trust & Transparency
-                        </a>
-                      </nav>
-                    </div>
-                    {/* [STAKE+TRUST:END:footer_links] */}
-                  </div>
-                </footer>
-                <PrivacyHUD />
-                <ServiceWorkerRegistration />
-                <PerformanceHUD />
-                <ConsentBanner />
-                <TelemetryBeacon />
-                <DiagnosticWorkflowTracker />
-                {/* [META:BEGIN:mounts] */}
-                {/* Example mounts — wire auth user ID + app meta in your layout or provider */}
-                {/* <meta name="x-app-id" content={process.env.NEXT_PUBLIC_APP_ID || 'generic'} /> */}
-                {/* <ConsentPanel /> */}
-                {/* <RecoDrawer userId="{AUTH_USER_ID}" /> */}
-                {/* [META:END:mounts] */}
-              </IntegrationsLoader>
-            </AnalyticsProvider>
-          </Providers>
-        </ThemeProvider>
+                  {/* [STAKE+TRUST:END:footer_links] */}
+                </div>
+              </footer>
+              <PrivacyHUD />
+              <ServiceWorkerRegistration />
+              <PerformanceHUD />
+              <ConsentBanner />
+              <TelemetryBeacon />
+              <DiagnosticWorkflowTracker />
+              {/* [META:BEGIN:mounts] */}
+              {/* Example mounts — wire auth user ID + app meta in your layout or provider */}
+              {/* <meta name="x-app-id" content={process.env.NEXT_PUBLIC_APP_ID || 'generic'} /> */}
+              {/* <ConsentPanel /> */}
+              {/* <RecoDrawer userId="{AUTH_USER_ID}" /> */}
+              {/* [META:END:mounts] */}
+            </IntegrationsLoader>
+          </AnalyticsProvider>
+        </Providers>
       </body>
     </html>
   )

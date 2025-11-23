@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useConsent } from "@/app/providers/consent-provider";
+import { useConsent } from "@/hooks/useConsent";
 import { HCaptchaIntegration } from "@/components/integrations/hCaptcha";
 import { LottiePlayerIntegration } from "@/components/integrations/LottiePlayer";
 import { CldImage } from "@/components/integrations/Cloudinary";

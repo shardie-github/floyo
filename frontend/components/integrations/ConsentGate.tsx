@@ -1,7 +1,7 @@
 "use client";
 import dynamic from "next/dynamic";
 import { PropsWithChildren } from "react";
-import { useConsent } from "@/app/providers/consent-provider";
+import { useConsent } from "@/hooks/useConsent";
 
 export default function ConsentGate({ requireKey, children }: PropsWithChildren<{ requireKey: "analytics"|"marketing"|"functional" }>) {
   const { consent } = useConsent();

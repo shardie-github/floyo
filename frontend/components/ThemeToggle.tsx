@@ -1,6 +1,6 @@
 "use client";
 
-import { useTheme } from "./ThemeProvider";
+import { useTheme } from "@/hooks/useTheme";
 import { Button } from "./ui/button";
 
 export function ThemeToggle() {

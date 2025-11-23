@@ -236,7 +236,17 @@ const nextConfig = {
   experimental: {
     // Enable next-intl compatibility
     optimizeCss: true,
-    optimizePackageImports: ['@mui/material', '@mui/icons-material', 'lodash'],
+    optimizePackageImports: [
+      '@mui/material',
+      '@mui/icons-material',
+      'lodash',
+      'recharts',
+      'framer-motion',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+    ],
   },
   
   // ISR revalidation default (can be overridden per route)
