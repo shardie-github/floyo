@@ -77,14 +77,32 @@ async def get_patterns(
             Pattern.user_id == str(current_user.id)
         ).all()
         
-        # Get event counts for each pattern
+        # Batch load event counts to avoid N+1 queries
+        # Get all file extensions from patterns
+        file_extensions = [p.file_extension for p in patterns]
+        
+        # Batch query event counts grouped by file extension
+        from sqlalchemy import func
+        event_counts_query = db.query(
+            Event.file_path,
+            func.count(Event.id).label('count')
+        ).filter(
+            Event.user_id == str(current_user.id),
+            Event.created_at >= cutoff_date
+        ).group_by(Event.file_path).all()
+        
+        # Build a map of file extension to event count
+        extension_event_map = {}
+        for file_path, count in event_counts_query:
+            # Extract extension from file path
+            if '.' in file_path:
+                ext = file_path.split('.')[-1].lower()
+                extension_event_map[ext] = extension_event_map.get(ext, 0) + count
+        
+        # Build pattern data with batch-loaded event counts
         pattern_data = []
         for pattern in patterns:
-            event_count = db.query(Event).filter(
-                Event.user_id == str(current_user.id),
-                Event.file_path.like(f'%{pattern.file_extension}'),
-                Event.created_at >= cutoff_date
-            ).count()
+            event_count = extension_event_map.get(pattern.file_extension.lower(), 0)
             
             pattern_data.append({
                 "id": str(pattern.id),
