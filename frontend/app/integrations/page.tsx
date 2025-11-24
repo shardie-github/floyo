@@ -226,6 +226,15 @@ export default function IntegrationsPage() {
         </div>
       </section>
 
+      {/* TikTok Ads Integration */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold mb-4">Advertising Integrations</h2>
+        <div className="space-y-4">
+          <TikTokAdsIntegration />
+          <MetaAdsIntegration />
+        </div>
+      </section>
+
       {/* Analytics Note */}
       <section className="mb-12 p-6 border rounded-lg bg-yellow-50 dark:bg-yellow-900/20">
         <h2 className="text-2xl font-semibold mb-4">Analytics Integrations</h2>

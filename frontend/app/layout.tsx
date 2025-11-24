@@ -12,6 +12,9 @@ import { IntegrationsLoader } from '@/components/integrations/IntegrationsLoader
 import { ConsentBanner } from '@/components/integrations/ConsentBanner'
 import { TelemetryBeacon } from '@/components/TelemetryBeacon'
 import { DiagnosticWorkflowTracker } from '@/components/DiagnosticWorkflowTracker'
+import { SkipLink } from '@/components/accessibility/SkipLink'
+import { OrganizationStructuredData, WebsiteStructuredData } from '@/lib/seo/structured-data'
+import { generateSEOMetadata } from '@/lib/seo/metadata'
 import { initSentry } from '@/lib/monitoring/sentry'
 
 // Initialize Sentry error tracking
