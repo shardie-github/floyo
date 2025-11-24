@@ -89,7 +89,15 @@
     "load-test": "bash scripts/run-load-tests.sh",
     "schedule-metrics-jobs": "bash scripts/schedule-metrics-jobs.sh",
     "verify-sprint-blockers": "tsx scripts/verify-sprint-blockers.ts",
-    "deploy:doctor": "tsx scripts/deploy-doctor.ts"
+    "deploy:doctor": "tsx scripts/deploy-doctor.ts",
+    "env:doctor": "tsx scripts/env-doctor.ts",
+    "verify:sentry": "tsx scripts/verify-sentry.ts",
+    "verify:posthog": "tsx scripts/verify-posthog.ts",
+    "seed:production": "tsx scripts/seed-production.ts",
+    "setup:dev": "tsx scripts/setup-dev.ts",
+    "clear-seed-data": "tsx scripts/clear-seed-data.ts",
+    "seed:run": "bash scripts/run-seed-and-migration.sh",
+    "migration:apply": "tsx scripts/apply-nps-migration.ts"
   },
   "dependencies": {
     "@octokit/rest": "^20.0.0",

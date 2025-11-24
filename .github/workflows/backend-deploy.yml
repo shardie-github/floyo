@@ -1,0 +1,148 @@
+name: Backend Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-deploy.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: backend-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt pytest pytest-asyncio
+
+      - name: Run tests
+        run: |
+          cd backend
+          pytest tests/unit/ -v --tb=short
+        continue-on-error: false
+
+  deploy:
+    name: Deploy Backend
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: |
+      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: "latest"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Validate required secrets
+        run: |
+          set -euo pipefail
+          echo "🔍 Validating required secrets..."
+          
+          MISSING_SECRETS=()
+          
+          if [ -z "${{ secrets.FLY_API_TOKEN }}" ] || [ "${{ secrets.FLY_API_TOKEN }}" == "" ]; then
+            MISSING_SECRETS+=("FLY_API_TOKEN")
+          fi
+          
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "❌ Missing required secrets: ${MISSING_SECRETS[*]}"
+            echo ""
+            echo "Please set the following secrets in GitHub:"
+            echo "  - Settings → Secrets and variables → Actions"
+            echo ""
+            for secret in "${MISSING_SECRETS[@]}"; do
+              echo "  - $secret"
+            done
+            echo ""
+            echo "See docs/backend-deployment.md for setup instructions."
+            exit 1
+          fi
+          
+          echo "✅ All required secrets are present"
+
+      - name: Deploy to Fly.io
+        run: |
+          set -euo pipefail
+          cd backend
+          
+          echo "🚀 Deploying backend to Fly.io..."
+          
+          # Check if fly.toml exists, if not, initialize
+          if [ ! -f "fly.toml" ]; then
+            echo "⚠️  fly.toml not found. Skipping deployment."
+            echo "   Create fly.toml and configure Fly.io app first."
+            echo "   See docs/backend-deployment.md for instructions."
+            exit 0
+          fi
+          
+          # Deploy
+          if flyctl deploy --remote-only; then
+            echo "✅ Backend deployed successfully"
+          else
+            echo "❌ Backend deployment failed"
+            echo ""
+            echo "Troubleshooting steps:"
+            echo "1. Verify FLY_API_TOKEN is valid"
+            echo "2. Check fly.toml configuration"
+            echo "3. Verify environment variables are set in Fly.io"
+            echo "4. Check Fly.io logs: fly logs"
+            exit 1
+          fi
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Health Check
+        run: |
+          set -euo pipefail
+          echo "🏥 Checking backend health..."
+          
+          # Get app URL from fly.toml or use default
+          APP_URL=$(grep -E '^app = ' backend/fly.toml 2>/dev/null | cut -d'"' -f2 || echo "")
+          
+          if [ -z "$APP_URL" ]; then
+            echo "⚠️  Could not determine app URL. Skipping health check."
+            exit 0
+          fi
+          
+          HEALTH_URL="https://${APP_URL}.fly.dev/api/health"
+          
+          echo "Checking: $HEALTH_URL"
+          
+          if curl -f -s "$HEALTH_URL" > /dev/null; then
+            echo "✅ Backend health check passed"
+          else
+            echo "⚠️  Backend health check failed (may be expected if app not configured)"
+            echo "   Verify deployment manually: curl $HEALTH_URL"
+            exit 0  # Non-blocking
+          fi
+
+      - name: Output deployment status
+        run: |
+          set -euo pipefail
+          echo "✅ Backend deployment workflow completed"
+          echo ""
+          echo "Next steps:"
+          echo "1. Verify deployment: fly status"
+          echo "2. Check logs: fly logs"
+          echo "3. Test health endpoint: curl https://<app-name>.fly.dev/api/health"

@@ -1,444 +1,447 @@
 # CI/CD Overview
 
-**Last Updated:** 2025-01-XX  
-**Purpose:** Complete CI/CD pipeline documentation and workflow audit
+**Generated:** 2025-01-XX  
+**Purpose:** Comprehensive guide to CI/CD workflows and processes
+
+## Overview
+
+This repository uses GitHub Actions for continuous integration and deployment. All workflows are located in `.github/workflows/`.
 
 ---
 
-## Executive Summary
+## Active Workflows
 
-**Total Workflows:** 41  
-**Required for Main:** 3 core workflows  
-**Optional/Supplementary:** 8 workflows  
-**Obsolete/Deprecated:** 30 workflows (need audit)
+### 1. Main CI Pipeline (`ci.yml`)
 
-**Status:** ✅ Core CI/CD is production-ready. Many workflows need consolidation or removal.
-
----
-
-## 1. Package Manager & Lockfile
-
-### Standardization ✅
-
-- **Package Manager**: npm (consistent across repo)
-- **Lockfile**: `package-lock.json` (root + frontend/)
-- **Node Version**: 20.x (pinned in `package.json` engines: `">=20 <21"`)
-- **Status**: ✅ Fully standardized, no conflicts
-
-### CI Usage
-
-All workflows use:
-- `npm ci` (deterministic installs)
-- Node 20 (pinned version)
-- Cache: `npm` (via `setup-node` action)
-
----
-
-## 2. Core CI/CD Workflows (Required)
-
-### ✅ `ci.yml` - Main CI Pipeline
-
-**Status:** ✅ **Required for main branch**
+**Purpose:** Core CI checks for all pull requests and pushes
 
 **Triggers:**
 - Pull requests to `main`
-- Push to `main`
+- Pushes to `main`
 
 **Jobs:**
-- `lint`: Python (ruff, black) + TypeScript (eslint) + Format check
-- `type-check`: Python (mypy) + TypeScript (tsc)
-- `test-fast`: Unit tests (Python pytest + Jest)
-- `build`: Frontend Next.js build
-- `coverage`: Coverage reports (non-blocking, continue-on-error)
-- `bundle-size`: Bundle size checks (non-blocking, continue-on-error)
+1. **Lint** - Python (ruff, black) + TypeScript (ESLint)
+2. **Type Check** - Python (mypy) + TypeScript (tsc)
+3. **Test Fast** - Unit tests (Python pytest + Jest)
+4. **Build** - Frontend Next.js build
+5. **Coverage** - Test coverage (non-blocking)
+6. **Bundle Size** - Bundle size check (non-blocking)
 
-**Purpose:** Quality gates (lint, typecheck, test, build)
+**Concurrency:** Cancels in-progress runs on new PR updates
 
-**Required for Branch Protection:** ✅ Yes
+**Status:** ✅ Active
 
 ---
 
-### ✅ `frontend-deploy.yml` - Primary Frontend Deployment
+### 2. Frontend Deployment (`frontend-deploy.yml`)
 
-**Status:** ✅ **Required for main branch** (PRIMARY deployment workflow)
+**Purpose:** Deploy frontend to Vercel (preview/production)
 
 **Triggers:**
-- Pull requests → Preview deployment
+- Pull requests to `main` → Preview deployment
 - Push to `main` → Production deployment
-- `workflow_dispatch` → Manual trigger
+- Manual (`workflow_dispatch`)
 
 **Jobs:**
-- `build-and-test`: Lint → Typecheck → Test → Build (blocks deployment)
-- `deploy`: Vercel deployment (preview for PRs, production for main)
-  - **Enhanced:** Secret validation, error handling, troubleshooting hints
+1. **Build and Test**
+   - Install dependencies
+   - Lint
+   - Run tests
+   - Type check
+   - Build Next.js
 
-**Purpose:** Automated frontend deployment to Vercel
+2. **Deploy**
+   - Validate secrets
+   - Determine environment (preview/production)
+   - Vercel pull configuration
+   - Vercel build
+   - Deploy to Vercel
+   - Comment PR with preview URL
 
-**Required for Branch Protection:** ✅ Yes (for production deployments)
+**Concurrency:** Single deployment per branch
 
-**Recent Fixes (2025-01-XX):**
-- ✅ Added secret validation step
-- ✅ Enhanced error handling for Vercel CLI commands
-- ✅ Improved troubleshooting messages
-- ✅ Fixed PR comment step conditions
-
-**Documentation:** 
-- See [deploy-strategy.md](./deploy-strategy.md) for deployment flow
-- See [vercel-troubleshooting.md](./vercel-troubleshooting.md) for troubleshooting
+**Status:** ✅ Active (Primary deployment workflow)
 
 ---
 
-### ✅ `supabase-migrate.yml` - Database Migrations
+### 3. Supabase Migrations (`supabase-migrate.yml`)
 
-**Status:** ✅ **Required for main branch** (when migrations exist)
+**Purpose:** Apply database migrations to Supabase
 
 **Triggers:**
-- Push to `main` (if migrations changed)
-- `workflow_dispatch` → Manual trigger
+- Push to `main`
+- Manual (`workflow_dispatch`)
 
-**Jobs:**
-- `migrate`: Applies Supabase migrations via CLI
+**Steps:**
+1. Checkout repository
+2. Setup Node.js
+3. Login to Supabase
+4. Link Supabase project
+5. Apply migrations (`supabase migration up`)
+6. Validate schema (`scripts/db-validate-schema.ts`)
 
-**Purpose:** Automated database migrations
+**Concurrency:** Single migration at a time (no cancellation)
 
-**Required for Branch Protection:** ⚠️ Optional (runs independently)
+**Status:** ✅ Active
 
-**Separation:** Runs independently from frontend deployments (decoupled)
+**⚠️ Important:** Migrations run independently of deployments. Ensure migrations are applied before deploying code that depends on schema changes.
 
 ---
 
-## 3. Supplementary Workflows (Optional but Useful)
+### 4. Preview PR (`preview-pr.yml`)
 
-### ✅ `preview-pr.yml` - PR Quality Gates
-
-**Status:** ✅ **Optional** (supplementary quality checks)
+**Purpose:** Additional quality gates (Lighthouse, Pa11y) for PRs
 
 **Triggers:**
 - Pull requests to `main`
-- `workflow_dispatch`
-
-**Purpose:** Additional quality checks (Lighthouse, Pa11y accessibility)
+- Manual (`workflow_dispatch`)
 
 **Jobs:**
-- `preview`: Typecheck → Lint → Build → Lighthouse → Pa11y → Deploy preview
+1. Typecheck & Lint
+2. Build Next.js
+3. Validate secrets
+4. Start server
+5. Lighthouse (mobile)
+6. Accessibility (Pa11y)
+7. Upload QA artifacts
+8. Supabase schema check (dry-run)
+9. Vercel preview deployment
+10. Comment PR with preview URL
 
-**Note:** Primary deployment handled by `frontend-deploy.yml`. This adds extra quality gates.
+**Status:** ✅ Active (Supplementary to `frontend-deploy.yml`)
 
-**Recent Fixes (2025-01-XX):**
-- ✅ Added secret validation step
-- ✅ Enhanced error handling for Vercel commands
-- ✅ Fixed comment step path handling
-
-**Required for Branch Protection:** ⚠️ Optional (non-blocking)
+**Note:** This workflow provides additional quality checks beyond the main frontend deployment.
 
 ---
 
-### ✅ `env-validation.yml` - Environment Variable Validation
+## Deprecated/Disabled Workflows
 
-**Status:** ✅ **Optional** (validates env var changes)
+### `deploy-main.yml`
+
+**Status:** ❌ Deprecated and Disabled
+
+**Reason:** Superseded by `frontend-deploy.yml`
+
+**Note:** Marked as deprecated with `if: false` to prevent accidental execution.
+
+---
+
+## Workflow Triggers
+
+### Pull Requests
 
 **Triggers:**
-- PRs/pushes when `.env.example`, `frontend/lib/env.ts`, or `backend/env_validator.py` change
+- `ci.yml` - CI checks
+- `frontend-deploy.yml` - Preview deployment
+- `preview-pr.yml` - Quality gates + preview
 
-**Purpose:** Validates environment variable configuration
+**Result:**
+- Preview deployments on Vercel
+- PR comments with preview URLs
+- CI checks must pass
 
-**Required for Branch Protection:** ⚠️ Optional
-
----
-
-### ✅ `env-smoke-test.yml` - Environment Smoke Test
-
-**Status:** ✅ **Optional** (manual trigger)
+### Push to Main
 
 **Triggers:**
-- Push to `main`/`master`
-- `workflow_dispatch`
-
-**Purpose:** Validates required environment variables exist in secrets
-
-**Required for Branch Protection:** ⚠️ Optional
-
----
-
-### ✅ `security-scan.yml` - Security Scanning
-
-**Status:** ✅ **Optional** (security checks)
-
-**Triggers:** (Need to check)
-
-**Purpose:** Security vulnerability scanning
-
-**Required for Branch Protection:** ⚠️ Optional (but recommended)
-
----
-
-### ✅ `performance-tests.yml` - Performance Testing
-
-**Status:** ✅ **Optional** (performance checks)
-
-**Triggers:** (Need to check)
-
-**Purpose:** Performance testing and benchmarking
-
-**Required for Branch Protection:** ⚠️ Optional
-
----
-
-## 4. Workflow Audit & Recommendations
-
-### Workflows Requiring Review
-
-**Total:** 41 workflows found
-
-**Categories:**
-
-#### ✅ Core (3 workflows) - Keep
-- `ci.yml` - Main CI pipeline
-- `frontend-deploy.yml` - Primary deployment
+- `ci.yml` - CI checks
+- `frontend-deploy.yml` - Production deployment
 - `supabase-migrate.yml` - Database migrations
 
-#### ✅ Supplementary (8 workflows) - Keep (Optional)
-- `preview-pr.yml` - PR quality gates
-- `env-validation.yml` - Env var validation
-- `env-smoke-test.yml` - Env smoke tests
-- `security-scan.yml` - Security scanning
-- `performance-tests.yml` - Performance tests
-- `privacy-ci.yml` - Privacy compliance
-- `wiring-check.yml` - Integration health
-- `vercel-guard.yml` - Vercel deployment guard
+**Result:**
+- Production deployment on Vercel
+- Database migrations applied
+- CI checks must pass
 
-#### ⚠️ Legacy/Deprecated (1 workflow) - Disabled
-- `deploy-main.yml` - **DISABLED** - Legacy production deploy (conflicted with `frontend-deploy.yml`, now disabled)
-  - **Status:** Disabled via `if: false` and removed `push` trigger
-  - **Reason:** Prevented conflicts with `frontend-deploy.yml`
-  - **Action:** Can be manually triggered but won't auto-run on push to main
+### Manual (`workflow_dispatch`)
 
-#### ❓ Unknown Purpose (27 workflows) - Audit Needed
-- `agent-runner.yml`
-- `backup-automation.yml`
-- `benchmarks.yml`
-- `bundle-analyzer.yml`
-- `canary-deploy.yml`
-- `ci-integration.yml`
-- `ci-intent-tests.yml`
-- `ci-performance.yml`
-- `data_quality.yml`
-- `docs-guard.yml`
-- `docs-pdf.yml`
-- `integration-audit.yml`
-- `meta-audit.yml`
-- `mobile.yml`
-- `nightly-etl.yml`
-- `on_failure_doctor.yml`
-- `openapi-generation.yml`
-- `post_deploy_verify.yml`
-- `project-governance.yml`
-- `status_pages.yml`
-- `system_health.yml`
-- `supabase_delta_apply.yml`
-- `systems-metrics.yml`
-- `telemetry.yml`
-- `ui-ingest.yml`
-- `unified-agent.yml`
-- `weekly-maint.yml`
+**Available for:**
+- `frontend-deploy.yml`
+- `supabase-migrate.yml`
+- `preview-pr.yml`
 
-**Recommendation:** Audit each workflow to determine if it's:
-1. **Active and needed** → Keep
-2. **Redundant** → Consolidate or remove
-3. **Obsolete** → Remove
-4. **Experimental** → Move to separate branch or disable
+**Use Case:** Re-run workflows, deploy specific branches, apply migrations manually
 
 ---
 
-## 5. Required GitHub Secrets
+## Required Secrets
 
-### For Vercel Deployment
+### GitHub Secrets
 
-| Secret | Purpose | Required For |
-|--------|---------|--------------|
-| `VERCEL_TOKEN` | Vercel API token | `frontend-deploy.yml`, `preview-pr.yml`, `deploy-main.yml` |
-| `VERCEL_ORG_ID` | Vercel organization ID | `frontend-deploy.yml`, `preview-pr.yml`, `deploy-main.yml` |
-| `VERCEL_PROJECT_ID` | Vercel project ID | `frontend-deploy.yml`, `preview-pr.yml`, `deploy-main.yml` |
+**Location:** GitHub → Settings → Secrets and variables → Actions
 
-### For Supabase Migrations
+**Required Secrets:**
 
-| Secret | Purpose | Required For |
-|--------|---------|--------------|
-| `SUPABASE_ACCESS_TOKEN` | Supabase CLI token | `supabase-migrate.yml`, `preview-pr.yml` |
-| `SUPABASE_PROJECT_REF` | Supabase project reference | `supabase-migrate.yml`, `preview-pr.yml` |
+| Secret | Used By | Purpose |
+|--------|---------|---------|
+| `VERCEL_TOKEN` | `frontend-deploy.yml`, `preview-pr.yml` | Vercel deployment authentication |
+| `VERCEL_ORG_ID` | `frontend-deploy.yml`, `preview-pr.yml` | Vercel organization ID |
+| `VERCEL_PROJECT_ID` | `frontend-deploy.yml`, `preview-pr.yml` | Vercel project ID |
+| `SUPABASE_ACCESS_TOKEN` | `supabase-migrate.yml`, `preview-pr.yml` | Supabase CLI authentication |
+| `SUPABASE_PROJECT_REF` | `supabase-migrate.yml`, `preview-pr.yml` | Supabase project reference |
 
-### For Environment Variables (Builds)
+**Optional Secrets:**
 
-| Secret | Purpose | Required For |
-|--------|---------|--------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL (public) | `ci.yml`, `frontend-deploy.yml` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (public) | `ci.yml`, `frontend-deploy.yml` |
+| Secret | Used By | Purpose |
+|--------|---------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | `ci.yml`, `frontend-deploy.yml` | Build-time env var (fallback) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `ci.yml`, `frontend-deploy.yml` | Build-time env var (fallback) |
+| `SUPABASE_DB_PASSWORD` | `preview-pr.yml` | Database password (if needed) |
 
-### Optional Secrets
-
-| Secret | Purpose | Required For |
-|--------|---------|--------------|
-| `DATABASE_URL` | PostgreSQL connection | `env-smoke-test.yml` (if used) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role | `env-smoke-test.yml` (if used) |
-| `SENTRY_DSN` | Error tracking | Various workflows (if used) |
-| `SLACK_WEBHOOK_URL` | Notifications | Various workflows (if used) |
-
-**See [env-and-secrets.md](./env-and-secrets.md) for complete mapping.**
+**Setup:** See `docs/env-and-secrets.md` for detailed instructions.
 
 ---
 
-## 6. Branch Protection Recommendations
+## Runtime Versions
 
-### Required Checks for `main` Branch
+### Node.js
+- **Version:** 20.x (pinned)
+- **Package Manager:** npm
+- **Lockfile:** `package-lock.json`
 
-**Minimum Required:**
-1. ✅ `ci.yml` - Main CI pipeline (lint, typecheck, test, build)
-2. ✅ `frontend-deploy.yml` - Frontend deployment (build-and-test job)
-
-**Recommended Additional:**
-3. ⚠️ `preview-pr.yml` - Quality gates (non-blocking, but useful)
-4. ⚠️ `security-scan.yml` - Security scanning (if configured)
-5. ⚠️ `supabase-migrate.yml` - Database migrations (if migrations exist)
-
-**Optional (Non-blocking):**
-- `env-validation.yml` - Env var validation
-- `performance-tests.yml` - Performance tests
-- `privacy-ci.yml` - Privacy compliance
-
-### Checks to Remove from Branch Protection
-
-**Obsolete (Already Disabled):**
-- `deploy-main.yml` - **DISABLED** - Conflicts with `frontend-deploy.yml`
-  - Removed from branch protection (workflow disabled via `if: false`)
-
-**If Other Workflows Become Obsolete:**
-- Mark as deprecated in workflow comments
-- Remove from branch protection rules
-- Document removal in this file
+### Python
+- **Version:** 3.11 (pinned)
+- **Package Manager:** pip
+- **Requirements:** `backend/requirements.txt`
 
 ---
 
-## 7. Deployment Flow
+## Build Process
 
-### Pull Request Flow
+### Frontend Build
 
-1. **PR Opened:**
-   - `ci.yml` → Quality checks (lint, typecheck, test, build)
-   - `frontend-deploy.yml` → Build & test → Deploy preview
-   - `preview-pr.yml` → Additional quality gates (Lighthouse, Pa11y)
-   - `env-validation.yml` → Validate env vars (if changed)
+**Command:** `npm run build` (in `frontend/` directory)
 
-2. **PR Comments:**
-   - Preview URL commented on PR (via `frontend-deploy.yml`)
-   - Quality reports uploaded as artifacts (via `preview-pr.yml`)
+**Steps:**
+1. Install dependencies (`npm ci`)
+2. Lint (`npm run lint`)
+3. Type check (`npm run type-check`)
+4. Tests (`npm test`)
+5. Build Next.js (`npm run build`)
 
-### Production Flow (`main` Branch)
+**Output:** `.next/` directory
 
-1. **Merge to `main`:**
-   - `ci.yml` → Quality checks (lint, typecheck, test, build)
-   - `frontend-deploy.yml` → Build & test → Deploy to production
-   - `supabase-migrate.yml` → Apply database migrations (if migrations changed)
-   - ~~`deploy-main.yml`~~ → **DISABLED** (no longer runs)
+**Environment Variables:**
+- `NEXT_PUBLIC_SUPABASE_URL` (required for build)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (required for build)
 
-2. **Post-Deploy:**
-   - `post_deploy_verify.yml` → Post-deployment verification (if configured)
-   - `env-smoke-test.yml` → Environment smoke tests (manual trigger)
+### Backend Build
 
----
+**Current Status:** ❌ No backend deployment workflow
 
-## 8. Standardization
+**Note:** Backend may be:
+- Deployed separately (not via GitHub Actions)
+- Not deployed (local development only)
+- Deployed manually
 
-### Node Version
-
-- **Pinned:** Node 20.x (`">=20 <21"` in `package.json` engines)
-- **CI:** All workflows use Node 20
-- **Status:** ✅ Consistent
-
-### Package Manager
-
-- **Manager:** npm (consistent across repo)
-- **CI Command:** `npm ci` (deterministic installs)
-- **Cache:** `npm` (via `setup-node` action)
-- **Status:** ✅ Consistent
-
-### Lockfile
-
-- **Files:** `package-lock.json` (root + frontend/)
-- **Conflicts:** None (no yarn.lock or pnpm-lock.yaml)
-- **Status:** ✅ Clean
+**Recommendation:** Document backend deployment process or create workflow.
 
 ---
 
-## 9. Deployment Reliability Improvements (2025-01-XX)
+## Deployment Strategy
 
-### Fixes Applied
-- [x] Added secret validation to `frontend-deploy.yml`
-- [x] Added secret validation to `preview-pr.yml`
-- [x] Disabled `deploy-main.yml` to prevent conflicts
-- [x] Enhanced error handling in deployment workflows
-- [x] Created `deploy-doctor` diagnostic script
-- [x] Created comprehensive troubleshooting documentation
+### Preview Deployments
 
-### New Documentation
-- [x] `docs/deploy-strategy.md` - Canonical deployment paths
-- [x] `docs/vercel-troubleshooting.md` - Troubleshooting guide
-- [x] `docs/deploy-reliability-plan.md` - Action plan and verification
-- [x] `docs/deploy-failure-postmortem-initial.md` - Failure analysis
+**Trigger:** Pull requests to `main`
 
-### Diagnostic Tools
-- [x] `scripts/deploy-doctor.ts` - Automated diagnostic checks
-- [x] `npm run deploy:doctor` - Run diagnostics locally
+**Workflow:** `frontend-deploy.yml`
 
----
+**Process:**
+1. Build and test
+2. Deploy to Vercel Preview
+3. Comment PR with preview URL
 
-## 10. Action Items
+**Environment:** Uses Vercel Preview environment variables
 
-### Immediate
-- [x] Document CI/CD overview
-- [x] Fix deployment workflows (secret validation, error handling)
-- [x] Disable conflicting workflows (`deploy-main.yml`)
-- [x] Create diagnostic tooling (`deploy-doctor`)
-- [x] Create troubleshooting documentation
-- [ ] Verify deployments work after fixes (create test PR, merge to main)
-- [ ] Update branch protection rules (remove `deploy-main.yml` if present)
+**URL Format:** `https://<project>-<hash>.vercel.app`
 
-### Short-Term
-- [ ] Audit remaining workflows (27 workflows need review)
-- [ ] Mark obsolete workflows as deprecated
-- [ ] Consolidate redundant workflows
-- [ ] Add workflow status badges to README
+### Production Deployments
 
-### Short-Term
-- [ ] Add workflow status badges to README
-- [ ] Create workflow runbook (troubleshooting guide)
-- [ ] Document workflow dependencies
-- [ ] Set up workflow notifications (Slack, email)
+**Trigger:** Push to `main`
 
-### Long-Term
-- [ ] Implement workflow monitoring/alerting
-- [ ] Optimize workflow performance (reduce CI time)
-- [ ] Add workflow cost tracking
-- [ ] Create workflow templates for new workflows
+**Workflow:** `frontend-deploy.yml`
+
+**Process:**
+1. Build and test
+2. Deploy to Vercel Production
+3. Output deployment URL
+
+**Environment:** Uses Vercel Production environment variables
+
+**URL Format:** `https://<project>.vercel.app` (or custom domain)
 
 ---
 
-## 11. References
+## Database Migrations
 
-### Deployment Documentation
-- [Deployment Strategy](./deploy-strategy.md) - Canonical deployment paths
-- [Vercel Troubleshooting](./vercel-troubleshooting.md) - Troubleshooting guide
-- [Deploy Reliability Plan](./deploy-reliability-plan.md) - Action plan and verification
-- [Deploy Failure Postmortem](./deploy-failure-postmortem-initial.md) - Failure analysis
+### Migration Workflow
 
-### Configuration Documentation
-- [Environment Variables](./env-and-secrets.md) - Environment variables guide
-- [Frontend Hosting Strategy](./frontend-hosting-strategy.md) - Hosting platform details
+**File:** `supabase-migrate.yml`
 
-### Other Documentation
-- [Backend Strategy](./backend-strategy.md)
-- [Stack Discovery](./stack-discovery.md)
+**Process:**
+1. Login to Supabase
+2. Link project
+3. Apply migrations (`supabase migration up`)
+4. Validate schema
+
+**Timing:** Runs independently of deployments
+
+**⚠️ Important:** 
+- Migrations run **before** deployments (on push to main)
+- Ensure migrations are applied before deploying code that depends on schema changes
+- Test migrations locally before pushing
+
+---
+
+## Quality Gates
+
+### Required Checks
+
+**Must Pass:**
+- Lint (Python + TypeScript)
+- Type check (Python + TypeScript)
+- Unit tests (Python + TypeScript)
+- Build (Frontend)
+
+**Optional Checks:**
+- Coverage (non-blocking)
+- Bundle size (non-blocking)
+- Lighthouse (in `preview-pr.yml`)
+- Accessibility (in `preview-pr.yml`)
+
+### Branch Protection
+
+**Recommended:** Protect `main` branch with:
+- Require status checks (lint, type-check, test, build)
+- Require up-to-date branches
+- Require pull request reviews
+
+---
+
+## Troubleshooting
+
+### Workflow Fails
+
+**Common Causes:**
+1. Missing secrets
+2. Build errors
+3. Test failures
+4. Migration failures
+
+**Steps:**
+1. Check workflow logs in GitHub Actions
+2. Verify secrets are set correctly
+3. Test locally: `npm run ci`
+4. Check for recent changes that might have broken CI
+
+### Deployment Fails
+
+**Common Causes:**
+1. Missing Vercel secrets
+2. Build errors
+3. Environment variable issues
+
+**Steps:**
+1. Check `frontend-deploy.yml` logs
+2. Verify Vercel secrets are set
+3. Check Vercel Dashboard → Environment Variables
+4. Test build locally: `cd frontend && npm run build`
+
+### Migration Fails
+
+**Common Causes:**
+1. Missing Supabase secrets
+2. Migration syntax errors
+3. Schema conflicts
+
+**Steps:**
+1. Check `supabase-migrate.yml` logs
+2. Verify Supabase secrets are set
+3. Test migrations locally: `supabase start && supabase migration up`
+4. Check migration file syntax
+
+---
+
+## Best Practices
+
+### 1. Keep Workflows Fast
+
+- Use caching (`cache: 'npm'`)
+- Run tests in parallel
+- Skip unnecessary checks
+
+### 2. Fail Fast
+
+- Run lint/type-check before tests
+- Run fast tests before slow tests
+- Use `continue-on-error: false` for critical checks
+
+### 3. Clear Error Messages
+
+- Validate secrets with helpful error messages
+- Provide troubleshooting links
+- Document common issues
+
+### 4. Security
+
+- Never commit secrets
+- Use GitHub Secrets
+- Rotate secrets regularly
+- Use least-privilege access
+
+### 5. Monitoring
+
+- Monitor workflow success rates
+- Track deployment frequency
+- Alert on failures
+
+---
+
+## Related Documentation
+
+- [Deploy Strategy](./deploy-strategy.md) - Deployment details
+- [Environment Variables](./env-and-secrets.md) - Secrets management
+- [Stack Discovery](./stack-discovery.md) - Overall architecture
+
+---
+
+## Quick Reference
+
+### Run CI Locally
+
+```bash
+# Full CI pipeline
+npm run ci
+
+# Individual checks
+npm run lint
+npm run type-check
+npm test
+npm run build
+```
+
+### Manual Deployment
+
+```bash
+# Preview
+cd frontend
+vercel deploy --prebuilt --token=$VERCEL_TOKEN
+
+# Production
+cd frontend
+vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+```
+
+### Manual Migration
+
+```bash
+# Apply migrations
+supabase migration up
+
+# Validate schema
+tsx scripts/db-validate-schema.ts
+```
 
 ---
 
 **Last Updated:** 2025-01-XX  
-**Status:** ✅ Core CI/CD Documented, Deployment Fixes Applied, Workflow Audit Needed
+**Maintained By:** Unified Background Agent

@@ -86,14 +86,30 @@ async function generateEvents(userId: string, count: number, daysBack: number) {
     });
   }
   
-  // Batch insert events
-  // Note: Adjust based on your Prisma schema
+  // Insert events using Prisma
   console.log(`Inserting ${events.length} events...`);
   
-  // For now, log the events (adjust based on your actual Event model)
-  console.log('Sample events generated:', events.slice(0, 5));
+  const createdEvents = [];
+  for (const eventData of events) {
+    try {
+      const event = await prisma.event.create({
+        data: {
+          userId: eventData.userId,
+          filePath: eventData.filePath,
+          eventType: eventData.eventType,
+          tool: eventData.tool,
+          timestamp: eventData.timestamp,
+          metadata: eventData.metadata,
+        },
+      });
+      createdEvents.push(event);
+    } catch (error) {
+      console.error(`Failed to create event:`, error);
+    }
+  }
   
-  return events;
+  console.log(`✓ Inserted ${createdEvents.length} events`);
+  return createdEvents;
 }
 
 async function generatePatterns(userId: string, events: any[]) {
@@ -122,8 +138,38 @@ async function generatePatterns(userId: string, events: any[]) {
     lastUsed: new Date(),
   }));
   
-  console.log(`Generated ${patterns.length} patterns`);
-  return patterns;
+  // Insert patterns using Prisma
+  const createdPatterns = [];
+  for (const patternData of patterns) {
+    try {
+      const pattern = await prisma.pattern.upsert({
+        where: {
+          userId_fileExtension: {
+            userId: patternData.userId,
+            fileExtension: patternData.fileExtension,
+          },
+        },
+        update: {
+          count: { increment: patternData.count },
+          lastUsed: patternData.lastUsed,
+          tools: patternData.tools,
+        },
+        create: {
+          userId: patternData.userId,
+          fileExtension: patternData.fileExtension,
+          count: patternData.count,
+          tools: patternData.tools,
+          lastUsed: patternData.lastUsed,
+        },
+      });
+      createdPatterns.push(pattern);
+    } catch (error) {
+      console.error(`Failed to create pattern for ${patternData.fileExtension}:`, error);
+    }
+  }
+  
+  console.log(`✓ Created/updated ${createdPatterns.length} patterns`);
+  return createdPatterns;
 }
 
 async function generateInsights(userId: string, patterns: any[]) {

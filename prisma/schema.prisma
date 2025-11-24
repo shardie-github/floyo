@@ -31,6 +31,7 @@ model User {
   utmTracks     UTMTrack[]
   cohorts       Cohort[]
   privacyPrefs  PrivacyPrefs?
+  npsSubmissions NPSSubmission[]
   
   @@index([email])
   @@map("users")
@@ -443,4 +444,21 @@ model MetricsLog {
   @@index([source])
   @@index([createdAt])
   @@map("metrics_log")
+}
+
+// NPS Submissions
+model NPSSubmission {
+  id          String   @id @default(uuid())
+  userId      String
+  score       Int      // 0-10
+  feedback    String?
+  category    String   // promoter, passive, detractor
+  submittedAt DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([submittedAt])
+  @@index([category])
+  @@map("nps_submissions")
 }
