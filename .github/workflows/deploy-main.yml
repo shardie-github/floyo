@@ -1,23 +1,29 @@
 name: Main Deploy (Vercel Production)
 
-# ⚠️ DEPRECATED: This workflow is deprecated in favor of frontend-deploy.yml
-# This workflow is kept for backward compatibility and includes additional smoke tests.
-# Consider migrating to frontend-deploy.yml for all deployments.
-
-# NOTE: This workflow has been updated to remove Supabase migrations.
-# Supabase migrations are handled separately by supabase-migrate.yml workflow.
-# The primary frontend deployment workflow is frontend-deploy.yml.
-# This workflow is kept for backward compatibility and includes additional smoke tests.
+# ⚠️ DEPRECATED: This workflow is DISABLED in favor of frontend-deploy.yml
+# 
+# This workflow has been disabled to prevent conflicts with frontend-deploy.yml.
+# All deployments (Preview and Production) are now handled by frontend-deploy.yml.
+#
+# If you need the smoke tests from this workflow, they should be moved to:
+# - frontend-deploy.yml (for production deployments)
+# - A separate smoke-test workflow
+#
+# To re-enable this workflow, remove the workflow_disable: true line below.
+# However, this is NOT RECOMMENDED as it will cause duplicate deployments.
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    # DISABLED: push to main now handled by frontend-deploy.yml
+    # push:
+    #   branches: [main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: production
+    # DISABLED: This workflow is deprecated
+    if: false
     concurrency:
       group: prod-deploy
       cancel-in-progress: false

@@ -109,6 +109,41 @@ jobs:
           cd frontend
           npm ci
 
+      - name: Validate required secrets
+        run: |
+          set -euo pipefail
+          echo "🔍 Validating required secrets..."
+          
+          MISSING_SECRETS=()
+          
+          if [ -z "$VERCEL_TOKEN" ] || [ "$VERCEL_TOKEN" == "" ]; then
+            MISSING_SECRETS+=("VERCEL_TOKEN")
+          fi
+          
+          if [ -z "$VERCEL_ORG_ID" ] || [ "$VERCEL_ORG_ID" == "" ]; then
+            MISSING_SECRETS+=("VERCEL_ORG_ID")
+          fi
+          
+          if [ -z "$VERCEL_PROJECT_ID" ] || [ "$VERCEL_PROJECT_ID" == "" ]; then
+            MISSING_SECRETS+=("VERCEL_PROJECT_ID")
+          fi
+          
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "❌ Missing required secrets: ${MISSING_SECRETS[*]}"
+            echo ""
+            echo "Please set the following secrets in GitHub:"
+            echo "  - Settings → Secrets and variables → Actions"
+            echo ""
+            for secret in "${MISSING_SECRETS[@]}"; do
+              echo "  - $secret"
+            done
+            echo ""
+            echo "See docs/env-and-secrets.md for setup instructions."
+            exit 1
+          fi
+          
+          echo "✅ All required secrets are present"
+
       - name: Install Vercel CLI
         run: |
           set -euo pipefail
@@ -125,18 +160,68 @@ jobs:
             echo "environment=production" >> $GITHUB_OUTPUT
             echo "is_production=true" >> $GITHUB_OUTPUT
           fi
+          
+          # Validate env step succeeded
+          if [ -z "${{ steps.env.outputs.environment }}" ]; then
+            echo "❌ Failed to determine deployment environment"
+            exit 1
+          fi
+          
+          echo "✅ Deployment environment: ${{ steps.env.outputs.environment }}"
 
       - name: Vercel Pull
         run: |
           set -euo pipefail
           cd frontend
-          vercel pull --yes --environment=${{ steps.env.outputs.environment }} --token="$VERCEL_TOKEN"
+          
+          echo "📥 Pulling Vercel configuration for ${{ steps.env.outputs.environment }} environment..."
+          
+          if ! vercel pull --yes --environment=${{ steps.env.outputs.environment }} --token="$VERCEL_TOKEN"; then
+            echo "❌ Failed to pull Vercel configuration"
+            echo ""
+            echo "Troubleshooting steps:"
+            echo "1. Verify VERCEL_TOKEN is valid (Vercel Dashboard → Account → Tokens)"
+            echo "2. Verify VERCEL_ORG_ID matches your Vercel organization"
+            echo "3. Verify VERCEL_PROJECT_ID matches your Vercel project"
+            echo "4. Check that Vercel Git Integration is disabled (Settings → Git)"
+            echo ""
+            echo "See docs/vercel-troubleshooting.md for more details."
+            exit 1
+          fi
+          
+          echo "✅ Vercel configuration pulled successfully"
 
       - name: Vercel Build
         run: |
           set -euo pipefail
           cd frontend
-          vercel build --token="$VERCEL_TOKEN"
+          
+          echo "🔨 Building with Vercel CLI..."
+          
+          # Warn if build env vars are missing (but don't fail - they may be in Vercel Dashboard)
+          if [ -z "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" ] || [ "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" == "" ]; then
+            echo "⚠️  WARNING: NEXT_PUBLIC_SUPABASE_URL secret not set"
+            echo "   Build may fail if not set in Vercel Dashboard → Environment Variables"
+          fi
+          
+          if [ -z "${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" ] || [ "${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" == "" ]; then
+            echo "⚠️  WARNING: NEXT_PUBLIC_SUPABASE_ANON_KEY secret not set"
+            echo "   Build may fail if not set in Vercel Dashboard → Environment Variables"
+          fi
+          
+          if ! vercel build --token="$VERCEL_TOKEN"; then
+            echo "❌ Vercel build failed"
+            echo ""
+            echo "Common causes:"
+            echo "1. Missing environment variables (check Vercel Dashboard → Environment Variables)"
+            echo "2. Build errors in Next.js code"
+            echo "3. Missing dependencies or lockfile issues"
+            echo ""
+            echo "See docs/vercel-troubleshooting.md for more details."
+            exit 1
+          fi
+          
+          echo "✅ Vercel build completed successfully"
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
@@ -184,7 +269,7 @@ jobs:
           fi
 
       - name: Comment PR with Preview URL
-        if: github.event_name == 'pull_request' && steps.env.outputs.is_production == 'false'
+        if: github.event_name == 'pull_request' && steps.env.outputs.is_production == 'false' && steps.env.outputs.environment == 'preview'
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           recreate: true
@@ -195,6 +280,8 @@ jobs:
             Your changes have been deployed to Vercel Preview:
             
             **Preview URL:** ${{ env.DEPLOY_URL }}
+            
+            > This preview uses Preview environment variables from Vercel Dashboard.
 
       - name: Output deployment URL
         run: |
