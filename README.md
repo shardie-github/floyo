@@ -305,39 +305,71 @@ See [ENVIRONMENT.md](./ENVIRONMENT.md) for complete variable reference.
 
 ---
 
+## CI/CD Overview
+
+- **Frontend**: Deployed via GitHub Actions to Vercel (Preview for PRs, Production for `main`)
+- **Database (Supabase)**: Migrations are applied via GitHub Actions using the Supabase CLI
+- **No local CLI required**: Everything runs in GitHub Actions - no need to install Vercel or Supabase CLI locally
+
+### Workflows
+
+- **`frontend-deploy.yml`**: Primary frontend CI/CD workflow - runs quality checks and deploys to Vercel
+- **`ci.yml`**: Main CI pipeline - lint, typecheck, tests, build
+- **`supabase-migrate.yml`**: Database migrations workflow - applies Supabase migrations
+- **`preview-pr.yml`**: Additional quality gates (Lighthouse, Pa11y) for PRs
+
+See:
+- [docs/frontend-deploy-vercel-ci.md](docs/frontend-deploy-vercel-ci.md) - Detailed frontend deployment guide
+- [docs/ci-overview.md](docs/ci-overview.md) - Complete CI/CD pipeline documentation
+
+---
+
 ## Deployment
 
 ### Vercel Deployment
 
-1. **Connect repository to Vercel**
-   - Go to Vercel Dashboard
-   - Import repository
-   - Configure build settings (already in `vercel.json`)
+**Automated via GitHub Actions** - No local CLI required!
 
-2. **Set environment variables**
+1. **Set up GitHub Secrets** (one-time setup):
+   - `VERCEL_TOKEN` - Get from [Vercel Dashboard → Tokens](https://vercel.com/account/tokens)
+   - `VERCEL_ORG_ID` - Get from Vercel Dashboard → Organization Settings
+   - `VERCEL_PROJECT_ID` - Get from Vercel Dashboard → Project Settings
+
+2. **Set environment variables in Vercel Dashboard**:
    - Add all required variables from [ENVIRONMENT.md](./ENVIRONMENT.md)
    - Set different values for Production/Preview/Development
 
-3. **Deploy**
-   - Push to `main` branch for production
-   - Create pull request for preview deployment
+3. **Deploy**:
+   - **Preview**: Create a pull request → automatically deploys preview environment
+   - **Production**: Merge to `main` → automatically deploys to production
+
+**See [docs/frontend-deploy-vercel-ci.md](docs/frontend-deploy-vercel-ci.md) for complete setup instructions.**
 
 ### Database Migrations
 
-Migrations are managed via Supabase:
+**Automated via GitHub Actions** - No local CLI required!
 
+Migrations are applied automatically via the `supabase-migrate.yml` workflow when:
+- Code is merged to `main` branch, or
+- Manually triggered via GitHub Actions UI
+
+**Required GitHub Secrets**:
+- `SUPABASE_ACCESS_TOKEN` - Get from [Supabase Dashboard → Access Tokens](https://supabase.com/dashboard/account/tokens)
+- `SUPABASE_PROJECT_REF` - Your Supabase project reference ID
+
+**Local development** (optional):
 ```bash
 # Create new migration
 supabase migration new <migration-name>
 
-# Apply migrations
+# Apply migrations locally
 supabase db push
 
 # Check migration status
 supabase db remote commit --dry-run
 ```
 
-**CI/CD Migrations**: This repo uses a GitHub Actions workflow to apply Supabase migrations against project `ilspfaxjiquzreszitjm`. See [docs/supabase-migrations-ci.md](docs/supabase-migrations-ci.md) for setup and usage details.
+**See [docs/supabase-migrations-ci.md](docs/supabase-migrations-ci.md) for CI setup details.**
 
 ---
 

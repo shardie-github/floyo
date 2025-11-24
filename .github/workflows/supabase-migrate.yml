@@ -35,9 +35,13 @@ jobs:
 
       - name: Link Supabase project
         env:
-          SUPABASE_PROJECT_REF: ilspfaxjiquzreszitjm
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
           set -euo pipefail
+          if [ -z "$SUPABASE_PROJECT_REF" ]; then
+            echo "Error: SUPABASE_PROJECT_REF secret is not set"
+            exit 1
+          fi
           npx supabase@latest link --project-ref "$SUPABASE_PROJECT_REF"
 
       - name: Apply migrations

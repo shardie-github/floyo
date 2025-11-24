@@ -4,6 +4,9 @@
   "private": true,
   "description": "Floyo - File usage pattern tracking and integration suggestions",
   "type": "module",
+  "engines": {
+    "node": ">=20 <21"
+  },
   "scripts": {
     "ops": "tsx ops/cli.ts",
     "ops:doctor": "npm run ops doctor",

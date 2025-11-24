@@ -1,0 +1,212 @@
+name: Frontend CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  NODE_ENV: production
+  NEXT_TELEMETRY_DISABLED: 1
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: |
+          set -euo pipefail
+          npm ci
+
+      - name: Install frontend dependencies
+        run: |
+          set -euo pipefail
+          cd frontend
+          npm ci
+
+      - name: Run lint
+        run: |
+          set -euo pipefail
+          cd frontend
+          npm run lint
+
+      - name: Run tests
+        run: |
+          set -euo pipefail
+          cd frontend
+          npm test
+        continue-on-error: false
+
+      - name: Run typecheck
+        run: |
+          set -euo pipefail
+          cd frontend
+          npm run typecheck
+
+      - name: Build Next.js
+        run: |
+          set -euo pipefail
+          cd frontend
+          npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+
+  deploy:
+    name: Deploy to Vercel
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: |
+      (github.event_name == 'pull_request' && github.event.action != 'closed') ||
+      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+      github.event_name == 'workflow_dispatch'
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install root dependencies
+        run: |
+          set -euo pipefail
+          npm ci
+
+      - name: Install frontend dependencies
+        run: |
+          set -euo pipefail
+          cd frontend
+          npm ci
+
+      - name: Install Vercel CLI
+        run: |
+          set -euo pipefail
+          npm install -g vercel@latest
+
+      - name: Determine environment
+        id: env
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "environment=preview" >> $GITHUB_OUTPUT
+            echo "is_production=false" >> $GITHUB_OUTPUT
+          else
+            echo "environment=production" >> $GITHUB_OUTPUT
+            echo "is_production=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Vercel Pull
+        run: |
+          set -euo pipefail
+          cd frontend
+          vercel pull --yes --environment=${{ steps.env.outputs.environment }} --token="$VERCEL_TOKEN"
+
+      - name: Vercel Build
+        run: |
+          set -euo pipefail
+          cd frontend
+          vercel build --token="$VERCEL_TOKEN"
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+
+      - name: Deploy to Vercel (Preview)
+        if: steps.env.outputs.is_production == 'false'
+        run: |
+          set -euo pipefail
+          cd frontend
+          DEPLOY_OUTPUT=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN" --prod=false 2>&1)
+          echo "$DEPLOY_OUTPUT"
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[^\s]+\.vercel\.app[^\s]*' | head -1 || echo "")
+          if [ -z "$DEPLOY_URL" ]; then
+            # Fallback: try to extract any URL
+            DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[^\s]+' | head -1 || echo "")
+          fi
+          if [ -n "$DEPLOY_URL" ]; then
+            echo "Preview URL: $DEPLOY_URL"
+            echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
+            echo "$DEPLOY_URL" > .vercel-preview-url.txt
+          else
+            echo "⚠️ Could not extract preview URL from deployment output"
+            exit 1
+          fi
+
+      - name: Deploy to Vercel (Production)
+        if: steps.env.outputs.is_production == 'true'
+        run: |
+          set -euo pipefail
+          cd frontend
+          DEPLOY_OUTPUT=$(vercel deploy --prebuilt --token="$VERCEL_TOKEN" --prod=true 2>&1)
+          echo "$DEPLOY_OUTPUT"
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[^\s]+\.vercel\.app[^\s]*' | head -1 || echo "")
+          if [ -z "$DEPLOY_URL" ]; then
+            # Fallback: try to extract any URL
+            DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[^\s]+' | head -1 || echo "")
+          fi
+          if [ -n "$DEPLOY_URL" ]; then
+            echo "Production URL: $DEPLOY_URL"
+            echo "DEPLOY_URL=$DEPLOY_URL" >> $GITHUB_ENV
+            echo "$DEPLOY_URL" > .vercel-production-url.txt
+          else
+            echo "⚠️ Could not extract production URL from deployment output"
+            exit 1
+          fi
+
+      - name: Comment PR with Preview URL
+        if: github.event_name == 'pull_request' && steps.env.outputs.is_production == 'false'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          recreate: true
+          path: frontend/.vercel-preview-url.txt
+          message: |
+            ## 🚀 Preview Deployment
+            
+            Your changes have been deployed to Vercel Preview:
+            
+            **Preview URL:** ${{ env.DEPLOY_URL }}
+
+      - name: Output deployment URL
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.env.outputs.is_production }}" == "true" ]; then
+            echo "✅ Production deployment completed"
+            if [ -f frontend/.vercel-production-url.txt ]; then
+              echo "Production URL: $(cat frontend/.vercel-production-url.txt)"
+            fi
+          else
+            echo "✅ Preview deployment completed"
+            if [ -f frontend/.vercel-preview-url.txt ]; then
+              echo "Preview URL: $(cat frontend/.vercel-preview-url.txt)"
+            fi
+          fi

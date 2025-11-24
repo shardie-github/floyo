@@ -1,4 +1,9 @@
-name: Main Deploy (DB migrate + Vercel Prod)
+name: Main Deploy (Vercel Production)
+
+# NOTE: This workflow has been updated to remove Supabase migrations.
+# Supabase migrations are handled separately by supabase-migrate.yml workflow.
+# The primary frontend deployment workflow is frontend-deploy.yml.
+# This workflow is kept for backward compatibility and includes additional smoke tests.
 
 on:
   push:
@@ -38,17 +43,8 @@ jobs:
       - name: Build Next.js
         run: npm run build
 
-      - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
-
-      - name: Supabase Login & Link
-        run: |
-          npm run supa:login
-          npm run supa:link
-
-      - name: Apply Supabase Migrations (Prod)
-        run: |
-          npm run supa:migrate:apply
+      # NOTE: Supabase migrations are handled separately by supabase-migrate.yml workflow
+      # This ensures deployments and migrations are decoupled and can be run independently
 
       # [CRUX+HARDEN:BEGIN:smoke]
       - name: CRUX Harden Smoke

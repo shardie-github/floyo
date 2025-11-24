@@ -48,6 +48,9 @@ jobs:
         run: |
           cd frontend
           npm run lint || exit 1
+
+      - name: Format check (TypeScript + Python)
+        run: |
           npm run format:check || exit 1
 
   type-check:
