@@ -2,9 +2,10 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState, useEffect } from 'react'
-import { NotificationProvider } from '@/components/NotificationProvider'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { I18nProvider } from '@/components/I18nProvider'
+import { NotificationContainer } from '@/components/NotificationContainer'
+import { ThemeInitializer } from '@/components/ThemeInitializer'
+import { I18nInitializer } from '@/components/I18nInitializer'
 import { WebVitalsTracker } from '@/components/WebVitalsTracker'
 import { initBackgroundSync } from '@/lib/backgroundSync'
 import { initOfflineDB } from '@/lib/offline'
@@ -41,14 +42,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <ErrorBoundary>
-      <I18nProvider>
-        <QueryClientProvider client={queryClient}>
-          <NotificationProvider>
-            <WebVitalsTracker />
-            {children}
-          </NotificationProvider>
-        </QueryClientProvider>
-      </I18nProvider>
+      <QueryClientProvider client={queryClient}>
+        <ThemeInitializer />
+        <I18nInitializer />
+        <NotificationContainer />
+        <WebVitalsTracker />
+        {children}
+      </QueryClientProvider>
     </ErrorBoundary>
   )
 }

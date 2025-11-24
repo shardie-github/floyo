@@ -7,6 +7,11 @@
 -- ============================================================================
 
 -- Events table performance indexes
+-- Critical composite index for common query pattern: userId + timestamp
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_user_timestamp 
+ON events("userId", timestamp DESC) 
+WHERE "userId" IS NOT NULL;
+
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_user_id_event_type 
 ON events("userId", "eventType") 
 WHERE "userId" IS NOT NULL;
@@ -20,6 +25,11 @@ ON events("filePath" text_pattern_ops)
 WHERE "filePath" IS NOT NULL;
 
 -- Patterns table performance indexes
+-- Critical composite index for common query pattern: userId + updatedAt
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_patterns_user_updated 
+ON patterns("userId", "updatedAt" DESC) 
+WHERE "userId" IS NOT NULL;
+
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_patterns_user_extension 
 ON patterns("userId", "fileExtension") 
 WHERE "userId" IS NOT NULL;
@@ -29,6 +39,11 @@ ON patterns("lastUsed" DESC)
 WHERE "lastUsed" IS NOT NULL;
 
 -- Relationships table performance indexes
+-- Critical composite index for common query pattern: userId + lastSeen
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_relationships_user_lastseen 
+ON relationships("userId", "lastSeen" DESC) 
+WHERE "userId" IS NOT NULL;
+
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_relationships_user_weight 
 ON relationships("userId", weight DESC) 
 WHERE "userId" IS NOT NULL;

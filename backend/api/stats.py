@@ -11,6 +11,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 from backend.audit import log_audit, get_audit_logs as query_audit_logs
 from backend.auth.utils import get_current_user
 from backend.auth.analytics_helpers import check_user_activation, get_user_retention_metrics
@@ -24,7 +25,9 @@ router = APIRouter(prefix="/api", tags=["stats"])
 
 
 @router.get("/stats")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_stats(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -52,7 +55,9 @@ async def get_stats(
 
 
 @router.get("/analytics/activation")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_activation_status(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -67,7 +72,9 @@ async def get_activation_status(
 
 
 @router.get("/analytics/funnel")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_funnel_metrics_endpoint(
+    request: Request,
     days: int = 30,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -84,7 +91,9 @@ async def get_funnel_metrics_endpoint(
 
 
 @router.get("/config")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_config(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -107,7 +116,9 @@ async def get_config(
 
 
 @router.put("/config")
+@limiter.limit("30/minute")
 async def update_config(
+    request: Request,
     config_data: dict,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -128,7 +139,9 @@ async def update_config(
 
 
 @router.get("/data/export")
+@limiter.limit("5/hour")  # More restrictive for data export
 async def export_all_data(
+    request: Request,
     format: str = "zip",  # zip or json
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -247,7 +260,9 @@ async def export_all_data(
 
 
 @router.post("/data/sample")
+@limiter.limit("10/hour")  # Restrictive for sample data generation
 async def generate_sample_data(
+    request: Request,
     events_count: int = 20,
     suggestions_count: int = 5,
     current_user: User = Depends(get_current_user),
@@ -268,7 +283,9 @@ async def generate_sample_data(
 
 
 @router.delete("/data/delete")
+@limiter.limit("1/hour")  # Very restrictive - destructive operation
 async def delete_all_data(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -299,7 +316,9 @@ async def delete_all_data(
 
 
 @router.post("/data/retention/cleanup")
+@limiter.limit("5/hour")
 async def cleanup_user_data(
+    request: Request,
     dry_run: bool = True,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -321,7 +340,9 @@ async def cleanup_user_data(
 
 
 @router.get("/audit-logs")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_audit_logs(
+    request: Request,
     organization_id: Optional[UUID] = None,
     limit: int = 100,
     offset: int = 0,

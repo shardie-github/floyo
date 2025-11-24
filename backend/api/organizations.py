@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 from backend.organizations import (
     create_organization, get_user_organizations, get_organization_members
 )
@@ -17,11 +18,12 @@ router = APIRouter(prefix="/api/organizations", tags=["organizations"])
 
 
 @router.post("", response_model=OrganizationResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("10/hour")  # Restrictive for organization creation
 async def create_org(
+    request: Request,
     org_data: OrganizationCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-    request: Request = None
+    db: Session = Depends(get_db)
 ):
     """
     Create a new organization.
@@ -39,7 +41,9 @@ async def create_org(
 
 
 @router.get("", response_model=List[OrganizationResponse])
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def list_organizations(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -49,7 +53,9 @@ async def list_organizations(
 
 
 @router.get("/{org_id}/members")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def list_org_members(
+    request: Request,
     org_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -69,7 +75,9 @@ async def list_org_members(
 
 
 @router.put("/{org_id}", response_model=OrganizationResponse)
+@limiter.limit("30/minute")
 async def update_organization(
+    request: Request,
     org_id: UUID,
     org_data: OrganizationUpdate,
     current_user: User = Depends(get_current_user),
@@ -102,7 +110,9 @@ async def update_organization(
 
 
 @router.delete("/{org_id}")
+@limiter.limit("5/hour")  # Restrictive for destructive operation
 async def delete_organization(
+    request: Request,
     org_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

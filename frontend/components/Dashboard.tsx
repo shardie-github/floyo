@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { statsAPI, suggestionsAPI, patternsAPI, eventsAPI, sampleDataAPI } from '@/lib/api'
@@ -31,7 +31,7 @@ import { EventFilters } from './EventFilters'
 import { Pagination } from './Pagination'
 import { EmptyState } from './EmptyState'
 import { NotificationCenter } from './NotificationCenter'
-import { useNotifications } from './NotificationProvider'
+import { useNotifications } from '@/hooks/useNotifications'
 import { GamificationDashboard } from './GamificationDashboard'
 import { InsightsPanel } from './InsightsPanel'
 import { ComparisonCard } from './ComparisonCard'
@@ -56,7 +56,8 @@ import { ProgressBar } from './LoadingStates'
 import { LoadingSkeleton } from './LoadingSkeleton'
 import { getErrorMessage } from '@/lib/errorMessages'
 
-export function Dashboard() {
+// Memoize Dashboard to prevent unnecessary re-renders
+const DashboardComponent = function Dashboard() {
   const { user, logout } = useAuth()
   const queryClient = useQueryClient()
   const { addNotification } = useNotifications()
@@ -586,4 +587,6 @@ export function Dashboard() {
       )}
     </div>
   )
-}
+};
+
+export const Dashboard = React.memo(DashboardComponent);

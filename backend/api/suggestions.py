@@ -200,7 +200,9 @@ async def generate_suggestions(
 
 
 @router.post("/{suggestion_id}/bookmark")
+@limiter.limit("30/minute")
 async def bookmark_suggestion(
+    request: Request,
     suggestion_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -230,7 +232,9 @@ async def bookmark_suggestion(
 
 
 @router.post("/{suggestion_id}/apply")
+@limiter.limit("30/minute")
 async def apply_suggestion(
+    request: Request,
     suggestion_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -281,7 +285,9 @@ async def apply_suggestion(
 
 
 @router.post("/{suggestion_id}/dismiss")
+@limiter.limit("30/minute")
 async def dismiss_suggestion(
+    request: Request,
     suggestion_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

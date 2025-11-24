@@ -100,6 +100,10 @@ def setup_middleware(app: FastAPI) -> None:
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, get_rate_limit_exceeded_handler())
     
+    # Error handling middleware (catches errors before they reach exception handlers)
+    from backend.middleware.error_middleware import ErrorHandlingMiddleware
+    app.add_middleware(ErrorHandlingMiddleware)
+    
     # Global error handlers
     app.add_exception_handler(APIError, error_handler)
     app.add_exception_handler(HTTPException, error_handler)

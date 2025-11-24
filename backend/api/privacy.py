@@ -3,13 +3,14 @@
 import sys
 from pathlib import Path
 from typing import Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from backend.database import get_db
+from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 from backend.logging_config import get_logger
 from backend.auth.utils import get_current_user
 from database.models import User, PrivacyPrefs
@@ -25,7 +26,9 @@ class PrivacySettingsUpdate(BaseModel):
 
 
 @router.get("/settings")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_privacy_settings(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -66,7 +69,9 @@ async def get_privacy_settings(
 
 
 @router.put("/settings")
+@limiter.limit("30/minute")
 async def update_privacy_settings(
+    request: Request,
     settings: PrivacySettingsUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

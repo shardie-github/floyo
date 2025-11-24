@@ -2,10 +2,11 @@
 
 from typing import Optional, Dict, Any
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from backend.database import get_db
+from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
 from backend.enterprise import SSOManager, EnterpriseAdmin, ComplianceManager, EcosystemManager
 from backend.auth.utils import get_current_user
 from database.models import User, OrganizationMember
@@ -14,7 +15,9 @@ router = APIRouter(prefix="/api/enterprise", tags=["enterprise"])
 
 
 @router.get("/organizations/{org_id}/stats")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_organization_stats(
+    request: Request,
     org_id: UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -34,7 +37,9 @@ async def get_organization_stats(
 
 
 @router.get("/organizations/{org_id}/activity")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_user_activity_report(
+    request: Request,
     org_id: UUID,
     days: int = 30,
     current_user: User = Depends(get_current_user),
@@ -54,7 +59,9 @@ async def get_user_activity_report(
 
 
 @router.post("/sso/providers")
+@limiter.limit("5/hour")  # Restrictive for SSO provider creation
 async def create_sso_provider(
+    request: Request,
     name: str,
     provider_type: str,
     config: Dict[str, Any],
@@ -74,7 +81,9 @@ async def create_sso_provider(
 
 
 @router.post("/organizations/{org_id}/sso")
+@limiter.limit("5/hour")  # Restrictive for SSO connection
 async def create_sso_connection(
+    request: Request,
     org_id: UUID,
     provider_id: UUID,
     connection_config: Dict[str, Any],
@@ -99,7 +108,9 @@ async def create_sso_connection(
 
 
 @router.post("/compliance/reports")
+@limiter.limit("5/hour")  # Restrictive - resource-intensive operation
 async def generate_compliance_report(
+    request: Request,
     organization_id: UUID,
     report_type: str = "gdpr",
     current_user: User = Depends(get_current_user),
@@ -128,7 +139,9 @@ async def generate_compliance_report(
 
 
 @router.get("/compliance/audit-trail")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_audit_trail(
+    request: Request,
     organization_id: Optional[UUID] = None,
     resource_type: Optional[str] = None,
     limit: int = 100,
@@ -147,7 +160,9 @@ async def get_audit_trail(
 
 
 @router.get("/ecosystem/workflows/featured")
+@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
 async def get_featured_workflows(
+    request: Request,
     limit: int = 10,
     db: Session = Depends(get_db)
 ):
@@ -161,7 +176,9 @@ async def get_featured_workflows(
 
 
 @router.post("/ecosystem/workflows/fork/{share_code}")
+@limiter.limit("20/hour")  # Restrictive for workflow forking
 async def fork_workflow(
+    request: Request,
     share_code: str,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useConsent } from "@/app/providers/consent-provider";
+import { useConsent } from "@/hooks/useConsent";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 

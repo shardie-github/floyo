@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useConsent } from "@/app/providers/consent-provider";
+import { useConsent } from "@/hooks/useConsent";
 import { HCaptchaIntegration } from "@/components/integrations/hCaptcha";
 import { LottiePlayerIntegration } from "@/components/integrations/LottiePlayer";
 import { CldImage } from "@/components/integrations/Cloudinary";
@@ -223,6 +223,15 @@ export default function IntegrationsPage() {
         <div className="space-y-4">
           <ZapierIntegration />
           <MindStudioIntegration />
+        </div>
+      </section>
+
+      {/* TikTok Ads Integration */}
+      <section className="mb-12">
+        <h2 className="text-2xl font-semibold mb-4">Advertising Integrations</h2>
+        <div className="space-y-4">
+          <TikTokAdsIntegration />
+          <MetaAdsIntegration />
         </div>
       </section>
 
