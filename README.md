@@ -337,6 +337,8 @@ supabase db push
 supabase db remote commit --dry-run
 ```
 
+**CI/CD Migrations**: This repo uses a GitHub Actions workflow to apply Supabase migrations against project `ilspfaxjiquzreszitjm`. See [docs/supabase-migrations-ci.md](docs/supabase-migrations-ci.md) for setup and usage details.
+
 ---
 
 ## Contributing
