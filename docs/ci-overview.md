@@ -70,12 +70,21 @@ All workflows use:
 **Jobs:**
 - `build-and-test`: Lint → Typecheck → Test → Build (blocks deployment)
 - `deploy`: Vercel deployment (preview for PRs, production for main)
+  - **Enhanced:** Secret validation, error handling, troubleshooting hints
 
 **Purpose:** Automated frontend deployment to Vercel
 
 **Required for Branch Protection:** ✅ Yes (for production deployments)
 
-**Documentation:** See [frontend-deploy-vercel-ci.md](./frontend-deploy-vercel-ci.md)
+**Recent Fixes (2025-01-XX):**
+- ✅ Added secret validation step
+- ✅ Enhanced error handling for Vercel CLI commands
+- ✅ Improved troubleshooting messages
+- ✅ Fixed PR comment step conditions
+
+**Documentation:** 
+- See [deploy-strategy.md](./deploy-strategy.md) for deployment flow
+- See [vercel-troubleshooting.md](./vercel-troubleshooting.md) for troubleshooting
 
 ---
 
@@ -114,6 +123,11 @@ All workflows use:
 - `preview`: Typecheck → Lint → Build → Lighthouse → Pa11y → Deploy preview
 
 **Note:** Primary deployment handled by `frontend-deploy.yml`. This adds extra quality gates.
+
+**Recent Fixes (2025-01-XX):**
+- ✅ Added secret validation step
+- ✅ Enhanced error handling for Vercel commands
+- ✅ Fixed comment step path handling
 
 **Required for Branch Protection:** ⚠️ Optional (non-blocking)
 
@@ -193,10 +207,11 @@ All workflows use:
 - `wiring-check.yml` - Integration health
 - `vercel-guard.yml` - Vercel deployment guard
 
-#### ⚠️ Legacy/Redundant (3 workflows) - Review
-- `deploy-main.yml` - Legacy production deploy (has smoke tests, may be redundant with `frontend-deploy.yml`)
-- `preview-pr.yml` - May overlap with `frontend-deploy.yml` (but adds Lighthouse/Pa11y)
-- `cd.yml` - May be redundant
+#### ⚠️ Legacy/Deprecated (1 workflow) - Disabled
+- `deploy-main.yml` - **DISABLED** - Legacy production deploy (conflicted with `frontend-deploy.yml`, now disabled)
+  - **Status:** Disabled via `if: false` and removed `push` trigger
+  - **Reason:** Prevented conflicts with `frontend-deploy.yml`
+  - **Action:** Can be manually triggered but won't auto-run on push to main
 
 #### ❓ Unknown Purpose (27 workflows) - Audit Needed
 - `agent-runner.yml`
@@ -292,10 +307,14 @@ All workflows use:
 
 ### Checks to Remove from Branch Protection
 
-**If Obsolete:**
-- `deploy-main.yml` - If redundant with `frontend-deploy.yml`
-- Any workflows marked as deprecated
-- Experimental workflows
+**Obsolete (Already Disabled):**
+- `deploy-main.yml` - **DISABLED** - Conflicts with `frontend-deploy.yml`
+  - Removed from branch protection (workflow disabled via `if: false`)
+
+**If Other Workflows Become Obsolete:**
+- Mark as deprecated in workflow comments
+- Remove from branch protection rules
+- Document removal in this file
 
 ---
 
@@ -319,7 +338,7 @@ All workflows use:
    - `ci.yml` → Quality checks (lint, typecheck, test, build)
    - `frontend-deploy.yml` → Build & test → Deploy to production
    - `supabase-migrate.yml` → Apply database migrations (if migrations changed)
-   - `deploy-main.yml` → Legacy deploy with smoke tests (if still active)
+   - ~~`deploy-main.yml`~~ → **DISABLED** (no longer runs)
 
 2. **Post-Deploy:**
    - `post_deploy_verify.yml` → Post-deployment verification (if configured)
@@ -350,14 +369,44 @@ All workflows use:
 
 ---
 
-## 9. Action Items
+## 9. Deployment Reliability Improvements (2025-01-XX)
+
+### Fixes Applied
+- [x] Added secret validation to `frontend-deploy.yml`
+- [x] Added secret validation to `preview-pr.yml`
+- [x] Disabled `deploy-main.yml` to prevent conflicts
+- [x] Enhanced error handling in deployment workflows
+- [x] Created `deploy-doctor` diagnostic script
+- [x] Created comprehensive troubleshooting documentation
+
+### New Documentation
+- [x] `docs/deploy-strategy.md` - Canonical deployment paths
+- [x] `docs/vercel-troubleshooting.md` - Troubleshooting guide
+- [x] `docs/deploy-reliability-plan.md` - Action plan and verification
+- [x] `docs/deploy-failure-postmortem-initial.md` - Failure analysis
+
+### Diagnostic Tools
+- [x] `scripts/deploy-doctor.ts` - Automated diagnostic checks
+- [x] `npm run deploy:doctor` - Run diagnostics locally
+
+---
+
+## 10. Action Items
 
 ### Immediate
 - [x] Document CI/CD overview
-- [ ] Audit all 41 workflows
+- [x] Fix deployment workflows (secret validation, error handling)
+- [x] Disable conflicting workflows (`deploy-main.yml`)
+- [x] Create diagnostic tooling (`deploy-doctor`)
+- [x] Create troubleshooting documentation
+- [ ] Verify deployments work after fixes (create test PR, merge to main)
+- [ ] Update branch protection rules (remove `deploy-main.yml` if present)
+
+### Short-Term
+- [ ] Audit remaining workflows (27 workflows need review)
 - [ ] Mark obsolete workflows as deprecated
 - [ ] Consolidate redundant workflows
-- [ ] Update branch protection rules
+- [ ] Add workflow status badges to README
 
 ### Short-Term
 - [ ] Add workflow status badges to README
@@ -373,14 +422,23 @@ All workflows use:
 
 ---
 
-## 10. References
+## 11. References
 
-- [Frontend Deployment Guide](./frontend-deploy-vercel-ci.md)
-- [Environment Variables](./env-and-secrets.md)
+### Deployment Documentation
+- [Deployment Strategy](./deploy-strategy.md) - Canonical deployment paths
+- [Vercel Troubleshooting](./vercel-troubleshooting.md) - Troubleshooting guide
+- [Deploy Reliability Plan](./deploy-reliability-plan.md) - Action plan and verification
+- [Deploy Failure Postmortem](./deploy-failure-postmortem-initial.md) - Failure analysis
+
+### Configuration Documentation
+- [Environment Variables](./env-and-secrets.md) - Environment variables guide
+- [Frontend Hosting Strategy](./frontend-hosting-strategy.md) - Hosting platform details
+
+### Other Documentation
 - [Backend Strategy](./backend-strategy.md)
 - [Stack Discovery](./stack-discovery.md)
 
 ---
 
 **Last Updated:** 2025-01-XX  
-**Status:** ✅ Core CI/CD Documented, Workflow Audit Needed
+**Status:** ✅ Core CI/CD Documented, Deployment Fixes Applied, Workflow Audit Needed

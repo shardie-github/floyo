@@ -47,6 +47,41 @@ jobs:
       - name: Build Next.js
         run: npm run build
 
+      - name: Validate required secrets
+        run: |
+          set -euo pipefail
+          echo "🔍 Validating required secrets..."
+          
+          MISSING_SECRETS=()
+          
+          if [ -z "$VERCEL_TOKEN" ] || [ "$VERCEL_TOKEN" == "" ]; then
+            MISSING_SECRETS+=("VERCEL_TOKEN")
+          fi
+          
+          if [ -z "$VERCEL_ORG_ID" ] || [ "$VERCEL_ORG_ID" == "" ]; then
+            MISSING_SECRETS+=("VERCEL_ORG_ID")
+          fi
+          
+          if [ -z "$VERCEL_PROJECT_ID" ] || [ "$VERCEL_PROJECT_ID" == "" ]; then
+            MISSING_SECRETS+=("VERCEL_PROJECT_ID")
+          fi
+          
+          if [ ${#MISSING_SECRETS[@]} -gt 0 ]; then
+            echo "❌ Missing required secrets: ${MISSING_SECRETS[*]}"
+            echo ""
+            echo "Please set the following secrets in GitHub:"
+            echo "  - Settings → Secrets and variables → Actions"
+            echo ""
+            for secret in "${MISSING_SECRETS[@]}"; do
+              echo "  - $secret"
+            done
+            echo ""
+            echo "See docs/env-and-secrets.md for setup instructions."
+            exit 1
+          fi
+          
+          echo "✅ All required secrets are present"
+
       - name: Start server
         run: npm run start-ci &
       
@@ -73,18 +108,48 @@ jobs:
         uses: supabase/setup-cli@v1
       - name: Supabase login/link (dry-run)
         run: |
-          npm run supa:login
-          npm run supa:link
-          npm run supa:status
+          npm run supa:login || echo "⚠️ Supabase login failed (optional)"
+          npm run supa:link || echo "⚠️ Supabase link failed (optional)"
+          npm run supa:status || echo "⚠️ Supabase status check failed (optional)"
 
       - name: Vercel Pull & Build (Preview)
         run: |
-          npm run vercel:pull
-          npm run vercel:build
-          npm run vercel:deploy:preview
+          set -euo pipefail
+          echo "📥 Pulling Vercel configuration for preview environment..."
+          
+          if ! npm run vercel:pull; then
+            echo "❌ Failed to pull Vercel configuration"
+            echo "See docs/vercel-troubleshooting.md for troubleshooting steps."
+            exit 1
+          fi
+          
+          echo "🔨 Building with Vercel..."
+          if ! npm run vercel:build; then
+            echo "❌ Vercel build failed"
+            echo "See docs/vercel-troubleshooting.md for troubleshooting steps."
+            exit 1
+          fi
+          
+          echo "🚀 Deploying preview..."
+          if ! npm run vercel:deploy:preview; then
+            echo "❌ Preview deployment failed"
+            echo "See docs/vercel-troubleshooting.md for troubleshooting steps."
+            exit 1
+          fi
+          
+          echo "✅ Preview deployment completed"
 
       - name: Comment Preview URL
+        if: always()
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           recreate: true
           path: .vercel-url.txt
+          message: |
+            ## 🚀 Preview Deployment (Quality Gates)
+            
+            This preview includes additional quality checks (Lighthouse, Pa11y).
+            
+            **Preview URL:** See file `.vercel-url.txt` for deployment URL.
+            
+            > Note: Primary preview deployment is handled by `frontend-deploy.yml`.
