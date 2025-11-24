@@ -1,5 +1,8 @@
 name: Canary Deployment
 
+# ⚠️ DEPRECATED: This workflow is a stub implementation and not fully functional.
+# Consider removing or completing implementation if canary deployments are needed.
+
 on:
   workflow_dispatch:
     inputs:

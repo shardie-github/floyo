@@ -48,3 +48,21 @@ jobs:
         run: |
           set -euo pipefail
           npx supabase@latest migration up
+
+      - name: Validate schema
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          # Install dependencies if needed
+          if [ ! -d "node_modules" ]; then
+            npm ci
+          fi
+          # Run schema validation
+          npx tsx scripts/db-validate-schema.ts || {
+            echo "⚠️ Schema validation failed. This may be expected if migrations are incomplete."
+            echo "Review the validation output above for details."
+            exit 0  # Non-blocking for now, can be made blocking later
+          }
