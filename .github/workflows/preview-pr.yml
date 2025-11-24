@@ -1,5 +1,9 @@
 name: PR Preview & Quality Gates
 
+# NOTE: This workflow provides additional quality gates (Lighthouse, Pa11y) beyond the main Frontend CI/CD workflow.
+# The primary frontend deployment workflow is frontend-deploy.yml.
+# This workflow runs quality checks and creates preview deployments with accessibility/performance testing.
+
 on:
   pull_request:
     branches: [main]
@@ -36,8 +40,9 @@ jobs:
 
       - name: Typecheck & Lint
         run: |
-          npm run -s typecheck || true
-          npm run -s lint || true
+          set -euo pipefail
+          npm run -s typecheck
+          npm run -s lint
 
       - name: Build Next.js
         run: npm run build
