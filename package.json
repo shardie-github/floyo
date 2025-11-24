@@ -89,7 +89,8 @@
     "load-test": "bash scripts/run-load-tests.sh",
     "schedule-metrics-jobs": "bash scripts/schedule-metrics-jobs.sh",
     "verify-sprint-blockers": "tsx scripts/verify-sprint-blockers.ts",
-    "deploy:doctor": "tsx scripts/deploy-doctor.ts"
+    "deploy:doctor": "tsx scripts/deploy-doctor.ts",
+    "env:doctor": "tsx scripts/env-doctor.ts"
   },
   "dependencies": {
     "@octokit/rest": "^20.0.0",

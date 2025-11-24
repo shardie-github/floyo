@@ -1,388 +1,324 @@
 # Stack Discovery Report
 
 **Generated:** 2025-01-XX  
-**Purpose:** Complete architectural audit and stack detection
-
----
+**Purpose:** Complete architectural overview of the Floyo monorepo
 
 ## Executive Summary
 
-**Floyo** is a file usage pattern tracking and integration suggestion platform. The repository is a monorepo with a modern, production-ready stack:
-
-- **Frontend:** Next.js 14+ (App Router) with TypeScript
-- **Backend:** Python FastAPI
-- **Database:** PostgreSQL via Supabase (with Prisma schema)
-- **Hosting:** Vercel (frontend), Supabase (database)
-- **CI/CD:** GitHub Actions (CI-first, no local CLI required)
-
-**Status:** ✅ Production-ready with solid foundations. Some normalization needed for dual database tooling.
+Floyo is a file usage pattern tracking system that suggests concrete, niche API integrations based on actual user routines. The repository is a monorepo with a Next.js frontend, Python FastAPI backend, and Supabase PostgreSQL database.
 
 ---
 
-## 1. Frontend Stack
+## 1. Architecture Overview
 
-### Framework & Build Tooling
-- **Framework:** Next.js 14.0.4+ (App Router)
-- **Language:** TypeScript 5.3.3
-- **Styling:** Tailwind CSS 3.3.6
-- **UI Components:** Radix UI primitives, Headless UI
-- **State Management:** Zustand 4.4.7
-- **Data Fetching:** TanStack Query (React Query) 5.12.2
-- **Build Tool:** Next.js built-in (Webpack/Turbopack)
+### Frontend
+- **Framework:** Next.js 14 (React 18)
+- **Language:** TypeScript
+- **Styling:** TailwindCSS
+- **State Management:** Zustand
+- **Data Fetching:** TanStack Query (React Query)
+- **UI Components:** Radix UI primitives
+- **Routing:** Next.js App Router (file-based)
+- **Build Tool:** Next.js built-in (Webpack)
+- **PWA:** Enabled via `next-pwa`
 
-### Key Dependencies
-- **Analytics:** PostHog, Vercel Analytics
-- **Error Tracking:** Sentry (@sentry/nextjs)
-- **Auth:** Supabase Auth (via @supabase/supabase-js)
-- **Testing:** Jest, Playwright (E2E)
-- **Accessibility:** @axe-core/react, pa11y-ci
+**Key Features:**
+- Server-side rendering (SSR)
+- Static site generation (SSG)
+- Incremental static regeneration (ISR)
+- API routes (Next.js API routes)
+- Edge runtime support
 
-### Build Configuration
-- **Config:** `frontend/next.config.js`
-- **Vercel Config:** `vercel.json` (root)
-- **Output:** Static + Server-side rendering (hybrid)
-
-### Package Manager
-- **Manager:** npm
-- **Lockfile:** `package-lock.json` (root + frontend/)
-- **Node Version:** 20.x (pinned in `package.json` engines)
-
----
-
-## 2. Backend Stack
-
-### Framework & Runtime
+### Backend
 - **Framework:** FastAPI (Python)
-- **Python Version:** 3.11+ (from CI workflows)
-- **ASGI Server:** Uvicorn
-- **API Versioning:** `/api/v1/` routes present
+- **Language:** Python 3.11+
+- **ORM:** Prisma (via Prisma Client)
+- **Database Access:** Direct PostgreSQL + Supabase client
+- **Job Queue:** Celery (Redis-backed)
+- **Caching:** Redis
+- **API Style:** RESTful
 
-### Key Dependencies
-- **Database ORM:** SQLAlchemy 2.0.23+
-- **Database Driver:** psycopg2-binary (PostgreSQL)
-- **Migrations:** Alembic 1.12.1+
-- **Auth:** python-jose, passlib[bcrypt]
-- **Validation:** Pydantic 2.5.0+
-- **Background Jobs:** Celery 5.3.4+ (with Redis)
-- **ML/Analytics:** scikit-learn, pandas, numpy, tensorflow
+**Key Features:**
+- JWT authentication
+- WebSocket support
+- Background job processing
+- Rate limiting
+- Security middleware
 
-### Structure
+### Database
+- **Provider:** Supabase (PostgreSQL)
+- **ORM:** Prisma (schema definition)
+- **Migrations:** Supabase migrations (`supabase/migrations/`)
+- **Schema Management:** 
+  - Prisma schema: `prisma/schema.prisma`
+  - Supabase migrations: `supabase/migrations/99999999999999_master_consolidated_schema.sql`
+- **Extensions:** `uuid-ossp`, `pgcrypto`, `pg_trgm`
+
+### Hosting & Infrastructure
+- **Frontend Hosting:** Vercel
+- **Database Hosting:** Supabase (managed PostgreSQL)
+- **CI/CD:** GitHub Actions
+- **Edge Functions:** Supabase Edge Functions (`supabase/functions/`)
+- **CDN:** Vercel Edge Network
+
+---
+
+## 2. Code Structure
+
+### Frontend Structure (`frontend/`)
+```
+frontend/
+├── app/                    # Next.js App Router pages
+│   ├── api/               # API routes (Next.js API routes)
+│   ├── (auth)/            # Auth-related pages
+│   └── ...                # Feature pages
+├── components/            # React components
+├── hooks/                 # Custom React hooks
+├── lib/                   # Utilities and services
+│   ├── api/              # API client
+│   ├── db/               # Database (Prisma)
+│   ├── services/         # Business logic services
+│   └── ...
+├── public/               # Static assets
+└── tests/                # Tests (Jest + Playwright)
+```
+
+### Backend Structure (`backend/`)
 ```
 backend/
-├── api/              # API route handlers
-│   ├── v1/          # Versioned API routes
-│   └── integrations/ # Third-party integrations
-├── services/         # Business logic
-├── ml/              # Machine learning models
-├── jobs/            # Background jobs
-└── middleware/      # Request middleware
+├── api/                   # FastAPI route handlers
+│   ├── v1/               # API versioning
+│   └── ...
+├── auth/                 # Authentication logic
+├── jobs/                 # Background jobs (Celery)
+├── services/             # Business logic services
+├── middleware/           # FastAPI middleware
+├── ml/                   # Machine learning models
+└── ...
 ```
 
-### API Endpoints
-- Health checks (`/api/health`)
-- Telemetry ingestion (`/api/telemetry`)
-- Patterns & insights (`/api/insights`, `/api/patterns`)
-- Privacy controls (`/api/privacy/*`)
-- Integrations (TikTok, Meta, Zapier, etc.)
+### Database Structure
+- **Prisma Schema:** `prisma/schema.prisma` (447 lines, comprehensive schema)
+- **Supabase Migrations:** `supabase/migrations/` (consolidated master schema)
+- **Migration History:** Archived migrations in `supabase/migrations_archive/`
 
 ---
 
-## 3. Database & Persistence
+## 3. Data Flow
 
-### Database Provider
-- **Primary:** Supabase (PostgreSQL)
-- **Connection:** Via Supabase client SDK + direct PostgreSQL connection
+### Authentication Flow
+1. User signs up/logs in → Frontend (`app/api/auth/*`)
+2. JWT token generated → Stored in session
+3. Token sent with requests → Backend validates via Supabase Auth
+4. Session stored in `sessions` table
 
-### Schema Management (⚠️ Dual Setup)
-**Issue:** Two schema management tools coexist:
+### Event Tracking Flow
+1. File events tracked → Frontend (`app/api/events/route.ts`)
+2. Events stored → `events` table via Prisma
+3. Pattern analysis → Background jobs detect patterns
+4. Suggestions generated → Stored in `patterns` table
 
-1. **Supabase Migrations** (Canonical)
-   - Location: `supabase/migrations/`
-   - Master file: `99999999999999_master_consolidated_schema.sql`
-   - CLI: `supabase` CLI
-   - CI: `.github/workflows/supabase-migrate.yml`
-
-2. **Prisma Schema** (Also Present)
-   - Location: `prisma/schema.prisma`
-   - Client: `@prisma/client`
-   - CLI: `prisma` CLI
-   - **Status:** Schema exists but migrations appear to be Supabase-first
-
-**Recommendation:** 
-- Use **Supabase migrations** as canonical (already consolidated)
-- Keep Prisma schema for type generation if needed, but align with Supabase migrations
-- Document this dual setup clearly
-
-### Database Schema Highlights
-- **Core Tables:** users, sessions, events, patterns, relationships
-- **Privacy:** privacy_prefs, app_allowlist, signal_toggles, telemetry_events
-- **Organizations:** organizations, organization_members
-- **Workflows:** workflows, workflow_versions, workflow_executions
-- **Analytics:** metrics_log, cohorts, utm_tracks
-- **Billing:** subscriptions, offers
-
-### Edge Functions
-- Location: `supabase/functions/`
-- Functions:
-  - `ingest-telemetry/` - Telemetry ingestion
-  - `analyze-patterns/` - Pattern analysis
-  - `analyze-performance/` - Performance analysis
-  - `generate-suggestions/` - Integration suggestions
+### API Request Flow
+```
+Frontend (Next.js API Route)
+  ↓
+Backend (FastAPI) [if proxied]
+  ↓
+Supabase (PostgreSQL)
+  ↓
+Response → Frontend → UI
+```
 
 ---
 
-## 4. Infrastructure & Hosting
+## 4. Configuration
 
-### Frontend Hosting
-- **Provider:** Vercel
-- **Deployment:** Automated via GitHub Actions
-- **Workflow:** `.github/workflows/frontend-deploy.yml`
-- **Preview:** Per-PR deployments
-- **Production:** `main` branch deployments
-- **Config:** `vercel.json` (crons, headers, build settings)
-
-### Database Hosting
-- **Provider:** Supabase (managed PostgreSQL)
-- **Migrations:** Automated via GitHub Actions
-- **Workflow:** `.github/workflows/supabase-migrate.yml`
-- **Backups:** Managed by Supabase (automatic)
-
-### Backend Hosting
-- **Status:** ⚠️ **Not clearly deployed**
-- **Code Present:** FastAPI backend exists in `backend/`
-- **Deployment:** No clear production deployment path
-- **Options:**
-  1. Deploy to Vercel Serverless Functions (if API routes are minimal)
-  2. Deploy to Render/Fly.io/Railway (if full backend needed)
-  3. Migrate API routes to Next.js API routes (simplest)
-
-**Recommendation:** Assess if backend is actively used. If minimal, migrate to Next.js API routes. If substantial, deploy separately.
-
----
-
-## 5. CI/CD & Automation
-
-### GitHub Actions Workflows
-
-#### Core CI/CD
-- **`ci.yml`** - Main CI pipeline
-  - Lint (Python + TypeScript)
-  - Type check (Python + TypeScript)
-  - Tests (unit tests)
-  - Build (frontend)
-  - Coverage (non-blocking)
-
-- **`frontend-deploy.yml`** - Frontend deployment
-  - Build & test
-  - Deploy to Vercel (preview/production)
-  - PR comments with preview URLs
-
-- **`supabase-migrate.yml`** - Database migrations
-  - Runs on `main` push or manual trigger
-  - Applies Supabase migrations
-
-#### Additional Workflows (Review Needed)
-- `preview-pr.yml` - PR preview with Lighthouse/Pa11y
-- `deploy-main.yml` - Legacy production deploy (may be redundant)
-- `env-smoke-test.yml` - Environment validation
-- `env-validation.yml` - Environment variable checks
-- `security-scan.yml` - Security scanning
-- `performance-tests.yml` - Performance testing
-- `privacy-ci.yml` - Privacy compliance checks
-- `wiring-check.yml` - Integration health checks
-- `vercel-guard.yml` - Vercel deployment guard
-- Many others (30+ workflows total)
-
-**Recommendation:** Audit all workflows, mark obsolete ones as deprecated, consolidate where possible.
-
-### Package Manager & Lockfiles
-- **Manager:** npm (consistent across repo)
-- **Lockfiles:** 
-  - `package-lock.json` (root)
-  - `frontend/package-lock.json`
-- **Status:** ✅ Consistent, no conflicts
-
-### Node Version
-- **Pinned:** Node 20.x (in `package.json` engines)
-- **CI:** Node 20 (consistent across workflows)
-
----
-
-## 6. Environment Variables & Secrets
-
-### Documentation
-- **Template:** `.env.example` (comprehensive, 235 lines)
+### Environment Variables
+- **Canonical Template:** `.env.example` (235 lines, comprehensive)
+- **Validation:** `frontend/lib/env.ts` (Zod schemas)
 - **Categories:**
-  - Database (DATABASE_URL, Supabase URLs/keys)
-  - Vercel (deployment tokens)
-  - Security (SECRET_KEY, encryption keys)
+  - Database (Supabase)
+  - Vercel (deployment)
+  - Security (secrets, JWT)
+  - Integrations (Stripe, external APIs)
   - Monitoring (Sentry, PostHog)
-  - Integrations (Stripe, AWS, third-party APIs)
+  - Feature flags
 
-### Public vs Private
-- **Public (NEXT_PUBLIC_*):** Supabase URLs/keys, PostHog, Sentry DSN
-- **Private:** Service role keys, API secrets, database passwords
+### Build Configuration
+- **Frontend:** `frontend/next.config.js` (PWA, optimizations)
+- **Backend:** Python requirements (not visible in root)
+- **Root:** `package.json` (monorepo scripts)
 
-### Secrets Management
-- **CI:** GitHub Secrets
-- **Hosting:** Vercel Environment Variables
-- **Database:** Supabase Dashboard
-
-**Status:** ✅ Well-documented, needs normalization mapping (CI ↔ Hosting)
+### Runtime Versions
+- **Node.js:** >=20 <21 (pinned)
+- **Python:** 3.11+ (from CI workflows)
 
 ---
 
-## 7. Testing & Quality
+## 5. CI/CD
 
-### Test Types
-- **Unit Tests:** Jest (frontend), pytest (backend)
-- **E2E Tests:** Playwright
-- **Accessibility:** Pa11y CI, axe-core
-- **Performance:** Lighthouse CI
-- **Type Checking:** TypeScript, mypy (Python)
+### Active Workflows
+1. **`ci.yml`** - Main CI pipeline
+   - Lint (Python + TypeScript)
+   - Type check
+   - Unit tests
+   - Build
+   - Coverage (non-blocking)
 
-### Test Coverage
-- **Frontend:** Jest coverage reports
-- **Backend:** pytest-cov reports
-- **CI:** Coverage uploaded to Codecov (non-blocking)
+2. **`frontend-deploy.yml`** - Frontend deployment
+   - Build and test
+   - Deploy to Vercel (preview/production)
+   - PR comments with preview URLs
 
-### Quality Gates
-- **PR:** Lint, typecheck, tests, build
-- **Main:** All checks + deployment
-- **Optional:** Lighthouse, Pa11y (in preview-pr.yml)
+3. **`supabase-migrate.yml`** - Database migrations
+   - Applies Supabase migrations
+   - Schema validation
 
----
+### Deprecated/Disabled Workflows
+- **`deploy-main.yml`** - Marked as deprecated, disabled
 
-## 8. Business Intent & User Flows
-
-### Primary Purpose
-**Floyo** tracks file usage patterns and suggests automation integrations.
-
-### Core User Flows
-1. **Sign Up** → Onboarding → Dashboard
-2. **File Tracking** → Pattern Detection → Insights
-3. **Integration Suggestions** → Action → Automation
-
-### Key Features
-- File system event tracking
-- Pattern recognition (ML-based)
-- Integration suggestions (Zapier, TikTok, Meta, etc.)
-- Privacy-first monitoring
-- Workflow automation
-
-### User Personas
-- Data analysts (CSV processing automation)
-- Developers (script → deployment automation)
-- Content creators (markdown → PDF → upload)
-- Researchers (data analysis → visualization → sharing)
+### Workflow Triggers
+- **Pull Requests:** Preview deployments
+- **Push to main:** Production deployments
+- **Manual:** `workflow_dispatch`
 
 ---
 
-## 9. Notable Gaps & Red Flags
+## 6. Persistence & Migrations
 
-### ⚠️ Critical Issues
+### Migration Systems
+1. **Supabase Migrations**
+   - Location: `supabase/migrations/`
+   - Master schema: `99999999999999_master_consolidated_schema.sql`
+   - CI: Applied via `supabase-migrate.yml`
+   - Validation: `scripts/db-validate-schema.ts`
 
-1. **Dual Database Tooling**
-   - Supabase migrations + Prisma schema coexist
-   - Need to clarify canonical approach
-   - Risk: Schema drift
+2. **Prisma Schema**
+   - Location: `prisma/schema.prisma`
+   - Purpose: ORM type definitions
+   - Generation: `prisma generate`
+   - Migration: `prisma migrate` (may be separate from Supabase)
 
-2. **Backend Deployment Unclear**
-   - FastAPI backend exists but no deployment path
-   - May need to migrate to Next.js API routes or deploy separately
+### Schema Reconciliation
+⚠️ **Potential Issue:** Two migration systems (Supabase + Prisma) may drift.  
+**Recommendation:** Ensure Prisma schema matches Supabase migrations.
 
-3. **Workflow Proliferation**
-   - 30+ GitHub Actions workflows
-   - Some may be obsolete or redundant
-   - Need audit and consolidation
+### Core Tables (from Prisma schema)
+- `users` - User accounts
+- `sessions` - Auth sessions
+- `events` - File system events
+- `patterns` - Detected usage patterns
+- `relationships` - File relationships
+- `subscriptions` - Billing
+- `privacy_prefs` - Privacy settings
+- `organizations` - Multi-tenant support
+- `workflows` - Workflow definitions
+- `audit_logs` - Compliance auditing
+
+---
+
+## 7. External Services
+
+### Authentication
+- **Supabase Auth** - JWT-based authentication
+
+### Payment Processing
+- **Stripe** - Subscription management
+
+### Monitoring & Observability
+- **Sentry** - Error tracking
+- **PostHog** - Product analytics
+- **Vercel Analytics** - Web analytics
+
+### Integrations
+- **Zapier** - Workflow automation
+- **Meta Ads** - Advertising
+- **TikTok Ads** - Advertising
+- **ElevenLabs** - Voice synthesis
+- **MindStudio** - AI workflows
+
+### Storage
+- **AWS S3** - File exports
+- **Cloudinary** - Image hosting
+
+---
+
+## 8. Known Gaps & Risk Areas
+
+### ⚠️ High Priority
+1. **Dual Migration Systems**
+   - Prisma and Supabase migrations may drift
+   - Need reconciliation strategy
+
+2. **Backend Deployment**
+   - No visible backend deployment workflow
+   - Backend may be deployed separately or not deployed
+
+3. **Environment Variable Drift**
+   - Many env vars defined, need validation script
+   - Some may be unused
 
 ### ⚠️ Medium Priority
+1. **API Documentation**
+   - No OpenAPI spec visible
+   - Many API routes undocumented
 
-4. **Migration Consolidation**
-   - Single master migration file exists (good)
-   - But Prisma schema may not align
-   - Need validation script
+2. **Test Coverage**
+   - Tests exist but coverage unknown
+   - E2E tests via Playwright
 
-5. **Environment Variable Mapping**
-   - Well-documented but needs CI ↔ Hosting mapping
-   - Some secrets may be duplicated
+3. **Cost Optimization**
+   - Multiple preview deployments
+   - Potential unused Supabase features
 
-### ✅ Strengths
+### ⚠️ Low Priority
+1. **Documentation**
+   - Extensive docs in `docs/` but may be outdated
+   - Need consolidation
 
-- **CI-First Approach:** No local CLI required ✅
-- **Comprehensive Documentation:** README, env.example, docs/ ✅
-- **Modern Stack:** Next.js, TypeScript, Supabase ✅
-- **Security:** RLS policies, auth, rate limiting ✅
-- **Testing:** Unit, E2E, accessibility, performance ✅
+2. **Dependency Management**
+   - Multiple package managers possible
+   - Need audit
 
 ---
 
-## 10. Recommendations
+## 9. Recommendations
 
 ### Immediate Actions
-1. **Clarify Database Strategy:** Choose Supabase migrations as canonical, align Prisma if needed
-2. **Audit CI Workflows:** Mark obsolete workflows, consolidate duplicates
-3. **Backend Deployment:** Decide on FastAPI deployment or migration to Next.js API routes
-4. **Environment Mapping:** Create CI ↔ Hosting secrets mapping doc
+1. ✅ Create `env-doctor` script to validate environment variables
+2. ✅ Reconcile Prisma schema with Supabase migrations
+3. ✅ Document all API endpoints
+4. ✅ Create backend deployment workflow (if needed)
 
-### Short-Term Improvements
-5. **Smoke Tests:** Add basic smoke tests for demo readiness
-6. **Seed Data:** Create seed scripts for demo scenarios
-7. **Demo Script:** Document demo flow and URLs
-8. **Local Dev Guide:** Comprehensive setup instructions
+### Short-term (30 days)
+1. Generate OpenAPI spec from FastAPI
+2. Consolidate migration strategy
+3. Add API endpoint tests
+4. Optimize CI/CD (reduce redundant workflows)
 
-### Long-Term Considerations
-9. **Observability:** Add structured logging, error tracking (Sentry exists)
-10. **Cost Monitoring:** Document service costs and limits
-11. **Scaling:** Plan for multi-region, connection pooling, caching
-
----
-
-## 11. Architecture Diagram
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    GitHub Actions (CI/CD)                    │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   CI (lint,  │  │  Frontend    │  │  Supabase    │      │
-│  │   test,      │  │  Deploy      │  │  Migrate     │      │
-│  │   build)     │  │  (Vercel)    │  │  (DB)        │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Production Environment                   │
-│                                                               │
-│  ┌──────────────┐      ┌──────────────┐      ┌──────────┐ │
-│  │   Frontend   │◄─────►│   Backend    │◄─────►│ Database │ │
-│  │  (Next.js)   │      │  (FastAPI?)  │      │(Supabase) │ │
-│  │  (Vercel)    │      │  (TBD)       │      │(Postgres) │ │
-│  └──────────────┘      └──────────────┘      └──────────┘ │
-│         │                     │                            │
-│         │                     │                            │
-│         ▼                     ▼                            │
-│  ┌──────────────┐      ┌──────────────┐                  │
-│  │ Edge Functions│      │  Edge        │                  │
-│  │ (Supabase)    │      │  Functions   │                  │
-│  └──────────────┘      └──────────────┘                  │
-│                                                               │
-└─────────────────────────────────────────────────────────────┘
-```
+### Long-term (90 days)
+1. Implement comprehensive monitoring
+2. Add performance benchmarks
+3. Optimize database queries
+4. Implement caching strategy
 
 ---
 
-## 12. Next Steps
+## 10. Stack Summary
 
-See:
-- `docs/backend-strategy.md` - Backend & database strategy
-- `docs/frontend-hosting-strategy.md` - Frontend hosting details
-- `docs/env-and-secrets.md` - Environment variables mapping
-- `docs/ci-overview.md` - CI/CD pipeline documentation
-- `docs/local-dev.md` - Local development setup
-- `docs/demo-script.md` - Demo readiness guide
+| Component | Technology | Version | Status |
+|-----------|-----------|---------|--------|
+| Frontend Framework | Next.js | 14.0.4 | ✅ Active |
+| Frontend Language | TypeScript | 5.3.3 | ✅ Active |
+| Backend Framework | FastAPI | Latest | ✅ Active |
+| Backend Language | Python | 3.11+ | ✅ Active |
+| Database | PostgreSQL (Supabase) | Latest | ✅ Active |
+| ORM | Prisma | 5.7.0 | ✅ Active |
+| Hosting (Frontend) | Vercel | Latest | ✅ Active |
+| Hosting (Database) | Supabase | Latest | ✅ Active |
+| CI/CD | GitHub Actions | Latest | ✅ Active |
+| Package Manager | npm | Latest | ✅ Active |
 
 ---
 
-**Last Updated:** 2025-01-XX  
-**Status:** ✅ Discovery Complete
+**Next Steps:** See `docs/backend-strategy.md`, `docs/db-migrations-and-schema.md`, and `docs/api.md` for detailed analysis.

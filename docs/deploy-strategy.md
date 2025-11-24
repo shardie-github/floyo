@@ -1,254 +1,451 @@
-# Deployment Strategy - Canonical Paths
+# Deployment Strategy
 
-**Last Updated:** 2025-01-XX  
-**Status:** ✅ Canonical Deployment Strategy Defined  
-**Purpose:** Source of truth for Preview and Production deployments
+**Generated:** 2025-01-XX  
+**Purpose:** Comprehensive deployment guide
 
----
+## Overview
 
-## Executive Summary
-
-**Canonical Host:** Vercel  
-**Deployment Method:** GitHub Actions (CI-first, no local CLI required)  
-**Primary Workflow:** `frontend-deploy.yml`  
-**Preview Deployments:** Per-PR via `frontend-deploy.yml`  
-**Production Deployments:** Push to `main` via `frontend-deploy.yml`
+Floyo uses a **multi-environment deployment strategy** with:
+- **Frontend:** Vercel (Preview + Production)
+- **Database:** Supabase (managed PostgreSQL)
+- **Backend:** Unknown (may be deployed separately or not deployed)
 
 ---
 
-## 1. Preview Deployment (Pull Requests)
+## Frontend Deployment
 
-### Trigger
-- **Event:** Pull request opened/updated to `main` branch
-- **Workflow:** `.github/workflows/frontend-deploy.yml`
-- **Job:** `deploy` (runs after `build-and-test` succeeds)
+### Hosting Provider: Vercel
 
-### Flow
-1. **PR Created/Updated:**
-   - `ci.yml` → Quality checks (lint, typecheck, test, build)
-   - `frontend-deploy.yml` → `build-and-test` job:
-     - Checkout repository
-     - Setup Node.js 20
-     - Install dependencies (`npm ci` in root + frontend)
-     - Run lint (`npm run lint`)
-     - Run tests (`npm test`)
-     - Run typecheck (`npm run typecheck`)
-     - Build Next.js (`npm run build`)
-   - `frontend-deploy.yml` → `deploy` job:
-     - Install Vercel CLI (`npm install -g vercel@latest`)
-     - Determine environment (`preview` for PRs)
-     - Pull Vercel config (`vercel pull --environment=preview`)
-     - Build with Vercel (`vercel build`)
-     - Deploy preview (`vercel deploy --prebuilt --prod=false`)
-     - Comment PR with preview URL
+**Why Vercel:**
+- Native Next.js support
+- Automatic preview deployments
+- Edge network (CDN)
+- Serverless functions
+- Environment variable management
 
-### Expected Outcome
-- ✅ Preview URL appears in PR comments
-- ✅ Preview deployment accessible at `https://<project>-<hash>.vercel.app`
-- ✅ Preview uses Preview environment variables from Vercel Dashboard
+### Environments
 
-### Required Secrets (GitHub)
-- `VERCEL_TOKEN` - Vercel API token
-- `VERCEL_ORG_ID` - Vercel organization ID
-- `VERCEL_PROJECT_ID` - Vercel project ID
-- `NEXT_PUBLIC_SUPABASE_URL` - Supabase URL (for build)
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key (for build)
+#### Preview Environment
 
-### Required Environment Variables (Vercel Dashboard)
-- `NEXT_PUBLIC_SUPABASE_URL` - Preview environment
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Preview environment
-- `SUPABASE_SERVICE_ROLE_KEY` - Preview environment (if needed)
-- `DATABASE_URL` - Preview environment (if needed)
+**Trigger:** Pull requests to `main`
 
----
+**Workflow:** `frontend-deploy.yml`
 
-## 2. Production Deployment (Main Branch)
+**Process:**
+1. Build and test
+2. Deploy to Vercel Preview
+3. Comment PR with preview URL
 
-### Trigger
-- **Event:** Push to `main` branch
-- **Workflow:** `.github/workflows/frontend-deploy.yml`
-- **Job:** `deploy` (runs after `build-and-test` succeeds)
+**URL Format:** `https://<project>-<hash>.vercel.app`
 
-### Flow
-1. **Push to Main:**
-   - `ci.yml` → Quality checks (lint, typecheck, test, build)
-   - `frontend-deploy.yml` → `build-and-test` job:
-     - Same as Preview (lint, test, typecheck, build)
-   - `frontend-deploy.yml` → `deploy` job:
-     - Install Vercel CLI
-     - Determine environment (`production` for main)
-     - Pull Vercel config (`vercel pull --environment=production`)
-     - Build with Vercel (`vercel build`)
-     - Deploy production (`vercel deploy --prebuilt --prod=true`)
-   - `supabase-migrate.yml` → Database migrations (if migrations changed)
+**Environment Variables:** Vercel Dashboard → Preview environment
 
-### Expected Outcome
-- ✅ Production deployment accessible at `https://<project>.vercel.app`
-- ✅ Production uses Production environment variables from Vercel Dashboard
-- ✅ Zero-downtime deployment (Vercel handles)
+**Use Case:**
+- Testing PR changes
+- Stakeholder review
+- QA testing
 
-### Required Secrets (GitHub)
-- Same as Preview (see above)
+#### Production Environment
 
-### Required Environment Variables (Vercel Dashboard)
-- `NEXT_PUBLIC_SUPABASE_URL` - Production environment
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Production environment
-- `SUPABASE_SERVICE_ROLE_KEY` - Production environment (if needed)
-- `DATABASE_URL` - Production environment (if needed)
+**Trigger:** Push to `main`
 
----
+**Workflow:** `frontend-deploy.yml`
 
-## 3. Workflow Roles
+**Process:**
+1. Build and test
+2. Deploy to Vercel Production
+3. Output deployment URL
 
-### Primary Workflows
+**URL Format:** `https://<project>.vercel.app` (or custom domain)
 
-| Workflow | Purpose | Triggers | Status |
-|----------|---------|----------|--------|
-| `ci.yml` | Quality gates (lint, typecheck, test, build) | PR + Push to main | ✅ Required |
-| `frontend-deploy.yml` | **Primary deployment** (Preview + Production) | PR + Push to main | ✅ Required |
-| `supabase-migrate.yml` | Database migrations | Push to main (if migrations changed) | ✅ Required (when migrations exist) |
+**Environment Variables:** Vercel Dashboard → Production environment
 
-### Supplementary Workflows
+**Use Case:**
+- Live production site
+- User-facing application
 
-| Workflow | Purpose | Triggers | Status |
-|----------|---------|----------|--------|
-| `preview-pr.yml` | Quality gates (Lighthouse, Pa11y) + Preview deploy | PR | ⚠️ Optional |
-| `env-validation.yml` | Environment variable validation | PR (if env files changed) | ⚠️ Optional |
-| `security-scan.yml` | Security vulnerability scanning | PR + Push | ⚠️ Optional |
+### Deployment Process
 
-### Deprecated Workflows
+**Automated (CI/CD):**
+- Pull request → Preview deployment
+- Push to main → Production deployment
 
-| Workflow | Purpose | Status | Action |
-|----------|---------|--------|--------|
-| `deploy-main.yml` | Legacy production deploy | ⚠️ Deprecated | Disable or consolidate |
+**Manual:**
+```bash
+# Preview
+cd frontend
+vercel deploy --prebuilt --token=$VERCEL_TOKEN
+
+# Production
+cd frontend
+vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+```
+
+### Vercel Configuration
+
+**File:** `vercel.json`
+
+**Configuration:**
+- Build command: `cd frontend && npm ci && npm run build`
+- Output directory: `frontend/.next`
+- Framework: Next.js
+- Edge functions: `api/**/*.js`
+- Headers: Security headers, cache control
+- Cron jobs: Privacy cleanup, metrics collection
 
 ---
 
-## 4. Vercel Project Configuration
+## Database Deployment
 
-### Expected Project Settings
+### Hosting Provider: Supabase
 
-**Project Name:** (To be confirmed in Vercel Dashboard)  
-**Organization:** (To be confirmed in Vercel Dashboard)  
-**Framework:** Next.js  
-**Root Directory:** `frontend` (or root, depending on Vercel config)  
-**Build Command:** `cd frontend && npm ci && npm run build` (from `vercel.json`)  
-**Output Directory:** `frontend/.next` (from `vercel.json`)
+**Why Supabase:**
+- Managed PostgreSQL
+- Built-in authentication
+- Row Level Security (RLS)
+- Edge functions
+- Real-time subscriptions
 
-### Git Integration
+### Migration Process
 
-**Status:** ⚠️ **MUST BE DISABLED** if using GitHub Actions
+**Workflow:** `supabase-migrate.yml`
 
-**Rationale:**
-- GitHub Actions handles all deployments
-- Vercel Git Integration would cause conflicts (double deployments)
-- CI-first approach (no local CLI required)
+**Trigger:** Push to `main` (or manual)
 
-**How to Disable:**
-1. Vercel Dashboard → Project → Settings → Git
-2. Disconnect repository or disable automatic deployments
-3. Keep manual deployments disabled
+**Process:**
+1. Login to Supabase
+2. Link project
+3. Apply migrations (`supabase migration up`)
+4. Validate schema
 
-**Alternative:** If Vercel Git Integration is preferred, remove GitHub Actions deploy workflows and rely solely on Vercel's native integration.
+**Migration Files:** `supabase/migrations/`
 
----
+**Master Schema:** `99999999999999_master_consolidated_schema.sql`
 
-## 5. Environment Variables Mapping
+### Migration Strategy
 
-### GitHub Secrets → Vercel Environment Variables
+**Approach:** Single consolidated master migration
 
-| GitHub Secret | Vercel Variable | Purpose | Required For |
-|---------------|-----------------|---------|--------------|
-| `VERCEL_TOKEN` | - | CI deployment auth | CI workflows |
-| `VERCEL_ORG_ID` | - | CI deployment org | CI workflows |
-| `VERCEL_PROJECT_ID` | - | CI deployment project | CI workflows |
-| `NEXT_PUBLIC_SUPABASE_URL` | `NEXT_PUBLIC_SUPABASE_URL` | Build + Runtime | Both |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Build + Runtime | Both |
-| - | `SUPABASE_SERVICE_ROLE_KEY` | Runtime only | Vercel |
-| - | `DATABASE_URL` | Runtime only | Vercel |
+**Benefits:**
+- Idempotent operations
+- Safe to run multiple times
+- Clear schema state
 
-**Note:** `NEXT_PUBLIC_*` variables must exist in both GitHub Secrets (for CI builds) and Vercel Dashboard (for runtime).
+**Creating Migrations:**
+```bash
+# Update master migration
+vim supabase/migrations/99999999999999_master_consolidated_schema.sql
 
----
+# Or create incremental migration
+supabase migration new descriptive_name
+```
 
-## 6. Deployment Verification
+**Applying Migrations:**
+```bash
+# Local
+supabase start
+supabase migration up
 
-### Preview Deployment Verification
-
-**Checklist:**
-- [ ] PR created/updated
-- [ ] `frontend-deploy.yml` workflow triggered
-- [ ] `build-and-test` job passes
-- [ ] `deploy` job runs (not skipped)
-- [ ] Preview URL appears in PR comments
-- [ ] Preview URL accessible and functional
-
-**If Preview Fails:**
-1. Check GitHub Actions logs for `frontend-deploy.yml`
-2. Verify required secrets are set (see `env-and-secrets.md`)
-3. Check Vercel Dashboard → Deployments for errors
-4. Run `deploy-doctor` script (see `deploy-reliability-plan.md`)
-
-### Production Deployment Verification
-
-**Checklist:**
-- [ ] Push to `main` branch
-- [ ] `frontend-deploy.yml` workflow triggered
-- [ ] `build-and-test` job passes
-- [ ] `deploy` job runs (not skipped)
-- [ ] Production URL accessible and functional
-- [ ] Database migrations applied (if applicable)
-
-**If Production Fails:**
-1. Check GitHub Actions logs for `frontend-deploy.yml`
-2. Verify required secrets are set
-3. Check Vercel Dashboard → Deployments for errors
-4. Verify Vercel Git Integration is disabled
-5. Run `deploy-doctor` script
+# Production (via CI)
+# Automatically applied by supabase-migrate.yml
+```
 
 ---
 
-## 7. Rollback Procedure
+## Backend Deployment
 
-### Via Vercel Dashboard
-1. Vercel Dashboard → Project → Deployments
-2. Find previous successful deployment
+### Current Status: ❓ Unknown
+
+**Possible Scenarios:**
+1. **Not Deployed:** Backend runs locally only
+2. **Separate Deployment:** Deployed manually or via separate CI/CD
+3. **Serverless:** Backend logic in Next.js API routes or Supabase Edge Functions
+
+**Recommendation:** Document backend deployment process or create deployment workflow.
+
+### Potential Hosting Options
+
+**If Backend Needs Deployment:**
+
+1. **Fly.io**
+   - Docker-based
+   - Global edge network
+   - Good for Python/FastAPI
+
+2. **Render**
+   - Managed services
+   - Auto-deploy from Git
+   - Good for Python/FastAPI
+
+3. **Railway**
+   - Simple deployment
+   - Auto-deploy from Git
+   - Good for Python/FastAPI
+
+4. **Supabase Edge Functions**
+   - Serverless functions
+   - Co-located with database
+   - Good for lightweight APIs
+
+---
+
+## Deployment Workflow
+
+### Pull Request Flow
+
+```
+Developer creates PR
+  ↓
+CI checks run (lint, test, build)
+  ↓
+Preview deployment (Vercel)
+  ↓
+PR comment with preview URL
+  ↓
+Review & approve
+  ↓
+Merge to main
+```
+
+### Production Flow
+
+```
+Push to main
+  ↓
+CI checks run (lint, test, build)
+  ↓
+Database migrations (Supabase)
+  ↓
+Production deployment (Vercel)
+  ↓
+Deployment complete
+```
+
+### Deployment Order
+
+**Critical:** Migrations must run **before** code deployment if schema changes are included.
+
+**Current:** Migrations run independently (may cause issues)
+
+**Recommendation:** 
+1. Run migrations first
+2. Wait for migration completion
+3. Then deploy code
+
+**Or:** Use feature flags to handle schema changes gracefully.
+
+---
+
+## Environment Variables
+
+### Vercel Environment Variables
+
+**Location:** Vercel Dashboard → Project → Settings → Environment Variables
+
+**Environments:**
+- **Production:** Live production site
+- **Preview:** PR preview deployments
+- **Development:** Local development (not used)
+
+**Required Variables:**
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `DATABASE_URL` (for API routes)
+- `SUPABASE_SERVICE_ROLE_KEY` (for API routes)
+- `SECRET_KEY` (for production)
+
+**Setup:**
+```bash
+# Pull from Vercel
+vercel env pull .env.local
+```
+
+### Supabase Environment Variables
+
+**Location:** Supabase Dashboard → Settings → API
+
+**Variables:**
+- Project URL
+- API keys (anon, service_role)
+- Database connection string
+
+**Note:** Database connection managed by Supabase.
+
+---
+
+## Rollback Strategy
+
+### Frontend Rollback
+
+**Vercel:**
+1. Go to Vercel Dashboard → Deployments
+2. Find previous deployment
 3. Click "Promote to Production"
 
-### Via GitHub
-1. Revert commit: `git revert <commit-hash>`
-2. Push to `main`
-3. New deployment will be created automatically
+**Or via CLI:**
+```bash
+vercel rollback <deployment-url>
+```
+
+### Database Rollback
+
+**Supabase:**
+1. Create rollback migration
+2. Apply rollback migration
+3. Verify schema state
+
+**Note:** Supabase doesn't support automatic rollback - create manual rollback migrations.
 
 ---
 
-## 8. Branch Protection Rules
+## Monitoring & Health Checks
 
-### Required Checks for `main` Branch
+### Deployment Health
 
-**Minimum Required:**
-1. ✅ `ci.yml` - Quality gates (lint, typecheck, test, build)
-2. ✅ `frontend-deploy.yml` - Build and test (deploy can be optional)
+**Vercel:**
+- Automatic health checks
+- Deployment status in dashboard
+- Build logs available
 
-**Recommended:**
-3. ⚠️ `frontend-deploy.yml` - Deploy job (for production deployments)
-4. ⚠️ `supabase-migrate.yml` - Database migrations (if migrations exist)
+**Supabase:**
+- Migration status in dashboard
+- Database connection monitoring
+- Query performance monitoring
 
-**Optional (Non-blocking):**
-- `preview-pr.yml` - Quality gates
-- `security-scan.yml` - Security scanning
-- `env-validation.yml` - Environment validation
+### Post-Deployment Verification
+
+**Checklist:**
+1. ✅ Frontend loads correctly
+2. ✅ API routes respond
+3. ✅ Database migrations applied
+4. ✅ Environment variables loaded
+5. ✅ Authentication works
+6. ✅ Core features functional
+
+**Automated Checks:**
+- Health check endpoint: `/api/health`
+- Comprehensive health: `/api/health/comprehensive`
 
 ---
 
-## 9. Troubleshooting
+## Troubleshooting
 
-See:
-- `docs/vercel-troubleshooting.md` - Vercel-specific issues
-- `docs/deploy-reliability-plan.md` - Step-by-step troubleshooting
-- `docs/env-and-secrets.md` - Environment variable issues
+### Deployment Fails
+
+**Symptoms:**
+- Build errors
+- Deployment timeout
+- Environment variable errors
+
+**Steps:**
+1. Check Vercel build logs
+2. Verify environment variables
+3. Test build locally: `cd frontend && npm run build`
+4. Check for recent changes
+
+### Migration Fails
+
+**Symptoms:**
+- Migration errors
+- Schema validation fails
+- Application errors after migration
+
+**Steps:**
+1. Check Supabase migration logs
+2. Test migrations locally
+3. Verify migration syntax
+4. Check for schema conflicts
+
+### Preview Not Working
+
+**Symptoms:**
+- Preview URL not generated
+- Preview deployment fails
+- Preview shows errors
+
+**Steps:**
+1. Check `frontend-deploy.yml` logs
+2. Verify Vercel secrets
+3. Check PR comment for errors
+4. Test preview deployment manually
+
+---
+
+## Best Practices
+
+### 1. Test Before Deploy
+
+- Run CI locally: `npm run ci`
+- Test migrations locally: `supabase start && supabase migration up`
+- Verify build: `cd frontend && npm run build`
+
+### 2. Small, Incremental Changes
+
+- Small PRs are easier to review
+- Easier to rollback if needed
+- Faster deployments
+
+### 3. Monitor Deployments
+
+- Check deployment status
+- Monitor error rates
+- Track deployment frequency
+
+### 4. Document Changes
+
+- Document breaking changes
+- Update migration comments
+- Changelog for major changes
+
+### 5. Use Feature Flags
+
+- Gradual rollouts
+- Easy rollback
+- A/B testing
+
+---
+
+## Related Documentation
+
+- [CI/CD Overview](./ci-overview.md) - CI/CD workflows
+- [Environment Variables](./env-and-secrets.md) - Secrets management
+- [Database Migrations](./db-migrations-and-schema.md) - Migration strategy
+
+---
+
+## Quick Reference
+
+### Deploy Preview
+
+```bash
+cd frontend
+vercel deploy --prebuilt --token=$VERCEL_TOKEN
+```
+
+### Deploy Production
+
+```bash
+cd frontend
+vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+```
+
+### Apply Migrations
+
+```bash
+supabase migration up
+```
+
+### Check Deployment Status
+
+```bash
+# Vercel
+vercel ls
+
+# Supabase
+supabase migration list
+```
 
 ---
 
 **Last Updated:** 2025-01-XX  
-**Status:** ✅ Canonical Deployment Strategy Documented
+**Maintained By:** Unified Background Agent
