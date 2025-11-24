@@ -268,12 +268,31 @@ See [CI Configuration](.github/workflows/ci.yml) for the full test suite that ru
 
 ## Documentation
 
-- **[ENVIRONMENT.md](./ENVIRONMENT.md)** - Complete environment variables reference
+### Getting Started
+- **[Local Development Guide](./docs/local-dev.md)** - Complete setup instructions for local development
+- **[Environment Variables](./docs/env-and-secrets.md)** - Environment variables and secrets management
+- **[Stack Discovery](./docs/stack-discovery.md)** - Complete architecture and stack analysis
+
+### Architecture & Strategy
+- **[Backend Strategy](./docs/backend-strategy.md)** - Backend & database strategy (Supabase + Prisma)
+- **[Frontend Hosting Strategy](./docs/frontend-hosting-strategy.md)** - Frontend hosting on Vercel
+- **[CI/CD Overview](./docs/ci-overview.md)** - Complete CI/CD pipeline documentation
+
+### Deployment & Operations
+- **[Frontend Deployment](./docs/frontend-deploy-vercel-ci.md)** - Vercel deployment guide
+- **[Database Migrations](./docs/supabase-migrations-ci.md)** - Supabase migrations guide
+
+### Demo & Onboarding
+- **[Demo Script](./docs/demo-script.md)** - Demo-ready guide for showcasing Floyo
+
+### Audit & Reports
+- **[Repository Audit Summary](./docs/REPO_AUDIT_SUMMARY.md)** - Complete audit report
+
+### Legacy Documentation
+- **[ENVIRONMENT.md](./ENVIRONMENT.md)** - Legacy environment variables reference
 - **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - System architecture and design
 - **[API.md](./docs/API.md)** - API endpoint documentation
 - **[WORKFLOW.md](./docs/WORKFLOW.md)** - Development workflow and guidelines
-- **[VALUE_PROPOSITION.md](./VALUE_PROPOSITION.md)** - Why Floyo exists
-- **[USE_CASES.md](./USE_CASES.md)** - Detailed use cases and examples
 
 ### Health Reports
 
