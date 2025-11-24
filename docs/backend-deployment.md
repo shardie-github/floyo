@@ -11,7 +11,69 @@ The Floyo backend is a Python FastAPI application that can be deployed to variou
 
 ## Deployment Options
 
-### Option 1: Fly.io (Recommended)
+### Option 1: Supabase Edge Functions (Recommended for Supabase Users)
+
+**Why Supabase Edge Functions:**
+- Co-located with database (low latency)
+- Serverless (pay per use)
+- Built-in authentication
+- Easy integration with Supabase
+
+**Deployment Steps:**
+
+1. **Create Edge Function:**
+```bash
+cd supabase/functions
+supabase functions new floyo-backend
+```
+
+2. **Create Function Code:**
+```typescript
+// supabase/functions/floyo-backend/index.ts
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+serve(async (req) => {
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    {
+      global: {
+        headers: { Authorization: req.headers.get('Authorization')! },
+      },
+    }
+  );
+
+  // Handle FastAPI-like routing
+  const url = new URL(req.url);
+  const path = url.pathname;
+
+  if (path === '/api/health') {
+    return new Response(JSON.stringify({ status: 'healthy' }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Proxy to Python backend or implement endpoints here
+  return new Response(JSON.stringify({ error: 'Not found' }), {
+    status: 404,
+    headers: { 'Content-Type': 'application/json' },
+  });
+});
+```
+
+3. **Deploy:**
+```bash
+supabase functions deploy floyo-backend
+```
+
+4. **Set Secrets:**
+```bash
+supabase secrets set DATABASE_URL="..."
+supabase secrets set SECRET_KEY="..."
+```
+
+### Option 2: Fly.io (Alternative)
 
 **Why Fly.io:**
 - Docker-based deployment

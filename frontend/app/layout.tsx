@@ -13,6 +13,7 @@ import { ConsentBanner } from '@/components/integrations/ConsentBanner'
 import { TelemetryBeacon } from '@/components/TelemetryBeacon'
 import { DiagnosticWorkflowTracker } from '@/components/DiagnosticWorkflowTracker'
 import { SkipLink } from '@/components/accessibility/SkipLink'
+import { NPSSurvey } from '@/components/NPSSurvey'
 import { OrganizationStructuredData, WebsiteStructuredData } from '@/lib/seo/structured-data'
 import { generateSEOMetadata } from '@/lib/seo/metadata'
 import { initSentry } from '@/lib/monitoring/sentry'
@@ -161,6 +162,7 @@ export default function RootLayout({
               <ConsentBanner />
               <TelemetryBeacon />
               <DiagnosticWorkflowTracker />
+              <NPSSurvey />
               {/* [META:BEGIN:mounts] */}
               {/* Example mounts — wire auth user ID + app meta in your layout or provider */}
               {/* <meta name="x-app-id" content={process.env.NEXT_PUBLIC_APP_ID || 'generic'} /> */}
