@@ -1,0 +1,69 @@
+name: Test Coverage Enforcement
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  coverage-check:
+    name: Coverage Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r backend/requirements.txt pytest pytest-cov
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run Python tests with coverage
+        run: |
+          cd backend
+          pytest tests/unit/ --cov=backend --cov-report=term-missing --cov-report=json --cov-fail-under=60
+
+      - name: Run TypeScript tests with coverage
+        run: |
+          cd frontend
+          npm run test:coverage:ci
+
+      - name: Upload Python coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: backend/coverage.json
+          flags: python
+          name: python-coverage
+          fail_ci_if_error: false
+
+      - name: Upload TypeScript coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: frontend/coverage/coverage-final.json
+          flags: typescript
+          name: typescript-coverage
+          fail_ci_if_error: false
+
+      - name: Coverage comment
+        uses: py-cov-action/python-coverage-comment@v3
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MINIMUM_GREEN: 60
+          MINIMUM_ORANGE: 50
