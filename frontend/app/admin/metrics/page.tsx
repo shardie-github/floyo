@@ -1,299 +1,356 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
+import { useQuery } from '@tanstack/react-query';
 
 interface MetricsData {
-  performance: {
-    webVitals?: {
-      LCP?: number;
-      CLS?: number;
-      FID?: number;
-      TTFB?: number;
-      errors?: number;
-    };
-    supabase?: {
-      avgLatencyMs?: number;
-      queryCount?: number;
-      errorRate?: number;
-    };
-    expo?: {
-      bundleMB?: number;
-      buildDurationMin?: number;
-      successRate?: number;
-    };
-    ci?: {
-      avgBuildMin?: number;
-      failureRate?: number;
-      queueLength?: number;
-    };
-    client?: {
-      avgTTFB?: number;
-      avgLCP?: number;
-      errorCount?: number;
-    };
+  dau_wau_mau?: {
+    dau: number;
+    wau: number;
+    mau: number;
   };
-  status: 'healthy' | 'degraded' | 'regression';
-  lastUpdated: string;
-  trends?: {
-    [key: string]: number;
+  revenue?: {
+    mrr: number;
+    arr: number;
+    arpu: number;
+    total_paid_users: number;
   };
-  recommendations?: string[];
+  engagement?: {
+    events_per_user: number;
+    integrations_per_user: number;
+    active_users: number;
+  };
+  activation?: {
+    total_signups: number;
+    activated_users: number;
+    activation_rate: number;
+  };
+  unit_economics?: {
+    cac: number;
+    ltv: number;
+    ltv_cac_ratio: number;
+    payback_period_months: number;
+  };
+  acquisition_channels?: {
+    channels: Array<{
+      source: string;
+      medium: string;
+      signups: number;
+      percentage: number;
+    }>;
+    total_signups: number;
+  };
 }
 
 export default function MetricsDashboard() {
-  const [metrics, setMetrics] = useState<MetricsData | null>(null);
+  const [metrics, setMetrics] = useState<MetricsData>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    async function fetchMetrics() {
+      try {
+        // Fetch all metrics in parallel
+        const [dauWauMau, revenue, engagement, activation, unitEconomics, channels] = await Promise.all([
+          fetch('/api/analytics/dau-wau-mau').then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch('/api/analytics/revenue-metrics').then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch('/api/analytics/engagement-metrics?days=30').then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch('/api/analytics/activation-metrics?days=30').then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch('/api/analytics/unit-economics').then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch('/api/analytics/acquisition-channels?days=30').then(r => r.ok ? r.json() : null).catch(() => null),
+        ]);
+
+        setMetrics({
+          dau_wau_mau: dauWauMau,
+          revenue,
+          engagement,
+          activation,
+          unit_economics: unitEconomics,
+          acquisition_channels: channels,
+        });
+      } catch (error) {
+        console.error('Error fetching metrics:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     fetchMetrics();
-    // Auto-refresh every 60 seconds
-    const interval = setInterval(fetchMetrics, 60000);
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchMetrics, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const fetchMetrics = async () => {
-    try {
-      const res = await fetch('/api/metrics');
-      if (!res.ok) throw new Error('Failed to fetch metrics');
-      const data = await res.json();
-      setMetrics(data);
-      setError(null);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse">Loading metrics...</div>
+      <div className="min-h-screen bg-gray-50 p-8">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold mb-8">Loading Metrics...</h1>
+        </div>
       </div>
     );
   }
-
-  if (error) {
-    return (
-      <div className="p-6">
-        <div className="text-red-600">Error: {error}</div>
-      </div>
-    );
-  }
-
-  if (!metrics) {
-    return (
-      <div className="p-6">
-        <div>No metrics available</div>
-      </div>
-    );
-  }
-
-  const statusColor = {
-    healthy: 'bg-green-100 text-green-800',
-    degraded: 'bg-yellow-100 text-yellow-800',
-    regression: 'bg-red-100 text-red-800',
-  }[metrics.status];
-
-  // Prepare chart data
-  const webVitalsData = metrics.performance.webVitals
-    ? [
-        {
-          name: 'LCP',
-          value: metrics.performance.webVitals.LCP?.toFixed(2) || 0,
-          target: 2.5,
-        },
-        {
-          name: 'CLS',
-          value: metrics.performance.webVitals.CLS?.toFixed(3) || 0,
-          target: 0.1,
-        },
-        {
-          name: 'FID',
-          value: metrics.performance.webVitals.FID?.toFixed(2) || 0,
-          target: 100,
-        },
-        {
-          name: 'TTFB',
-          value: metrics.performance.webVitals.TTFB?.toFixed(2) || 0,
-          target: 800,
-        },
-      ]
-    : [];
-
-  const systemMetricsData = [
-    metrics.performance.supabase?.avgLatencyMs && {
-      name: 'Supabase Latency',
-      value: metrics.performance.supabase.avgLatencyMs,
-      unit: 'ms',
-    },
-    metrics.performance.expo?.bundleMB && {
-      name: 'Expo Bundle',
-      value: metrics.performance.expo.bundleMB,
-      unit: 'MB',
-    },
-    metrics.performance.ci?.avgBuildMin && {
-      name: 'CI Build Time',
-      value: metrics.performance.ci.avgBuildMin,
-      unit: 'min',
-    },
-  ].filter(Boolean);
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Performance Intelligence Dashboard</h1>
-        <div className="flex items-center gap-4">
-          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${statusColor}`}>
-            {metrics.status.toUpperCase()}
-          </span>
-          <span className="text-sm text-gray-500">
-            Last updated: {new Date(metrics.lastUpdated).toLocaleString()}
-          </span>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">YC Metrics Dashboard</h1>
+          <p className="text-gray-600 mt-2">Real-time metrics for YC interview prep</p>
+        </div>
+
+        {/* Quick Stats Summary */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <StatCard
+            label="Total Users"
+            value={metrics.activation?.total_signups || 0}
+            subtitle="Signups"
+          />
+          <StatCard
+            label="Paid Users"
+            value={metrics.revenue?.total_paid_users || 0}
+            subtitle="Active subscriptions"
+          />
+          <StatCard
+            label="MRR"
+            value={`$${metrics.revenue?.mrr?.toLocaleString() || 0}`}
+            subtitle="Monthly recurring revenue"
+          />
+          <StatCard
+            label="ARR"
+            value={`$${metrics.revenue?.arr?.toLocaleString() || 0}`}
+            subtitle="Annual recurring revenue"
+          />
+        </div>
+
+        {/* DAU/WAU/MAU */}
+        {metrics.dau_wau_mau && (
+          <MetricSection title="Usage Metrics">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <StatCard
+                label="DAU"
+                value={metrics.dau_wau_mau.dau}
+                subtitle="Daily active users"
+              />
+              <StatCard
+                label="WAU"
+                value={metrics.dau_wau_mau.wau}
+                subtitle="Weekly active users"
+              />
+              <StatCard
+                label="MAU"
+                value={metrics.dau_wau_mau.mau}
+                subtitle="Monthly active users"
+              />
+            </div>
+          </MetricSection>
+        )}
+
+        {/* Activation */}
+        {metrics.activation && (
+          <MetricSection title="Activation Metrics">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <StatCard
+                label="Total Signups"
+                value={metrics.activation.total_signups}
+                subtitle="Last 30 days"
+              />
+              <StatCard
+                label="Activated Users"
+                value={metrics.activation.activated_users}
+                subtitle="Viewed first suggestion"
+              />
+              <StatCard
+                label="Activation Rate"
+                value={`${metrics.activation.activation_rate?.toFixed(1) || 0}%`}
+                subtitle="% of signups who activate"
+              />
+            </div>
+          </MetricSection>
+        )}
+
+        {/* Revenue */}
+        {metrics.revenue && (
+          <MetricSection title="Revenue Metrics">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <StatCard
+                label="MRR"
+                value={`$${metrics.revenue.mrr?.toLocaleString() || 0}`}
+                subtitle="Monthly recurring revenue"
+              />
+              <StatCard
+                label="ARR"
+                value={`$${metrics.revenue.arr?.toLocaleString() || 0}`}
+                subtitle="Annual recurring revenue"
+              />
+              <StatCard
+                label="ARPU"
+                value={`$${metrics.revenue.arpu?.toFixed(2) || 0}`}
+                subtitle="Average revenue per user"
+              />
+              <StatCard
+                label="Paid Users"
+                value={metrics.revenue.total_paid_users}
+                subtitle="Active subscriptions"
+              />
+            </div>
+          </MetricSection>
+        )}
+
+        {/* Unit Economics */}
+        {metrics.unit_economics && (
+          <MetricSection title="Unit Economics">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <StatCard
+                label="CAC"
+                value={`$${metrics.unit_economics.cac?.toFixed(2) || 0}`}
+                subtitle="Customer acquisition cost"
+              />
+              <StatCard
+                label="LTV"
+                value={`$${metrics.unit_economics.ltv?.toFixed(2) || 0}`}
+                subtitle="Lifetime value"
+              />
+              <StatCard
+                label="LTV:CAC"
+                value={`${metrics.unit_economics.ltv_cac_ratio?.toFixed(1) || 0}:1`}
+                subtitle="Target: >3:1"
+              />
+              <StatCard
+                label="Payback Period"
+                value={`${metrics.unit_economics.payback_period_months?.toFixed(1) || 0} mo`}
+                subtitle="Months to recover CAC"
+              />
+            </div>
+          </MetricSection>
+        )}
+
+        {/* Engagement */}
+        {metrics.engagement && (
+          <MetricSection title="Engagement Metrics">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <StatCard
+                label="Events per User"
+                value={metrics.engagement.events_per_user?.toFixed(1) || 0}
+                subtitle="Average per day"
+              />
+              <StatCard
+                label="Integrations per User"
+                value={metrics.engagement.integrations_per_user?.toFixed(1) || 0}
+                subtitle="Average per user"
+              />
+              <StatCard
+                label="Active Users"
+                value={metrics.engagement.active_users}
+                subtitle="Last 30 days"
+              />
+            </div>
+          </MetricSection>
+        )}
+
+        {/* Acquisition Channels */}
+        {metrics.acquisition_channels && metrics.acquisition_channels.channels.length > 0 && (
+          <MetricSection title="Acquisition Channels">
+            <div className="bg-white rounded-lg shadow p-6">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-4 font-semibold">Source</th>
+                    <th className="text-left py-2 px-4 font-semibold">Medium</th>
+                    <th className="text-right py-2 px-4 font-semibold">Signups</th>
+                    <th className="text-right py-2 px-4 font-semibold">%</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metrics.acquisition_channels.channels.map((channel, idx) => (
+                    <tr key={idx} className="border-b">
+                      <td className="py-2 px-4">{channel.source || 'direct'}</td>
+                      <td className="py-2 px-4">{channel.medium || 'none'}</td>
+                      <td className="text-right py-2 px-4">{channel.signups}</td>
+                      <td className="text-right py-2 px-4">
+                        <div className="flex items-center justify-end">
+                          <div className="w-24 bg-gray-200 rounded-full h-2 mr-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full"
+                              style={{ width: `${channel.percentage}%` }}
+                            />
+                          </div>
+                          <span className="text-sm">{channel.percentage.toFixed(1)}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </MetricSection>
+        )}
+
+        {/* Export Buttons */}
+        <div className="mt-8 flex gap-4">
+          <button
+            onClick={() => {
+              const data = JSON.stringify(metrics, null, 2);
+              const blob = new Blob([data], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `floyo-metrics-${new Date().toISOString().split('T')[0]}.json`;
+              a.click();
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Export JSON
+          </button>
+          <button
+            onClick={() => {
+              // Create CSV export
+              const rows = [
+                ['Metric', 'Value'],
+                ['Total Users', metrics.activation?.total_signups || 0],
+                ['Paid Users', metrics.revenue?.total_paid_users || 0],
+                ['MRR', `$${metrics.revenue?.mrr || 0}`],
+                ['ARR', `$${metrics.revenue?.arr || 0}`],
+                ['DAU', metrics.dau_wau_mau?.dau || 0],
+                ['WAU', metrics.dau_wau_mau?.wau || 0],
+                ['MAU', metrics.dau_wau_mau?.mau || 0],
+                ['Activation Rate', `${metrics.activation?.activation_rate || 0}%`],
+                ['CAC', `$${metrics.unit_economics?.cac || 0}`],
+                ['LTV', `$${metrics.unit_economics?.ltv || 0}`],
+                ['LTV:CAC', `${metrics.unit_economics?.ltv_cac_ratio || 0}:1`],
+              ];
+              const csv = rows.map(r => r.join(',')).join('\n');
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `floyo-metrics-${new Date().toISOString().split('T')[0]}.csv`;
+              a.click();
+            }}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+          >
+            Export CSV
+          </button>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Status Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">LCP</h3>
-          <div className="text-2xl font-bold">
-            {metrics.performance.webVitals?.LCP?.toFixed(2) || 'N/A'}s
-          </div>
-          {metrics.trends?.LCP && (
-            <div
-              className={`text-sm ${
-                metrics.trends.LCP > 0 ? 'text-red-600' : 'text-green-600'
-              }`}
-            >
-              {metrics.trends.LCP > 0 ? '+' : ''}
-              {metrics.trends.LCP.toFixed(1)}%
-            </div>
-          )}
-        </div>
+function StatCard({ label, value, subtitle }: { label: string; value: string | number; subtitle?: string }) {
+  return (
+    <div className="bg-white rounded-lg shadow p-6">
+      <div className="text-sm text-gray-600 mb-1">{label}</div>
+      <div className="text-3xl font-bold text-gray-900 mb-1">{value}</div>
+      {subtitle && <div className="text-xs text-gray-500">{subtitle}</div>}
+    </div>
+  );
+}
 
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">CLS</h3>
-          <div className="text-2xl font-bold">
-            {metrics.performance.webVitals?.CLS?.toFixed(3) || 'N/A'}
-          </div>
-          {metrics.trends?.CLS && (
-            <div
-              className={`text-sm ${
-                metrics.trends.CLS > 0 ? 'text-red-600' : 'text-green-600'
-              }`}
-            >
-              {metrics.trends.CLS > 0 ? '+' : ''}
-              {metrics.trends.CLS.toFixed(1)}%
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Supabase Latency</h3>
-          <div className="text-2xl font-bold">
-            {metrics.performance.supabase?.avgLatencyMs?.toFixed(0) || 'N/A'}ms
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Errors</h3>
-          <div className="text-2xl font-bold">
-            {metrics.performance.webVitals?.errors || metrics.performance.client?.errorCount || 0}
-          </div>
-        </div>
-      </div>
-
-      {/* Web Vitals Chart */}
-      {webVitalsData.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h2 className="text-xl font-semibold mb-4">Web Vitals</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={webVitalsData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="value" fill="#3b82f6" name="Current" />
-              <Bar dataKey="target" fill="#ef4444" name="Target" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* System Metrics */}
-      {systemMetricsData.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h2 className="text-xl font-semibold mb-4">System Metrics</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={systemMetricsData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#10b981" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {/* Recommendations */}
-      {metrics.recommendations && metrics.recommendations.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h2 className="text-xl font-semibold mb-4">Optimization Recommendations</h2>
-          <ul className="list-disc list-inside space-y-2">
-            {metrics.recommendations.map((rec, idx) => (
-              <li key={idx} className="text-sm text-gray-700 dark:text-gray-300">
-                {rec}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Trends */}
-      {metrics.trends && Object.keys(metrics.trends).length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h2 className="text-xl font-semibold mb-4">Trends (6h vs previous 6h)</h2>
-          <div className="space-y-2">
-            {Object.entries(metrics.trends).map(([key, value]) => (
-              <div key={key} className="flex justify-between items-center">
-                <span className="font-medium">{key}</span>
-                <span
-                  className={`font-semibold ${
-                    value > 0 ? 'text-red-600' : 'text-green-600'
-                  }`}
-                >
-                  {value > 0 ? '+' : ''}
-                  {value.toFixed(1)}%
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Raw JSON View (collapsible) */}
-      <details className="mt-6">
-        <summary className="cursor-pointer text-sm font-medium text-gray-600">
-          View Raw JSON
-        </summary>
-        <pre className="mt-2 p-4 bg-gray-100 rounded overflow-auto text-xs">
-          {JSON.stringify(metrics, null, 2)}
-        </pre>
-      </details>
+function MetricSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-8">
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">{title}</h2>
+      {children}
     </div>
   );
 }

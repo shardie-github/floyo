@@ -11,6 +11,8 @@ from backend.api import (
 from backend.api.analytics import dashboard as analytics_dashboard
 from backend.api.integrations import zapier, tiktok, meta
 from backend.api.marketplace import __init__ as marketplace_module
+from backend.analytics import router as analytics_router
+from backend.api.referral import router as referral_router
 
 
 def register_routes(app: FastAPI):
@@ -39,6 +41,10 @@ def register_routes(app: FastAPI):
     
     # Analytics routes
     app.include_router(analytics_dashboard.router)
+    app.include_router(analytics_router)
+    
+    # Referral routes
+    app.include_router(referral_router)
     
     # Integration-specific routes
     app.include_router(zapier.router)

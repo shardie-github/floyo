@@ -196,35 +196,90 @@
 
 ---
 
+## Founder Information Template
+
+### Founder 1: [Your Name]
+
+**Role:** [CEO/CTO/CPO/etc.]
+
+**Background:**
+- **Previous Companies:** [List companies, roles, achievements]
+- **Education:** [Schools, degrees, notable achievements]
+- **Notable Achievements:** [Awards, publications, open source contributions, etc.]
+
+**Why I'm Qualified:**
+- [Reason 1: e.g., "Built developer tools at [Company]"]
+- [Reason 2: e.g., "Experienced the tool sprawl problem firsthand"]
+- [Reason 3: e.g., "Technical expertise in [relevant area]"]
+
+**Responsibilities:**
+- Product strategy
+- Engineering (backend/frontend)
+- GTM (marketing/sales)
+
+**Previous Projects:**
+- [Project 1]: [What it was, what you learned, how it relates to Floyo]
+- [Project 2]: [What it was, what you learned, how it relates to Floyo]
+
+**Commitment:**
+- Full-time / Part-time
+- Other commitments: [None / List]
+- Runway: [X] months
+
+---
+
+### Founder 2: [Co-founder Name]
+
+[Same template as above]
+
+---
+
+### Founder 3: [Co-founder Name] (if applicable)
+
+[Same template as above]
+
+---
+
+## Why This Team?
+
+**Unique Insight:**
+> [What do you know that others don't? e.g., "We discovered that 80% of developers manually sync data daily, but only 20% know automation tools can help"]
+
+**Complementary Skills:**
+> [How do founders complement each other? e.g., "Founder 1 brings technical expertise, Founder 2 brings product/GTM experience"]
+
+**Execution Evidence:**
+> [What have you built together? e.g., "We built [previous project] in [X] months and achieved [result]"]
+
+---
+
+## Hiring Plans
+
+**Immediate Needs (0-3 months):**
+- [Role 1]: [Why needed, when]
+- [Role 2]: [Why needed, when]
+
+**Near-term Needs (3-6 months):**
+- [Role 3]: [Why needed, when]
+
+**Hiring Process:**
+- [Describe your hiring process]
+- [How do you evaluate candidates?]
+- [What's your culture fit criteria?]
+
+---
+
 ## TODO: Founders to Fill In
 
-> **TODO:** Add founder names, backgrounds, and photos
+> **TODO:** Replace all [placeholders] with real information
 
-> **TODO:** Add "Why this team?" narrative:
-> - What unique insight do you have?
-> - What experience makes you qualified?
-> - Why are you the right team to build this?
+> **TODO:** Add photos (optional but recommended)
 
-> **TODO:** Add division of responsibilities:
-> - Who does product?
-> - Who does engineering?
-> - Who does GTM?
-> - Who does design?
+> **TODO:** Add LinkedIn profiles
 
-> **TODO:** Add previous projects:
-> - What have you built before?
-> - What did you learn?
-> - How does it relate to Floyo?
+> **TODO:** Add GitHub profiles (if applicable)
 
-> **TODO:** Add commitment level:
-> - Full-time or part-time?
-> - Other commitments?
-> - Runway?
-
-> **TODO:** Add hiring plans:
-> - What roles are you hiring for?
-> - When?
-> - What's your hiring process?
+> **TODO:** Add any press/articles about founders
 
 ---
 
