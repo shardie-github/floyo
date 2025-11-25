@@ -1,0 +1,58 @@
+{
+  "budgets": [
+    {
+      "type": "bundle",
+      "name": "JavaScript Bundle",
+      "maximumWarning": "250kb",
+      "maximumError": "300kb",
+      "path": "**/*.js"
+    },
+    {
+      "type": "bundle",
+      "name": "CSS Bundle",
+      "maximumWarning": "50kb",
+      "maximumError": "75kb",
+      "path": "**/*.css"
+    },
+    {
+      "type": "initial",
+      "name": "Initial JavaScript",
+      "maximumWarning": "200kb",
+      "maximumError": "250kb"
+    },
+    {
+      "type": "anyComponentStyle",
+      "name": "Component Styles",
+      "maximumWarning": "10kb",
+      "maximumError": "15kb"
+    }
+  ],
+  "api": {
+    "responseTime": {
+      "p50": 200,
+      "p95": 500,
+      "p99": 1000,
+      "maximumError": 2000
+    },
+    "endpoints": {
+      "/api/health": {
+        "p95": 100,
+        "maximumError": 200
+      },
+      "/api/telemetry": {
+        "p95": 300,
+        "maximumError": 500
+      },
+      "/api/events": {
+        "p95": 400,
+        "maximumError": 800
+      }
+    }
+  },
+  "lighthouse": {
+    "performance": 80,
+    "accessibility": 90,
+    "bestPractices": 80,
+    "seo": 80
+  }
+}

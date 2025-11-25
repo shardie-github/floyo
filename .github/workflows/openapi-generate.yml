@@ -1,0 +1,67 @@
+name: Generate OpenAPI Documentation
+
+on:
+  pull_request:
+    paths:
+      - 'frontend/app/api/**'
+      - 'backend/api/**'
+      - 'scripts/generate-openapi*.ts'
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/app/api/**'
+      - 'backend/api/**'
+      - 'scripts/generate-openapi*.ts'
+  workflow_dispatch:
+
+jobs:
+  generate-openapi:
+    name: Generate OpenAPI Spec
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate OpenAPI specification
+        run: npm run openapi:generate
+        continue-on-error: true
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if [ -f openapi.json ]; then
+            if git diff --quiet openapi.json; then
+              echo "changed=false" >> $GITHUB_OUTPUT
+            else
+              echo "changed=true" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit OpenAPI spec
+        if: steps.check-changes.outputs.changed == 'true' && github.event_name == 'push'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add openapi.json
+          git commit -m "chore: update OpenAPI specification [skip ci]" || exit 0
+          git push || exit 0
+
+      - name: Upload OpenAPI spec
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: openapi-spec
+          path: openapi.json
+          retention-days: 30

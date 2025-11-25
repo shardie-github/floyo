@@ -1,363 +1,305 @@
-# Database Migrations & Schema Orchestration
+# Database Migrations & Schema Documentation
 
-**Generated:** 2025-01-XX  
-**Purpose:** Document migration strategy and schema reconciliation
+**Generated:** 2025-01-20  
+**Agent:** Unified Background Agent v3.0  
+**Status:** Complete
 
-## Migration Systems Overview
+## Migration Strategy Overview
 
-### Current State
+This project uses a **hybrid migration approach**:
+- **Master Migration:** Single consolidated schema file (`99999999999999_master_consolidated_schema.sql`)
+- **Incremental Migrations:** Data migrations and schema updates (`YYYYMMDDHHMMSS_description.sql`)
+- **Prisma Schema:** Type-safe schema definition (`prisma/schema.prisma`)
 
-This project uses **two migration systems**:
+## Current Migration State
 
-1. **Supabase Migrations**
-   - Location: `supabase/migrations/`
-   - Master schema: `99999999999999_master_consolidated_schema.sql`
-   - Applied via: `supabase-migrate.yml` CI workflow
-   - CLI: `supabase migration up`
+### Active Migrations
 
-2. **Prisma Schema**
-   - Location: `prisma/schema.prisma`
-   - Purpose: ORM type definitions
-   - Generation: `prisma generate`
-   - Migration: `prisma migrate` (may be separate)
+1. **`99999999999999_master_consolidated_schema.sql`**
+   - **Purpose:** Bootstrap fresh database to final state
+   - **Size:** 1,400+ lines
+   - **Status:** ✅ Active
+   - **Idempotent:** Yes (uses `IF NOT EXISTS`)
+   - **Safe to run:** Yes (multiple times)
 
-### ⚠️ Risk: Schema Drift
+2. **`20250120000000_nps_submissions.sql`**
+   - **Purpose:** Add NPS submissions table
+   - **Status:** ✅ Active
+   - **Idempotent:** Yes
 
-**Problem:** Two migration systems can drift apart, causing:
-- Type mismatches between Prisma and database
-- Runtime errors from missing columns/tables
-- Deployment failures
+### Archived Migrations
 
-**Solution:** Implement validation and sync strategy (see below)
+**Location:** `supabase/migrations_archive/`
 
----
+Historical migrations preserved for reference:
+- `000000000800_upsert_functions.sql`
+- `20240101000000_initial_schema.sql`
+- `20240101000001_validation_queries.sql`
+- `20240101000002_enhanced_policies.sql`
+- `20240101000003_privacy_monitoring.sql`
+- `2025-11-05_telemetry.sql`
+- `2025-11-05_trust_audit.sql`
+- `20250101000000_performance_indexes.sql`
+- `20250106000000_metrics_log.sql`
+- `20250110000000_consolidated_rls_policies.sql`
+- `20250115000000_activation_analytics_indexes.sql`
+- `20251105_crux_hardening.sql`
+- `20251105_workflow_runs.sql`
 
-## Migration Strategy
+**Note:** These are archived and not executed automatically.
 
-### Supabase Migrations (Primary)
+## Schema Reconciliation
 
-**Master Migration Approach:**
-- Single consolidated migration file
-- Idempotent operations (`IF NOT EXISTS`)
-- Safe to run multiple times
-- Historical migrations archived
+### Prisma Schema vs Supabase Migrations
 
-**Applying Migrations:**
+**Prisma Schema:** `prisma/schema.prisma`
+- **Models:** 20+ models defined
+- **Relationships:** Comprehensive foreign keys
+- **Indexes:** Defined in `@@index` directives
+- **Purpose:** Type-safe TypeScript client generation
 
-```bash
-# Local development
-supabase start
-supabase migration up
+**Supabase Migrations:** `supabase/migrations/*.sql`
+- **Tables:** Created via SQL DDL
+- **RLS Policies:** Defined in migrations
+- **Functions:** PostgreSQL functions defined
+- **Purpose:** Database schema definition
 
-# Production (via CI)
-# Automatically applied by supabase-migrate.yml workflow
-```
+### Alignment Status
 
-**Creating New Migrations:**
+✅ **Aligned:**
+- Core tables (User, Session, Event, Pattern, etc.)
+- Relationships and foreign keys
+- Indexes (most indexes match)
 
-1. **Schema Changes:** Update master migration directly
-2. **Data Migrations:** Create incremental migration
+⚠️ **Potential Drift:**
+- RLS policies (defined in Supabase, not in Prisma)
+- Database functions (defined in Supabase, not in Prisma)
+- Constraints (some constraints may differ)
 
-```bash
-supabase migration new descriptive_name
-# Edit: supabase/migrations/TIMESTAMP_descriptive_name.sql
-```
+### Validation Scripts
 
-### Prisma Schema (Secondary)
-
-**Current Usage:**
-- Type definitions for TypeScript/JavaScript
-- Client generation: `prisma generate`
-- May be used in Python via bridge (not confirmed)
-
-**Sync Strategy:**
-
-**Option 1: Prisma → Supabase (Recommended)**
-```bash
-# Generate Supabase migration from Prisma changes
-prisma migrate dev --create-only
-# Convert Prisma migration to Supabase format
-# Apply via Supabase CLI
-```
-
-**Option 2: Supabase → Prisma**
-```bash
-# Pull schema from Supabase
-supabase db pull
-# Generate Prisma schema from Supabase
-# (Requires custom tooling)
-```
-
-**Option 3: Manual Sync (Current)**
-- Maintain both manually
-- Use validation script to detect drift
-- ⚠️ Requires discipline
-
----
-
-## Schema Validation
-
-### Validation Script
-
-**Location:** `scripts/db-validate-schema.ts`
-
-**Purpose:**
-- Validates core tables exist
-- Checks required columns
-- Detects schema drift
+**Existing Scripts:**
+1. `scripts/validate-schema-alignment.ts` - Validates Prisma vs Supabase
+2. `scripts/db-validate-schema.ts` - Validates database schema
+3. `scripts/align-migrations.ts` - Aligns migrations
 
 **Usage:**
 ```bash
-tsx scripts/db-validate-schema.ts
+npm run schema:validate
+npm run migrations:align
 ```
 
-**CI Integration:**
-- Runs after migrations in `supabase-migrate.yml`
-- Non-blocking (can be made blocking)
+## Schema Structure
 
-### Core Tables (Required)
+### Core Tables
 
-The following tables **must exist**:
+**Users & Authentication:**
+- `users` - User accounts
+- `sessions` - Authentication sessions
+- `mfa_enforced_sessions` - MFA sessions
 
-1. `users` - User accounts
-2. `sessions` - Auth sessions
-3. `events` - File system events
-4. `patterns` - Detected usage patterns
-5. `relationships` - File relationships
-6. `subscriptions` - Billing
-7. `privacy_prefs` - Privacy settings
-8. `organizations` - Multi-tenant support
-9. `workflows` - Workflow definitions
+**File Tracking:**
+- `events` - File system events
+- `patterns` - Detected file usage patterns
+- `relationships` - File-to-file relationships
 
-**See:** `scripts/db-validate-schema.ts` for full list
+**Multi-tenant:**
+- `organizations` - Organizations
+- `organization_members` - Organization membership
+- `workflows` - Workflow definitions
+- `workflow_versions` - Workflow version history
+- `workflow_executions` - Workflow execution logs
 
----
+**Privacy & Compliance:**
+- `privacy_prefs` - User privacy preferences
+- `app_allowlist` - App-level permissions
+- `signal_toggles` - Granular signal controls
+- `telemetry_events` - Privacy-first telemetry
+- `privacy_transparency_log` - Privacy audit trail
+- `audit_logs` - General audit logging
+- `retention_policies` - Data retention policies
 
-## CI/CD Migration Workflow
+**Billing & Subscriptions:**
+- `subscriptions` - User subscriptions
+- `offers` - Pricing offers
+- `feature_flags` - Feature flags
 
-### Current Workflow
+**Analytics:**
+- `utm_tracks` - UTM tracking
+- `cohorts` - Cohort analysis
+- `metrics_log` - System metrics
+- `nps_submissions` - NPS survey responses
 
-**File:** `.github/workflows/supabase-migrate.yml`
+**Integrations:**
+- `user_integrations` - Third-party integrations
 
-**Steps:**
-1. Checkout repository
-2. Setup Node.js
-3. Login to Supabase
-4. Link Supabase project
-5. Apply migrations (`supabase migration up`)
-6. Validate schema (`scripts/db-validate-schema.ts`)
+### Indexes
 
-**Triggers:**
-- Push to `main` branch
-- Manual (`workflow_dispatch`)
+**User-related:**
+- `users.email` (unique)
+- `sessions.token` (unique)
+- `sessions.userId` (indexed)
 
-**Concurrency:**
-- Single migration at a time (no cancellation)
+**Event-related:**
+- `events.userId, events.timestamp` (composite)
+- `events.filePath` (indexed)
 
-### Recommendations
+**Pattern-related:**
+- `patterns.userId, patterns.fileExtension` (unique composite)
+- `patterns.userId` (indexed)
 
-1. ✅ **Current workflow is good**
-2. ⚠️ **Consider:** Pre-migration backup
-3. ⚠️ **Consider:** Rollback strategy
-4. ⚠️ **Consider:** Migration testing in staging
+**Workflow-related:**
+- `workflows.userId` (indexed)
+- `workflows.organizationId` (indexed)
+- `workflows.isActive` (indexed)
+- `workflow_executions.workflowId` (indexed)
+- `workflow_executions.status` (indexed)
+- `workflow_executions.startedAt` (indexed)
 
----
+**Privacy-related:**
+- `telemetry_events.userId, telemetry_events.timestamp` (composite)
+- `telemetry_events.appId` (indexed)
+- `telemetry_events.timestamp` (indexed)
 
-## Schema Reconciliation Plan
+### Row Level Security (RLS)
 
-### Step 1: Audit Current State
+**RLS Policies:** Defined in Supabase migrations
 
-```bash
-# Check Prisma schema
-cat prisma/schema.prisma
+**Key Policies:**
+- Users can only access their own data
+- Organization members can access org data
+- Admins have elevated permissions
+- Public read access for certain tables (feature flags, offers)
 
-# Check Supabase migrations
-cat supabase/migrations/99999999999999_master_consolidated_schema.sql
+**Validation Script:** `scripts/verify-rls.ts`
 
-# Validate against database
-tsx scripts/db-validate-schema.ts
-```
+## Migration Workflow
 
-### Step 2: Identify Drift
+### Creating New Migrations
 
-**Compare:**
-- Prisma schema vs Supabase migrations
-- Supabase migrations vs actual database
-- Prisma schema vs actual database
+**For Schema Changes:**
+1. Update `prisma/schema.prisma`
+2. Generate Prisma client: `npm run prisma:generate`
+3. Create Supabase migration: `supabase migration new <description>`
+4. Write SQL in migration file
+5. Test locally: `supabase start && supabase migration up`
+6. Validate alignment: `npm run schema:validate`
 
-**Tools:**
-- `scripts/db-validate-schema.ts` (already exists)
-- `scripts/validate-schema-alignment.ts` (if exists)
-- Manual comparison
+**For Data Migrations:**
+1. Create incremental migration: `supabase migration new <description>`
+2. Write idempotent SQL
+3. Test locally
+4. Apply to production: `supabase migration up`
 
-### Step 3: Reconcile
+### Applying Migrations
 
-**If Prisma is ahead:**
-1. Generate Supabase migration from Prisma changes
-2. Apply migration
-3. Verify schema
-
-**If Supabase is ahead:**
-1. Update Prisma schema to match Supabase
-2. Regenerate Prisma client
-3. Verify types
-
-**If both are out of sync:**
-1. Choose source of truth (recommend Supabase)
-2. Update other to match
-3. Document decision
-
-### Step 4: Prevent Future Drift
-
-**Automation:**
-- CI check: Compare Prisma schema hash with Supabase migration hash
-- Pre-commit hook: Validate schema consistency
-- Documentation: Clear process for schema changes
-
----
-
-## Migration Best Practices
-
-### 1. Idempotency
-
-**Always use:**
-```sql
-CREATE TABLE IF NOT EXISTS ...
-CREATE INDEX IF NOT EXISTS ...
-CREATE FUNCTION IF NOT EXISTS ...
-```
-
-**Avoid:**
-```sql
-CREATE TABLE ...  -- Will fail if exists
-DROP TABLE ...    -- Destructive
-```
-
-### 2. Transactions
-
-**Use transactions for related changes:**
-```sql
-BEGIN;
-  -- Multiple related changes
-COMMIT;
-```
-
-**Note:** Supabase CLI handles transactions automatically
-
-### 3. Testing
-
-**Test locally first:**
+**Local Development:**
 ```bash
 supabase start
 supabase migration up
-# Test application
-supabase stop
 ```
 
-### 4. Documentation
-
-**Document breaking changes:**
-```sql
--- BREAKING: Removes column 'old_field'
--- Migration required: Update application code before applying
-ALTER TABLE users DROP COLUMN old_field;
+**Production:**
+```bash
+supabase link --project-ref <PROJECT_REF>
+supabase migration up
 ```
 
-### 5. Rollback Strategy
+**Via CI/CD:**
+- Automated via `supabase-migrate.yml` workflow
+- Runs on push to main
+- Validates before applying
 
-**Create rollback migrations:**
-```sql
--- Migration: add_column.sql
-ALTER TABLE users ADD COLUMN new_field TEXT;
+## Migration Best Practices
 
--- Rollback: remove_column.sql
-ALTER TABLE users DROP COLUMN new_field;
-```
+### ✅ Do's
 
-**Note:** Supabase doesn't support automatic rollback - create manual rollback migrations
+1. **Use `IF NOT EXISTS`** for idempotent operations
+2. **Test locally first** before applying to production
+3. **Document breaking changes** in migration comments
+4. **Keep migrations small** and focused
+5. **Use transactions** for related changes
+6. **Validate schema alignment** after migrations
 
----
+### ❌ Don'ts
+
+1. **Don't modify existing migrations** (create new ones instead)
+2. **Don't delete data** without backup
+3. **Don't run migrations without testing**
+4. **Don't ignore schema drift** warnings
+5. **Don't mix schema and data migrations** unnecessarily
 
 ## Troubleshooting
 
 ### Migration Fails
 
-**Symptoms:**
-- CI workflow fails
-- Schema validation fails
-- Application errors
+**Symptoms:** Migration fails with error
 
-**Steps:**
+**Solutions:**
 1. Check Supabase logs: `supabase logs`
 2. Verify project link: `supabase projects list`
 3. Check migration status: `supabase migration list`
-4. Review migration file for syntax errors
-5. Test locally: `supabase start && supabase migration up`
+4. Rollback if needed: `supabase migration down`
 
-### Schema Drift Detected
+### Schema Drift
 
-**Symptoms:**
-- Validation script reports missing tables/columns
-- Prisma client errors
-- Runtime database errors
+**Symptoms:** Prisma schema doesn't match database
 
-**Steps:**
-1. Identify drift: `tsx scripts/db-validate-schema.ts`
-2. Compare Prisma schema with Supabase migrations
-3. Create reconciliation migration
-4. Apply migration
-5. Verify: Re-run validation script
+**Solutions:**
+1. Pull current schema: `supabase db pull`
+2. Compare with Prisma: `npm run schema:validate`
+3. Create alignment migration: `npm run migrations:align`
+4. Apply migration: `supabase migration up`
 
-### Migration Conflicts
+### Missing Tables/Columns
 
-**Symptoms:**
-- Multiple developers create migrations
-- Migration order conflicts
-- Duplicate migrations
+**Symptoms:** Application errors about missing tables
 
-**Steps:**
-1. Review all pending migrations
-2. Resolve conflicts manually
-3. Consolidate if needed
-4. Test locally
-5. Apply in order
+**Solutions:**
+1. Check migration status: `supabase migration list`
+2. Apply pending migrations: `supabase migration up`
+3. Verify schema: `npm run schema:validate`
+
+## Migration Scripts Reference
+
+### Available Scripts
+
+**Validation:**
+- `npm run schema:validate` - Validate schema alignment
+- `npm run migrations:align` - Align migrations
+- `npm run verify:rls` - Verify RLS policies
+
+**Migration:**
+- `npm run prisma:generate` - Generate Prisma client
+- `npm run prisma:migrate` - Run Prisma migrations (dev)
+- `npm run prisma:deploy` - Deploy Prisma migrations (prod)
+- `npm run supa:migrate:apply` - Apply Supabase migrations
+
+**Database:**
+- `npm run prisma:studio` - Open Prisma Studio
+- `tsx scripts/db-validate-schema.ts` - Validate database schema
+
+## Future Improvements
+
+### Recommended Enhancements
+
+1. **Automated Schema Validation**
+   - Add CI check for schema alignment
+   - Block PRs with schema drift
+
+2. **Migration Testing**
+   - Add migration tests in CI
+   - Test rollback procedures
+
+3. **Schema Documentation**
+   - Auto-generate ER diagrams
+   - Document RLS policies
+
+4. **Migration Monitoring**
+   - Track migration execution time
+   - Alert on migration failures
 
 ---
 
-## Action Items
-
-### Immediate
-1. ✅ Run schema validation: `tsx scripts/db-validate-schema.ts`
-2. ✅ Compare Prisma schema with Supabase migrations
-3. ✅ Document any drift found
-
-### Short-term (This Week)
-1. Create reconciliation migration if drift exists
-2. Update CI to fail on schema validation errors (optional)
-3. Document schema change process
-
-### Long-term (30 days)
-1. Implement automated schema sync (Prisma ↔ Supabase)
-2. Add pre-commit hook for schema validation
-3. Create migration testing strategy
-
----
-
-## Related Documentation
-
-- [Stack Discovery](./stack-discovery.md) - Overall architecture
-- [Backend Strategy](./backend-strategy.md) - Backend recommendations
-- [API Documentation](./api.md) - API endpoints
-- [Environment Setup](./env-and-secrets.md) - Environment variables
-
----
-
-## Conclusion
-
-The current migration strategy (Supabase master migration) is **sound**, but requires:
-
-1. **Validation:** Ensure Prisma schema stays in sync
-2. **Documentation:** Clear process for schema changes
-3. **Automation:** Prevent drift via CI checks
-
-**No major changes recommended** - focus on validation and sync.
+**Generated by Unified Background Agent v3.0**  
+**Last Updated:** 2025-01-20

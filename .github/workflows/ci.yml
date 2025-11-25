@@ -110,12 +110,12 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install -r backend/requirements.txt pytest pytest-asyncio
+          pip install -r backend/requirements.txt pytest pytest-asyncio pytest-cov
 
       - name: Run Python unit tests
         run: |
           cd backend
-          pytest tests/unit/ -v --tb=short || exit 1
+          pytest tests/unit/ -v --tb=short --cov=backend --cov-report=term-missing --cov-fail-under=60 || exit 1
         continue-on-error: false
 
       - name: Install frontend dependencies
@@ -127,6 +127,12 @@ jobs:
         run: |
           cd frontend
           npm test || exit 1
+        continue-on-error: false
+
+      - name: Check test coverage thresholds
+        run: |
+          cd frontend
+          npm run test:coverage:ci || exit 1
         continue-on-error: false
 
   build:
@@ -191,7 +197,7 @@ jobs:
       - name: Generate TypeScript coverage
         run: |
           cd frontend
-          npm run test:coverage || true
+          npm run test:coverage:ci || true
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
@@ -219,29 +225,19 @@ jobs:
 
       - name: Install dependencies
         run: |
+          npm ci
           cd frontend
           npm ci
 
-      - name: Build and analyze bundle
+      - name: Build frontend
         run: |
           cd frontend
           npm run build
-          
-          # Check bundle sizes (adjust paths based on your build output)
-          if [ -d ".next" ]; then
-            MAIN_BUNDLE=$(find .next -name "*.js" -type f -exec ls -lh {} \; | sort -k5 -hr | head -1 | awk '{print $5}')
-            echo "Main bundle size: $MAIN_BUNDLE"
-            
-            # Warn if exceeds 250KB (non-blocking)
-            SIZE_BYTES=$(echo "$MAIN_BUNDLE" | sed 's/K/ * 1024/' | sed 's/M/ * 1024 * 1024/' | bc 2>/dev/null || echo "0")
-            MAX_SIZE=256000
-            
-            if [ "$SIZE_BYTES" -gt "$MAX_SIZE" ]; then
-              echo "⚠️ Bundle size exceeds 250KB threshold: $MAIN_BUNDLE"
-            else
-              echo "✅ Bundle size within limits: $MAIN_BUNDLE"
-            fi
-          fi
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key' }}
+
+      - name: Check performance budgets
+        run: |
+          npm run perf:check || echo "Performance budget check failed (non-blocking)"
+        continue-on-error: true
