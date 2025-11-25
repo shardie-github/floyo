@@ -268,6 +268,11 @@ See [CI Configuration](.github/workflows/ci.yml) for the full test suite that ru
 
 ## Documentation
 
+### YC Readiness
+- **[YC Readiness Overview](./yc/REPO_ORIENTATION.md)** - Quick orientation for YC partners and investors
+- **[YC Interview Cheat Sheet](./yc/YC_INTERVIEW_CHEATSHEET.md)** - Interview prep reference
+- **[Full YC Documentation](./yc/)** - Complete YC readiness package (product, metrics, distribution, tech)
+
 ### Getting Started
 - **[Local Development Guide](./docs/local-dev.md)** - Complete setup instructions for local development
 - **[Environment Variables](./docs/env-and-secrets.md)** - Environment variables and secrets management
