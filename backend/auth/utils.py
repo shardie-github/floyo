@@ -28,6 +28,7 @@ __all__ = [
     "create_access_token",
     "create_refresh_token",
     "get_current_user",
+    "get_optional_user",
     "security",
     "pwd_context",
     "SECRET_KEY",
@@ -93,4 +94,25 @@ async def get_current_user(
     user = db.query(User).filter(User.id == payload.get("sub")).first()
     if user is None:
         raise credentials_exception
+    return user
+
+
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security.auto_error(False)),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    """Get the current authenticated user from JWT token, or None if not authenticated."""
+    if credentials is None:
+        return None
+    
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            return None
+    except jwt.PyJWTError:
+        return None
+    
+    user = db.query(User).filter(User.id == payload.get("sub")).first()
     return user

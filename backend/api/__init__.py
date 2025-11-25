@@ -13,6 +13,9 @@ from backend.api.integrations import zapier, tiktok, meta
 from backend.api.marketplace import __init__ as marketplace_module
 from backend.analytics import router as analytics_router
 from backend.api.referral import router as referral_router
+from backend.api.growth import router as growth_metrics_router
+from backend.api.experiments import router as experiments_router
+from backend.api.share import router as share_router
 
 
 def register_routes(app: FastAPI):
@@ -45,6 +48,15 @@ def register_routes(app: FastAPI):
     
     # Referral routes
     app.include_router(referral_router)
+    
+    # Growth metrics routes (new endpoints)
+    app.include_router(growth_metrics_router)
+    
+    # Experiments routes
+    app.include_router(experiments_router)
+    
+    # Share routes
+    app.include_router(share_router)
     
     # Integration-specific routes
     app.include_router(zapier.router)
