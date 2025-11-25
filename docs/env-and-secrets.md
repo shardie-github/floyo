@@ -1,434 +1,431 @@
 # Environment Variables & Secrets Management
 
-**Generated:** 2025-01-XX  
-**Purpose:** Comprehensive guide to environment variables and secrets
+**Generated:** 2025-01-20  
+**Agent:** Unified Background Agent v3.0  
+**Status:** Complete
 
 ## Overview
 
-This document describes all environment variables used in the Floyo application, how they're managed, and where they should be configured.
-
----
-
-## Canonical Environment Template
-
-**File:** `.env.example`
-
-The `.env.example` file is the **single source of truth** for all environment variables. It contains:
-- All required variables
-- All optional variables
-- Grouped by category
-- Documented with comments
-
-**Usage:**
-```bash
-# Copy template to local file
-cp .env.example .env.local
-
-# Fill in values from Supabase/Vercel dashboards
-# DO NOT commit .env.local (it's gitignored)
-```
-
----
+This project uses **235+ environment variables** across multiple categories. All variables are documented in `.env.example` and validated via `scripts/env-doctor.ts`.
 
 ## Environment Variable Categories
 
 ### 1. Database (Required)
 
-| Variable | Required | Description | Source |
-|----------|----------|-------------|--------|
-| `DATABASE_URL` | ✅ Yes | PostgreSQL connection string | Supabase Dashboard → Settings → Database |
-| `SUPABASE_URL` | ✅ Yes | Supabase project URL | Supabase Dashboard → Settings → API |
-| `SUPABASE_ANON_KEY` | ✅ Yes | Supabase anonymous key (server-side) | Supabase Dashboard → Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ Yes | Supabase service role key (server-only) | Supabase Dashboard → Settings → API |
-| `SUPABASE_JWT_SECRET` | ⚠️ Optional | JWT secret for token validation | Supabase Dashboard → Settings → API |
-
-**⚠️ Security:** Never expose `SUPABASE_SERVICE_ROLE_KEY` to the client. It bypasses Row Level Security (RLS).
-
-### 2. Supabase Public (Required)
-
-| Variable | Required | Description | Source |
-|----------|----------|-------------|--------|
-| `NEXT_PUBLIC_SUPABASE_URL` | ✅ Yes | Supabase project URL (public) | Supabase Dashboard → Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ Yes | Supabase anonymous key (public) | Supabase Dashboard → Settings → API |
-
-**Note:** `NEXT_PUBLIC_*` variables are exposed to the browser. Only include safe, public values.
-
-### 3. Vercel Deployment (Optional - CI/CD)
-
-| Variable | Required | Description | Source |
-|----------|----------|-------------|--------|
-| `VERCEL_TOKEN` | ⚠️ CI Only | Vercel deployment token | Vercel Dashboard → Account → Tokens |
-| `VERCEL_ORG_ID` | ⚠️ CI Only | Vercel organization ID | Vercel Dashboard → Settings |
-| `VERCEL_PROJECT_ID` | ⚠️ CI Only | Vercel project ID | Vercel Dashboard → Settings |
-
-**Usage:** Set as GitHub Secrets for CI/CD workflows.
-
-### 4. Supabase CLI (Optional - CI/CD)
-
-| Variable | Required | Description | Source |
-|----------|----------|-------------|--------|
-| `SUPABASE_ACCESS_TOKEN` | ⚠️ CI Only | Supabase CLI access token | Supabase Dashboard → Account → Access Tokens |
-| `SUPABASE_PROJECT_REF` | ⚠️ CI Only | Supabase project reference ID | Supabase Dashboard → Settings → General |
-
-**Usage:** Set as GitHub Secrets for migration workflows.
-
-### 5. Application Configuration (Optional)
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `NODE_ENV` | ⚠️ Optional | `development` | Node environment (development/production/test) |
-| `ENVIRONMENT` | ⚠️ Optional | `development` | Application environment |
-| `FRONTEND_URL` | ⚠️ Optional | `http://localhost:3000` | Frontend URL (for email links, redirects) |
-| `NEXT_PUBLIC_API_URL` | ⚠️ Optional | `http://localhost:8000` | Public API URL |
-| `NEXT_PUBLIC_SITE_URL` | ⚠️ Optional | `http://localhost:3000` | Public site URL |
-
-### 6. Security & Secrets (Required in Production)
-
-| Variable | Required | Description | Source |
-|----------|----------|-------------|--------|
-| `SECRET_KEY` | ✅ Production | Application secret key (min 32 chars) | Generate: `openssl rand -hex 32` |
-| `CRON_SECRET` | ⚠️ Optional | Secret for authenticated cron endpoints | Generate: `openssl rand -hex 32` |
-| `VERCEL_CRON_SECRET` | ⚠️ Optional | Vercel-specific cron secret | Generate: `openssl rand -hex 32` |
-| `ADMIN_BASIC_AUTH` | ⚠️ Optional | Admin basic auth (format: `username:password`) | Set manually |
-| `SNAPSHOT_ENCRYPTION_KEY` | ⚠️ Optional | Encryption key for snapshots | Generate: `openssl rand -hex 32` |
-
-**⚠️ Critical:** `SECRET_KEY` must be:
-- At least 32 characters
-- Random and unpredictable
-- Different in each environment
-- Never committed to git
-
-### 7. Payment Processing (Optional)
-
-| Variable | Required | Description | Source |
-|----------|----------|-------------|--------|
-| `STRIPE_API_KEY` | ⚠️ Optional | Stripe API key | Stripe Dashboard → Developers → API keys |
-| `STRIPE_WEBHOOK_SECRET` | ⚠️ Optional | Stripe webhook secret | Stripe Dashboard → Developers → Webhooks |
-
-### 8. Monitoring & Observability (Optional)
-
-| Variable | Required | Description | Source |
-|----------|----------|-------------|--------|
-| `SENTRY_DSN` | ⚠️ Optional | Sentry DSN (server-side) | Sentry Dashboard → Settings → Projects |
-| `NEXT_PUBLIC_SENTRY_DSN` | ⚠️ Optional | Sentry DSN (public) | Sentry Dashboard → Settings → Projects |
-| `NEXT_PUBLIC_POSTHOG_KEY` | ⚠️ Optional | PostHog API key | PostHog Dashboard → Project Settings |
-| `NEXT_PUBLIC_POSTHOG_HOST` | ⚠️ Optional | `https://us.i.posthog.com` | PostHog Dashboard |
-
-### 9. Feature Flags (Optional)
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `PRIVACY_KILL_SWITCH` | ⚠️ Optional | `false` | Privacy kill switch |
-| `NEXT_PUBLIC_PRIVACY_KILL_SWITCH` | ⚠️ Optional | `false` | Public privacy kill switch |
-| `NEXT_PUBLIC_TRUST_STATUS_PAGE` | ⚠️ Optional | `false` | Trust status page feature |
-| `NEXT_PUBLIC_TRUST_HELP_CENTER` | ⚠️ Optional | `false` | Trust help center feature |
-| `NEXT_PUBLIC_TRUST_EXPORT` | ⚠️ Optional | `false` | Trust export feature |
-| `NEXT_PUBLIC_CSP_ENABLED` | ⚠️ Optional | `false` | Content Security Policy |
-| `NEXT_PUBLIC_CSP_ALLOWLIST` | ⚠️ Optional | - | CSP allowlist |
-
-### 10. Integrations (Optional)
-
-| Variable | Required | Description | Source |
-|----------|----------|-------------|--------|
-| `NEXT_PUBLIC_HCAPTCHA_SITEKEY` | ⚠️ Optional | hCaptcha site key | hCaptcha Dashboard |
-| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | ⚠️ Optional | Cloudinary cloud name | Cloudinary Dashboard |
-| `AWS_ACCESS_KEY_ID` | ⚠️ Optional | AWS access key (for S3 exports) | AWS IAM |
-| `AWS_SECRET_ACCESS_KEY` | ⚠️ Optional | AWS secret key | AWS IAM |
-| `AWS_REGION` | ⚠️ Optional | AWS region | AWS Console |
-| `AWS_S3_BUCKET` | ⚠️ Optional | S3 bucket name | AWS S3 |
-
-### 11. External API Integrations (Optional)
-
-| Variable | Required | Description | Source |
-|----------|----------|-------------|--------|
-| `ZAPIER_SECRET` | ⚠️ Optional | Zapier webhook secret | Zapier Dashboard |
-| `TIKTOK_ADS_API_KEY` | ⚠️ Optional | TikTok Ads API key | TikTok Ads Manager |
-| `TIKTOK_ADS_API_SECRET` | ⚠️ Optional | TikTok Ads API secret | TikTok Ads Manager |
-| `META_ADS_ACCESS_TOKEN` | ⚠️ Optional | Meta Ads access token | Meta Business Manager |
-| `META_ADS_APP_ID` | ⚠️ Optional | Meta Ads app ID | Meta Developers |
-| `META_ADS_APP_SECRET` | ⚠️ Optional | Meta Ads app secret | Meta Developers |
-| `ELEVENLABS_API_KEY` | ⚠️ Optional | ElevenLabs API key | ElevenLabs Dashboard |
-| `AUTODS_API_KEY` | ⚠️ Optional | AutoDS API key | AutoDS Dashboard |
-| `CAPCUT_API_KEY` | ⚠️ Optional | CapCut API key | CapCut Dashboard |
-| `MINSTUDIO_API_KEY` | ⚠️ Optional | MindStudio API key | MindStudio Dashboard |
-
-### 12. Redis & Cache (Optional)
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `REDIS_URL` | ⚠️ Optional | `redis://localhost:6379/0` | Redis connection URL |
-| `CELERY_BROKER_URL` | ⚠️ Optional | `redis://localhost:6379/0` | Celery broker URL |
-| `CELERY_RESULT_BACKEND` | ⚠️ Optional | `redis://localhost:6379/0` | Celery result backend |
-
----
-
-## Environment Variable Validation
-
-### Frontend Validation
-
-**File:** `frontend/lib/env.ts`
+**Variables:**
+- `DATABASE_URL` - PostgreSQL connection string (Supabase)
+- `SUPABASE_DB_URL` - Alternative Supabase DB URL format
 
 **Usage:**
-```typescript
-import { validatePublicEnv } from '@/lib/env';
+- Backend database connections
+- Prisma client initialization
+- Connection pooling
 
-// Validates public env vars at build time
-validatePublicEnv();
-```
+**Security:** ⚠️ Contains credentials - never commit to git
 
-**Schema:** Zod schemas for type-safe validation
+### 2. Supabase - Server-side (Required)
 
-### Backend Validation
-
-**File:** `backend/config.py`
-
-**Usage:**
-```python
-from backend.config import settings
-
-# Validates settings on import
-# Fails fast in production if invalid
-```
-
-**Validation:** Pydantic settings with production checks
-
-### Doctor Script
-
-**File:** `scripts/env-doctor.ts`
+**Variables:**
+- `SUPABASE_URL` - Supabase project URL
+- `SUPABASE_ANON_KEY` - Supabase anonymous key (server-side)
+- `SUPABASE_SERVICE_ROLE_KEY` - Supabase service role key (server-only)
+- `SUPABASE_JWT_SECRET` - JWT secret for token validation
 
 **Usage:**
-```bash
-npm run env:doctor
-```
+- Backend API authentication
+- Database operations
+- Admin operations
 
-**Checks:**
-- Env vars used but not in `.env.example`
-- Env vars in `.env.example` but not used
-- Inconsistent naming/casing
-- Missing required variables
+**Security:** 🔒 Critical - service role key has admin access
 
----
+### 3. Supabase - Public (Required)
 
-## Configuration by Environment
+**Variables:**
+- `NEXT_PUBLIC_SUPABASE_URL` - Public Supabase URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Public Supabase anonymous key
+
+**Usage:**
+- Frontend client initialization
+- Client-side authentication
+- Public API calls
+
+**Security:** ⚠️ Exposed to client - safe for public use
+
+### 4. Supabase - CLI/Deployment (Optional)
+
+**Variables:**
+- `SUPABASE_ACCESS_TOKEN` - CLI access token
+- `SUPABASE_PROJECT_REF` - Project reference ID
+
+**Usage:**
+- CI/CD migrations
+- Supabase CLI operations
+- Deployment automation
+
+### 5. Vercel (Optional - CI/CD)
+
+**Variables:**
+- `VERCEL_TOKEN` - Deployment token
+- `VERCEL_ORG_ID` - Organization ID
+- `VERCEL_PROJECT_ID` - Project ID
+- `VERCEL_CRON_SECRET` - Cron job secret
+
+**Usage:**
+- Vercel deployments
+- Preview deployments
+- Production deployments
+- Cron job authentication
+
+### 6. Application (Optional)
+
+**Variables:**
+- `NODE_ENV` - Node environment (development/production)
+- `ENVIRONMENT` - Application environment
+- `FRONTEND_URL` - Frontend URL (for redirects)
+- `NEXT_PUBLIC_API_URL` - Public API URL
+- `NEXT_PUBLIC_SITE_URL` - Public site URL
+
+**Usage:**
+- Environment detection
+- URL generation
+- API client configuration
+
+### 7. Security & Secrets (Optional)
+
+**Variables:**
+- `SECRET_KEY` - Application secret key (JWT, encryption)
+- `SNAPSHOT_ENCRYPTION_KEY` - Encryption key for snapshots
+- `CRON_SECRET` - Cron job authentication secret
+- `ADMIN_BASIC_AUTH` - Admin basic auth (username:password)
+
+**Usage:**
+- JWT signing
+- Data encryption
+- Cron job security
+- Admin access
+
+**Security:** 🔒 Critical - never expose
+
+### 8. Payment Processing (Optional)
+
+**Variables:**
+- `STRIPE_API_KEY` - Stripe API key
+- `STRIPE_WEBHOOK_SECRET` - Stripe webhook secret
+
+**Usage:**
+- Payment processing
+- Subscription management
+- Webhook verification
+
+**Security:** 🔒 Critical - financial data
+
+### 9. Monitoring & Observability (Optional)
+
+**Variables:**
+- `SENTRY_DSN` - Sentry error tracking DSN
+- `NEXT_PUBLIC_SENTRY_DSN` - Public Sentry DSN
+- `NEXT_PUBLIC_POSTHOG_KEY` - PostHog analytics key
+- `NEXT_PUBLIC_POSTHOG_HOST` - PostHog host URL
+
+**Usage:**
+- Error tracking
+- Performance monitoring
+- User analytics
+
+### 10. Feature Flags (Optional)
+
+**Variables:**
+- `PRIVACY_KILL_SWITCH` - Privacy kill switch (server)
+- `NEXT_PUBLIC_PRIVACY_KILL_SWITCH` - Privacy kill switch (client)
+- `NEXT_PUBLIC_TRUST_STATUS_PAGE` - Trust status page flag
+- `NEXT_PUBLIC_TRUST_HELP_CENTER` - Trust help center flag
+- `NEXT_PUBLIC_TRUST_EXPORT` - Trust export flag
+- `NEXT_PUBLIC_CSP_ENABLED` - Content Security Policy flag
+- `NEXT_PUBLIC_CSP_ALLOWLIST` - CSP allowlist
+
+**Usage:**
+- Feature toggles
+- Privacy controls
+- Security features
+
+### 11. Integrations (Optional)
+
+**Variables:**
+- `NEXT_PUBLIC_HCAPTCHA_SITEKEY` - hCaptcha site key
+- `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` - Cloudinary cloud name
+- `AWS_ACCESS_KEY_ID` - AWS access key
+- `AWS_SECRET_ACCESS_KEY` - AWS secret key
+- `AWS_REGION` - AWS region
+- `AWS_S3_BUCKET` - S3 bucket name
+
+**Usage:**
+- CAPTCHA verification
+- Image uploads
+- File storage
+
+**Security:** 🔒 AWS credentials - critical
+
+### 12. Redis (Optional)
+
+**Variables:**
+- `REDIS_URL` - Redis connection URL
+- `CELERY_BROKER_URL` - Celery broker URL
+- `CELERY_RESULT_BACKEND` - Celery result backend
+
+**Usage:**
+- Caching
+- Rate limiting
+- Background job queue
+
+### 13. External Integrations (Optional - Not Yet Configured)
+
+**Variables:**
+- `OPENAI_API_KEY` - OpenAI API key
+- `TIKTOK_ADS_API_KEY` - TikTok Ads API key
+- `TIKTOK_ADS_API_SECRET` - TikTok Ads API secret
+- `META_ADS_ACCESS_TOKEN` - Meta Ads access token
+- `META_ADS_APP_ID` - Meta Ads app ID
+- `ELEVENLABS_API_KEY` - ElevenLabs API key
+- `AUTODS_API_KEY` - AutoDS API key
+- `CAPCUT_API_KEY` - CapCut API key
+- `ZAPIER_SECRET` - Zapier webhook secret
+- `MINSTUDIO_API_KEY` - MindStudio API key
+
+**Usage:**
+- AI features
+- Marketing integrations
+- Workflow automation
+
+### 14. Infrastructure / CI/CD (Optional)
+
+**Variables:**
+- `GENERIC_SOURCE_A_TOKEN` - Generic source A token
+- `GENERIC_SOURCE_B_TOKEN` - Generic source B token
+- `SLACK_WEBHOOK_URL` - Slack webhook URL
+- `TZ` - Timezone
+- `API_BASE_URL` - API base URL
+- `PROD_URL` - Production URL
+- `PARTNER_HMAC_KEY` - Partner HMAC key
+
+**Usage:**
+- CI/CD automation
+- Notifications
+- External integrations
+
+### 15. Next.js Configuration (Optional)
+
+**Variables:**
+- `REVALIDATE_SECONDS` - ISR revalidation default
+- `ANALYZE` - Bundle analyzer flag
+
+**Usage:**
+- Next.js configuration
+- Build optimization
+
+## Environment Setup
 
 ### Local Development
 
-**File:** `.env.local` (gitignored)
+1. **Copy .env.example:**
+   ```bash
+   cp .env.example .env.local
+   ```
 
-**Setup:**
-```bash
-cp .env.example .env.local
-# Fill in values from Supabase/Vercel dashboards
-```
+2. **Fill in values:**
+   - Get Supabase credentials from Supabase Dashboard
+   - Get Vercel credentials from Vercel Dashboard
+   - Add optional integrations as needed
 
-**Required:**
-- Database connection (Supabase)
-- Supabase keys
-- Frontend URL (localhost:3000)
+3. **Validate:**
+   ```bash
+   npm run env:validate
+   npm run env:doctor
+   ```
+
+### Production (Vercel)
+
+1. **Set in Vercel Dashboard:**
+   - Go to Project → Settings → Environment Variables
+   - Add all required variables
+   - Set for Production, Preview, and Development
+
+2. **Pull locally:**
+   ```bash
+   vercel env pull .env.local
+   ```
 
 ### CI/CD (GitHub Actions)
 
-**Location:** GitHub Secrets
+1. **Set secrets:**
+   - Go to Repository → Settings → Secrets and variables → Actions
+   - Add required secrets
+   - Use environment-specific secrets
 
-**Required Secrets:**
-- `VERCEL_TOKEN`
-- `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
-- `SUPABASE_ACCESS_TOKEN`
-- `SUPABASE_PROJECT_REF`
-- `DATABASE_URL` (for migrations)
-- `SUPABASE_SERVICE_ROLE_KEY` (for migrations)
+2. **Reference in workflows:**
+   ```yaml
+   env:
+     SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+   ```
 
-**Optional Secrets:**
-- `NEXT_PUBLIC_SUPABASE_URL` (for builds)
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (for builds)
+## Validation
 
-### Vercel (Production/Preview)
-
-**Location:** Vercel Dashboard → Project → Settings → Environment Variables
-
-**Required:**
-- All `NEXT_PUBLIC_*` variables (for builds)
-- `DATABASE_URL` (for API routes)
-- `SUPABASE_*` variables (for API routes)
-- `SECRET_KEY` (for production)
-
-**Environment-specific:**
-- **Production:** All production secrets
-- **Preview:** Preview/test secrets
-- **Development:** Local development (not used)
-
-**Setup:**
-```bash
-# Pull env vars from Vercel
-vercel env pull .env.local
-```
-
-### Supabase (Database)
-
-**Location:** Supabase Dashboard → Settings → Database
-
-**Configuration:**
-- Connection pooling
-- Row Level Security (RLS)
-- Database extensions
-
-**Note:** Database connection string (`DATABASE_URL`) is managed by Supabase.
-
----
-
-## Secrets Management Best Practices
-
-### 1. Never Commit Secrets
-
-**Gitignored Files:**
-- `.env.local`
-- `.env`
-- `*.key`
-- `*.pem`
-- `secrets/`
-
-### 2. Use Strong Secrets
-
-**Generate Secrets:**
-```bash
-# Generate random secret (32+ characters)
-openssl rand -hex 32
-
-# Generate UUID
-uuidgen
-```
-
-### 3. Rotate Secrets Regularly
-
-**Rotation Schedule:**
-- **Production secrets:** Every 90 days
-- **API keys:** When compromised or quarterly
-- **Database passwords:** Every 180 days
-
-### 4. Use Environment-Specific Values
-
-**Different Secrets Per Environment:**
-- Development: Local/test values
-- Staging: Staging/test values
-- Production: Production values
-
-**Never reuse production secrets in development.**
-
-### 5. Document All Secrets
-
-**Documentation:**
-- Add to `.env.example` with comments
-- Document in this file
-- Update when adding new secrets
-
----
-
-## Troubleshooting
-
-### Missing Environment Variable
-
-**Symptoms:**
-- Application fails to start
-- Runtime errors about undefined variables
-- Build failures
-
-**Steps:**
-1. Check `.env.local` exists and has the variable
-2. Verify variable name matches exactly (case-sensitive)
-3. Check for typos or extra spaces
-4. Run `npm run env:doctor` to detect drift
-
-### Environment Variable Not Loading
-
-**Symptoms:**
-- Variable defined but `undefined` at runtime
-- Build succeeds but runtime fails
-
-**Steps:**
-1. **Frontend:** Ensure `NEXT_PUBLIC_*` prefix for client-side vars
-2. **Backend:** Check `backend/config.py` includes the variable
-3. **Restart:** Restart dev server after adding variables
-4. **Vercel:** Rebuild after adding variables in dashboard
-
-### Secret Exposure
-
-**Symptoms:**
-- Secret appears in logs
-- Secret in git history
-- Secret exposed to client
-
-**Steps:**
-1. **Immediate:** Rotate the exposed secret
-2. **Git:** Remove from history: `git filter-branch` or BFG Repo-Cleaner
-3. **Logs:** Check Sentry/logs for exposure
-4. **Prevent:** Add to `.gitignore`, use secrets manager
-
----
-
-## Environment Variable Doctor
+### Environment Doctor
 
 **Script:** `scripts/env-doctor.ts`
 
-**Purpose:** Detect environment variable drift
+**Checks:**
+- ✅ Variables used but not documented
+- ✅ Variables documented but never used
+- ✅ Inconsistent naming (casing, spelling)
+- ✅ Missing required variables
 
 **Usage:**
 ```bash
 npm run env:doctor
 ```
 
-**Output:**
-- Lists env vars used but not documented
-- Lists env vars documented but not used
-- Detects inconsistent naming
-- Validates required variables
+### Environment Validator
 
-**CI Integration:**
-- Can be added to CI workflow
-- Non-blocking (informational)
-- Can be made blocking if needed
+**Script:** `frontend/lib/env.ts` (validatePublicEnv)
+
+**Checks:**
+- ✅ Required public variables present
+- ✅ Variable format validation
+- ✅ Type validation
+
+**Usage:**
+```bash
+npm run env:validate
+```
+
+## Security Best Practices
+
+### ✅ Do's
+
+1. **Never commit .env files** - Use .gitignore
+2. **Use .env.example** - Document all variables
+3. **Rotate secrets regularly** - Especially API keys
+4. **Use different values** - Dev/staging/prod
+5. **Limit access** - Only grant necessary permissions
+6. **Monitor usage** - Track secret access
+
+### ❌ Don'ts
+
+1. **Don't hardcode secrets** - Use environment variables
+2. **Don't share secrets** - Use secure channels
+3. **Don't log secrets** - Filter from logs
+4. **Don't expose in client** - Only NEXT_PUBLIC_ vars
+5. **Don't use production secrets** - In development
+
+## Secret Rotation
+
+### Automated Rotation
+
+**Script:** `npm run ops:rotate-secrets`
+
+**Process:**
+1. Generate new secrets
+2. Update in hosting provider
+3. Update in CI/CD secrets
+4. Deploy with new secrets
+5. Verify functionality
+6. Remove old secrets
+
+### Manual Rotation
+
+1. Generate new secret
+2. Update in all environments
+3. Deploy
+4. Verify
+5. Remove old secret
+
+## Environment Parity
+
+### Dev = Staging = Prod
+
+**Checklist:**
+- ✅ Same environment variables (different values)
+- ✅ Same database schema
+- ✅ Same API versions
+- ✅ Same feature flags (different states)
+
+**Validation:**
+```bash
+npm run env:doctor  # Check variable consistency
+npm run schema:validate  # Check schema alignment
+```
+
+## Troubleshooting
+
+### Missing Variables
+
+**Symptoms:** Application errors about missing env vars
+
+**Solutions:**
+1. Check .env.local exists
+2. Run `npm run env:doctor`
+3. Verify variable names match
+4. Check for typos
+
+### Wrong Values
+
+**Symptoms:** Authentication errors, connection failures
+
+**Solutions:**
+1. Verify Supabase credentials
+2. Check DATABASE_URL format
+3. Verify API keys are correct
+4. Check environment (dev vs prod)
+
+### Variable Not Loading
+
+**Symptoms:** Variables undefined in code
+
+**Solutions:**
+1. Restart dev server
+2. Check .env.local location
+3. Verify NEXT_PUBLIC_ prefix for client vars
+4. Check variable name casing
+
+## Required vs Optional
+
+### Required (Production)
+
+**Must be set for production:**
+- `DATABASE_URL`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+### Optional (Features)
+
+**Enable features:**
+- Payment: `STRIPE_API_KEY`
+- Analytics: `NEXT_PUBLIC_POSTHOG_KEY`
+- Error tracking: `SENTRY_DSN`
+- Storage: `AWS_ACCESS_KEY_ID`
+- Integrations: Various API keys
+
+## Documentation
+
+**Complete List:** See `.env.example` for all 235+ variables
+
+**Categories:**
+- Database (2 variables)
+- Supabase (7 variables)
+- Vercel (4 variables)
+- Application (5 variables)
+- Security (4 variables)
+- Payment (2 variables)
+- Monitoring (4 variables)
+- Feature Flags (7 variables)
+- Integrations (15+ variables)
+- Infrastructure (10+ variables)
+- External APIs (10+ variables)
 
 ---
 
-## Related Documentation
-
-- [Stack Discovery](./stack-discovery.md) - Overall architecture
-- [Backend Strategy](./backend-strategy.md) - Backend configuration
-- [CI/CD Overview](./ci-overview.md) - CI/CD secrets
-- [Deploy Strategy](./deploy-strategy.md) - Deployment configuration
-
----
-
-## Quick Reference
-
-### Required for Local Development
-```bash
-DATABASE_URL=
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_URL=
-SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-```
-
-### Required for Production
-```bash
-# All local dev vars +
-SECRET_KEY=  # Min 32 chars, random
-NODE_ENV=production
-ENVIRONMENT=production
-```
-
-### Required for CI/CD
-```bash
-VERCEL_TOKEN=
-VERCEL_ORG_ID=
-VERCEL_PROJECT_ID=
-SUPABASE_ACCESS_TOKEN=
-SUPABASE_PROJECT_REF=
-```
-
----
-
-**Last Updated:** 2025-01-XX  
-**Maintained By:** Unified Background Agent
+**Generated by Unified Background Agent v3.0**  
+**Last Updated:** 2025-01-20
