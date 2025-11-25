@@ -220,9 +220,14 @@ async def get_unit_economics(
     revenue = calculate_revenue_metrics(db)
     arpu = revenue.get("arpu", 0)
     
-    # TODO: Get marketing spend from external source (Google Ads API, etc.)
-    # For now, return placeholder structure
-    marketing_spend = 0  # Placeholder - needs to be filled from actual marketing data
+    # Get marketing spend from marketing integrations
+    try:
+        from backend.api.marketing_integrations import marketing_tracker
+        marketing_data = marketing_tracker.get_total_spend(30)
+        marketing_spend = marketing_data["total"]
+    except Exception as e:
+        logger.warning(f"Could not get marketing spend: {e}")
+        marketing_spend = 0  # Placeholder - needs to be filled from actual marketing data
     
     # Calculate CAC (requires new signups and marketing spend)
     from datetime import timedelta

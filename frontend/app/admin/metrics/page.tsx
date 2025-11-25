@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import MetricsChart from '@/components/MetricsChart';
 
 interface MetricsData {
   dau_wau_mau?: {
@@ -125,7 +125,7 @@ export default function MetricsDashboard() {
         {/* DAU/WAU/MAU */}
         {metrics.dau_wau_mau && (
           <MetricSection title="Usage Metrics">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <StatCard
                 label="DAU"
                 value={metrics.dau_wau_mau.dau}
@@ -142,6 +142,7 @@ export default function MetricsDashboard() {
                 subtitle="Monthly active users"
               />
             </div>
+            {/* Trend chart placeholder - would need historical data */}
           </MetricSection>
         )}
 
