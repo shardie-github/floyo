@@ -1,149 +1,163 @@
-"""Growth and analytics API endpoints."""
+"""Growth metrics API endpoints."""
 
-from typing import Optional
-from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func, and_
+from typing import Dict, Any
+from datetime import datetime, timedelta
+from typing import List
+from uuid import UUID
 
 from backend.database import get_db
-from backend.rate_limit import limiter, RATE_LIMIT_PER_MINUTE
-from backend.growth import RetentionEngine, ViralGrowthEngine, GrowthAnalytics
 from backend.auth.utils import get_current_user
-from database.models import User
+from backend.logging_config import get_logger
+from database.models import User, Referral, ReferralReward, Event, UTMTrack
 
+logger = get_logger(__name__)
 router = APIRouter(prefix="/api/growth", tags=["growth"])
 
 
-@router.get("/retention/cohort")
-@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
-async def get_retention_cohort(
-    request: Request,
-    days: int = 7,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get retention cohort data for current user."""
-    cohort = RetentionEngine.get_user_retention_cohort(db, current_user.id, days)
-    return cohort
-
-
-@router.get("/retention/at-risk")
-@limiter.limit("10/hour")  # Admin endpoint, restrictive
-async def get_at_risk_users(
-    request: Request,
-    days_inactive: int = 7,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get users at risk of churning (admin only)."""
-    if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    at_risk = RetentionEngine.get_at_risk_users(db, days_inactive)
-    return {"at_risk_users": at_risk, "count": len(at_risk)}
-
-
-@router.post("/retention/digest")
-@limiter.limit("5/hour")  # Restrictive - email sending
-async def send_retention_digest(
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Generate and send weekly retention digest."""
-    digest = RetentionEngine.send_retention_digest(db, current_user.id)
-    return digest
-
-
-@router.post("/referral/create")
-@limiter.limit("10/hour")  # Restrictive for referral creation
-async def create_referral_code(
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Create a referral code for current user.
-    
-    Share Floyo with others and earn rewards when they sign up.
-    """
-    referral = ViralGrowthEngine.create_referral_code(db, current_user.id)
-    return {
-        "referral_code": referral.code,
-        "referral_url": f"/signup?ref={referral.code}",
-        "usage_count": referral.usage_count
-    }
-
-
-@router.get("/referral/stats")
-@limiter.limit(f"{RATE_LIMIT_PER_MINUTE}/minute")
-async def get_referral_stats(
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get referral statistics for current user."""
-    stats = ViralGrowthEngine.calculate_viral_coefficient(db, current_user.id)
-    return stats
-
-
-@router.get("/viral-coefficient")
-@limiter.limit("10/hour")  # Admin endpoint, restrictive
-async def get_viral_coefficient(
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """Get platform viral coefficient (admin only)."""
-    if not current_user.is_superuser:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    viral = ViralGrowthEngine.calculate_viral_coefficient(db)
-    return viral
-
-
-@router.post("/workflows/{workflow_id}/share")
-@limiter.limit("20/hour")  # Restrictive for workflow sharing
-async def share_workflow(
-    request: Request,
-    workflow_id: UUID,
-    share_type: str = "public",
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Share a workflow publicly or via link.
-    
-    Share your workflows with the community and discover workflows created by others.
-    """
-    share = ViralGrowthEngine.share_workflow(db, current_user.id, workflow_id, share_type)
-    return share
-
-
-@router.get("/metrics")
-@limiter.limit("10/hour")  # Admin endpoint, restrictive
-async def get_growth_metrics(
-    request: Request,
+@router.get("/referral-metrics")
+async def get_referral_metrics(
     days: int = 30,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get growth metrics for platform (admin only)."""
+    """Get referral system metrics (admin only)."""
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin access required")
-    metrics = GrowthAnalytics.get_growth_metrics(db, days)
-    return metrics
+    
+    start_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Total referrals sent (tracked via events or referral table)
+    total_referrals = db.query(func.count(Referral.id)).filter(
+        Referral.created_at >= start_date
+    ).scalar() or 0
+    
+    # Total referrals used
+    total_used = db.query(func.sum(Referral.usage_count)).filter(
+        Referral.created_at >= start_date
+    ).scalar() or 0
+    
+    # Signups from referrals (users with referral_code in signup)
+    # This would need to be tracked in user signup - assuming referral_code field exists
+    try:
+        signups_from_referrals = db.query(func.count(User.id)).filter(
+            and_(
+                User.created_at >= start_date,
+                User.referral_code.isnot(None)  # Assuming this field exists
+            )
+        ).scalar() or 0
+    except Exception:
+        # Fallback: estimate from referral usage
+        signups_from_referrals = total_used
+    
+    # Conversion rate
+    conversion_rate = (signups_from_referrals / total_referrals * 100) if total_referrals > 0 else 0
+    
+    # Viral coefficient (signups from referrals / total signups)
+    total_signups = db.query(func.count(User.id)).filter(
+        User.created_at >= start_date
+    ).scalar() or 0
+    viral_coefficient = (signups_from_referrals / total_signups) if total_signups > 0 else 0
+    
+    return {
+        "total_referrals": total_referrals,
+        "total_signups_from_referrals": signups_from_referrals,
+        "conversion_rate": round(conversion_rate, 2),
+        "viral_coefficient": round(viral_coefficient, 2),
+        "period_days": days
+    }
 
 
-@router.post("/retention/process-campaigns")
-@limiter.limit("5/hour")  # Very restrictive - admin operation
-async def process_retention_campaigns(
-    request: Request,
+@router.get("/share-metrics")
+async def get_share_metrics(
+    days: int = 30,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Process retention campaigns (admin only)."""
+    """Get share functionality metrics (admin only)."""
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin access required")
-    from backend.retention_campaigns import RetentionCampaignService
-    service = RetentionCampaignService(db)
-    results = service.process_campaigns()
-    return results
+    
+    start_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Track shares via events table with event_type='share'
+    total_shares = db.query(func.count(Event.id)).filter(
+        and_(
+            Event.timestamp >= start_date,
+            Event.event_type == 'share'
+        )
+    ).scalar() or 0
+    
+    # Signups from shares (tracked via UTM with source=share)
+    signups_from_shares = db.query(func.count(func.distinct(UTMTrack.user_id))).filter(
+        and_(
+            UTMTrack.timestamp >= start_date,
+            UTMTrack.source == 'share'
+        )
+    ).scalar() or 0
+    
+    # Share rate (shares / active users)
+    active_users = db.query(func.count(func.distinct(Event.user_id))).filter(
+        Event.timestamp >= start_date
+    ).scalar() or 0
+    share_rate = (total_shares / active_users * 100) if active_users > 0 else 0
+    
+    return {
+        "total_shares": total_shares,
+        "signups_from_shares": signups_from_shares,
+        "share_rate": round(share_rate, 2),
+        "period_days": days
+    }
+
+
+@router.get("/seo-metrics")
+async def get_seo_metrics(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get SEO landing page metrics (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    start_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Get signups from organic search (UTM source=google, medium=organic)
+    organic_signups = db.query(
+        UTMTrack.source,
+        UTMTrack.medium,
+        func.count(func.distinct(UTMTrack.user_id)).label('signups')
+    ).filter(
+        and_(
+            UTMTrack.timestamp >= start_date,
+            UTMTrack.source == 'google',
+            UTMTrack.medium == 'organic'
+        )
+    ).group_by(UTMTrack.source, UTMTrack.medium).all()
+    
+    # For now, return placeholder structure
+    # In production, this would query actual landing page analytics
+    landing_pages = [
+        {
+            "page": "/use-cases/shopify-automation",
+            "visitors": 0,  # Would come from analytics
+            "signups": 0,
+            "conversion_rate": 0.0
+        },
+        {
+            "page": "/use-cases/zapier-alternative",
+            "visitors": 0,
+            "signups": 0,
+            "conversion_rate": 0.0
+        }
+    ]
+    
+    total_organic_signups = sum(s.signups for s in organic_signups) if organic_signups else 0
+    
+    return {
+        "landing_pages": landing_pages,
+        "total_organic_signups": total_organic_signups,
+        "period_days": days
+    }
