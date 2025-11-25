@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from backend.database import SessionLocal, get_db
 from backend.logging_config import setup_logging, get_logger
-from database.models import AuditLog, User, Event, Pattern
+from database.models import AuditLog, User, Event, Pattern, Subscription
 
 setup_logging()
 logger = get_logger(__name__)
@@ -181,19 +181,163 @@ def run_weekly_aggregation():
         db.close()
 
 
+def calculate_dau_wau_mau(db: Session, date: datetime = None) -> Dict[str, Any]:
+    """
+    Calculate DAU, WAU, MAU for a given date (defaults to today).
+    
+    Returns:
+        Dictionary with DAU, WAU, MAU metrics
+    """
+    if date is None:
+        date = datetime.utcnow()
+    
+    # DAU: events in last 24 hours
+    dau_start = date - timedelta(days=1)
+    dau = db.query(func.count(func.distinct(Event.user_id))).filter(
+        Event.timestamp >= dau_start
+    ).scalar() or 0
+    
+    # WAU: events in last 7 days
+    wau_start = date - timedelta(days=7)
+    wau = db.query(func.count(func.distinct(Event.user_id))).filter(
+        Event.timestamp >= wau_start
+    ).scalar() or 0
+    
+    # MAU: events in last 30 days
+    mau_start = date - timedelta(days=30)
+    mau = db.query(func.count(func.distinct(Event.user_id))).filter(
+        Event.timestamp >= mau_start
+    ).scalar() or 0
+    
+    return {
+        "date": date.date().isoformat(),
+        "dau": dau,
+        "wau": wau,
+        "mau": mau,
+        "created_at": datetime.utcnow().isoformat()
+    }
+
+
+def calculate_revenue_metrics(db: Session, date: datetime = None) -> Dict[str, Any]:
+    """
+    Calculate revenue metrics (MRR, ARR, ARPU).
+    
+    Returns:
+        Dictionary with revenue metrics
+    """
+    if date is None:
+        date = datetime.utcnow()
+    
+    # Get active paid subscriptions
+    active_subscriptions = db.query(Subscription).filter(
+        Subscription.status == 'active',
+        Subscription.plan.in_(['pro', 'enterprise'])
+    ).all()
+    
+    # Calculate MRR
+    mrr = sum([
+        29 if s.plan == 'pro' else (100 if s.plan == 'enterprise' else 0)
+        for s in active_subscriptions
+    ])
+    
+    # Calculate ARR
+    arr = mrr * 12
+    
+    # Calculate ARPU
+    arpu = mrr / len(active_subscriptions) if active_subscriptions else 0
+    
+    # Subscription breakdown
+    pro_count = sum(1 for s in active_subscriptions if s.plan == 'pro')
+    enterprise_count = sum(1 for s in active_subscriptions if s.plan == 'enterprise')
+    
+    return {
+        "date": date.date().isoformat(),
+        "mrr": mrr,
+        "arr": arr,
+        "arpu": round(arpu, 2),
+        "total_paid_users": len(active_subscriptions),
+        "pro_users": pro_count,
+        "enterprise_users": enterprise_count,
+        "created_at": datetime.utcnow().isoformat()
+    }
+
+
+def calculate_engagement_metrics(db: Session, days: int = 30) -> Dict[str, Any]:
+    """
+    Calculate engagement metrics for the last N days.
+    
+    Returns:
+        Dictionary with engagement metrics
+    """
+    start_date = datetime.utcnow() - timedelta(days=days)
+    
+    # Events per user
+    total_events = db.query(func.count(Event.id)).filter(
+        Event.timestamp >= start_date
+    ).scalar() or 0
+    
+    active_users = db.query(func.count(func.distinct(Event.user_id))).filter(
+        Event.timestamp >= start_date
+    ).scalar() or 0
+    
+    events_per_user = total_events / active_users if active_users > 0 else 0
+    
+    # Integrations per user (if user_integrations table exists)
+    try:
+        from database.models import UserIntegration
+        total_integrations = db.query(func.count(UserIntegration.id)).filter(
+            UserIntegration.created_at >= start_date,
+            UserIntegration.is_active == True
+        ).scalar() or 0
+        
+        users_with_integrations = db.query(func.count(func.distinct(UserIntegration.user_id))).filter(
+            UserIntegration.created_at >= start_date,
+            UserIntegration.is_active == True
+        ).scalar() or 0
+        
+        integrations_per_user = total_integrations / users_with_integrations if users_with_integrations > 0 else 0
+    except Exception:
+        integrations_per_user = 0
+    
+    return {
+        "period_days": days,
+        "events_per_user": round(events_per_user, 2),
+        "integrations_per_user": round(integrations_per_user, 2),
+        "total_events": total_events,
+        "active_users": active_users,
+        "created_at": datetime.utcnow().isoformat()
+    }
+
+
 if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser(description="Run metrics aggregation jobs")
     parser.add_argument("--daily", action="store_true", help="Run daily aggregation")
     parser.add_argument("--weekly", action="store_true", help="Run weekly aggregation")
+    parser.add_argument("--dau-wau-mau", action="store_true", help="Calculate DAU/WAU/MAU")
+    parser.add_argument("--revenue", action="store_true", help="Calculate revenue metrics")
+    parser.add_argument("--engagement", action="store_true", help="Calculate engagement metrics")
     
     args = parser.parse_args()
     
-    if args.daily:
-        run_daily_aggregation()
-    elif args.weekly:
-        run_weekly_aggregation()
-    else:
-        # Default to daily
-        run_daily_aggregation()
+    db = SessionLocal()
+    try:
+        if args.daily:
+            run_daily_aggregation()
+        elif args.weekly:
+            run_weekly_aggregation()
+        elif args.dau_wau_mau:
+            metrics = calculate_dau_wau_mau(db)
+            logger.info(f"DAU/WAU/MAU: {metrics}")
+        elif args.revenue:
+            metrics = calculate_revenue_metrics(db)
+            logger.info(f"Revenue metrics: {metrics}")
+        elif args.engagement:
+            metrics = calculate_engagement_metrics(db)
+            logger.info(f"Engagement metrics: {metrics}")
+        else:
+            # Default to daily
+            run_daily_aggregation()
+    finally:
+        db.close()

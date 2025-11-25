@@ -8,6 +8,14 @@
     "node": ">=20 <21"
   },
   "scripts": {
+    "yc:fetch-metrics": "tsx yc/scripts/fetch_real_metrics.ts",
+    "yc:generate-team": "tsx yc/scripts/generate_team_template.ts",
+    "yc:calculate-financials": "tsx yc/scripts/calculate_financials.ts",
+    "yc:test-features": "bash yc/scripts/test_all_features.sh",
+    "yc:deploy-referral": "bash yc/scripts/deploy_referral_system.sh",
+    "yc:setup-complete": "bash yc/scripts/setup_complete.sh",
+    "yc:weekly-report": "tsx yc/scripts/generate_weekly_report.ts",
+    "yc:run-all": "bash yc/scripts/run_all_next_steps.sh",
     "ops": "tsx ops/cli.ts",
     "ops:doctor": "npm run ops doctor",
     "ops:init": "npm run ops init",
@@ -107,6 +115,7 @@
   "dependencies": {
     "@octokit/rest": "^20.0.0",
     "@prisma/client": "^5.7.0",
+    "@supabase/supabase-js": "^2.81.1",
     "commander": "^11.1.0",
     "dotenv": "^16.3.1",
     "zod": "^3.22.4",
@@ -119,7 +128,6 @@
     "@lhci/cli": "^0.13.0",
     "@playwright/test": "^1.40.0",
     "@sentry/nextjs": "^7.91.0",
-    "@supabase/supabase-js": "^2.81.1",
     "@types/node": "^20.10.5",
     "@types/pg": "^8.10.9",
     "@typescript-eslint/eslint-plugin": "^6.0.0",

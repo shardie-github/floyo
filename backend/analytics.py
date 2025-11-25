@@ -12,6 +12,11 @@ from backend.logging_config import get_logger
 from backend.auth.utils import get_current_user
 from backend.auth.analytics_helpers import check_user_activation, get_user_retention_metrics
 from backend.services.analytics_service import AnalyticsService as AnalyticsDashboard
+from backend.jobs.metrics_aggregation import (
+    calculate_dau_wau_mau,
+    calculate_revenue_metrics,
+    calculate_engagement_metrics
+)
 from database.models import User, AuditLog
 
 logger = get_logger(__name__)
@@ -171,8 +176,126 @@ async def get_revenue_metrics(
     if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    metrics = AnalyticsDashboard.get_revenue_metrics(db, days)
+    metrics = calculate_revenue_metrics(db)
     return metrics
+
+
+@router.get("/dau-wau-mau")
+async def get_dau_wau_mau(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get DAU, WAU, MAU metrics (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    metrics = calculate_dau_wau_mau(db)
+    return metrics
+
+
+@router.get("/engagement-metrics")
+async def get_engagement_metrics_endpoint(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get engagement metrics (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    metrics = calculate_engagement_metrics(db, days)
+    return metrics
+
+
+@router.get("/unit-economics")
+async def get_unit_economics(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get unit economics (CAC, LTV, LTV:CAC, payback period) (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    # Get revenue metrics
+    revenue = calculate_revenue_metrics(db)
+    arpu = revenue.get("arpu", 0)
+    
+    # Get marketing spend from marketing integrations
+    try:
+        from backend.api.marketing_integrations import marketing_tracker
+        marketing_data = marketing_tracker.get_total_spend(30)
+        marketing_spend = marketing_data["total"]
+    except Exception as e:
+        logger.warning(f"Could not get marketing spend: {e}")
+        marketing_spend = 0  # Placeholder - needs to be filled from actual marketing data
+    
+    # Calculate CAC (requires new signups and marketing spend)
+    from datetime import timedelta
+    from database.models import User
+    new_customers_30d = db.query(func.count(User.id)).filter(
+        User.created_at >= datetime.utcnow() - timedelta(days=30)
+    ).scalar() or 0
+    
+    cac = marketing_spend / new_customers_30d if new_customers_30d > 0 else 0
+    
+    # Calculate LTV (assume 12-month average lifetime)
+    ltv = arpu * 12
+    
+    # Calculate LTV:CAC
+    ltv_cac_ratio = ltv / cac if cac > 0 else 0
+    
+    # Calculate payback period (months)
+    payback_period = cac / arpu if arpu > 0 else 0
+    
+    return {
+        "cac": round(cac, 2),
+        "ltv": round(ltv, 2),
+        "ltv_cac_ratio": round(ltv_cac_ratio, 2),
+        "payback_period_months": round(payback_period, 2),
+        "arpu": arpu,
+        "new_customers_30d": new_customers_30d,
+        "marketing_spend_30d": marketing_spend,
+        "note": "Marketing spend needs to be updated from actual marketing platform data"
+    }
+
+
+@router.get("/acquisition-channels")
+async def get_acquisition_channels(
+    days: int = 30,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get acquisition channel breakdown (admin only)."""
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    from database.models import UTMTrack
+    start_date = datetime.utcnow() - timedelta(days=days)
+    
+    channels = db.query(
+        UTMTrack.source,
+        UTMTrack.medium,
+        func.count(func.distinct(UTMTrack.user_id)).label('signups')
+    ).filter(
+        UTMTrack.timestamp >= start_date,
+        UTMTrack.firstTouch == True
+    ).group_by(UTMTrack.source, UTMTrack.medium).all()
+    
+    total_signups = sum(c.signups for c in channels)
+    
+    return {
+        "period_days": days,
+        "channels": [
+            {
+                "source": c.source or "direct",
+                "medium": c.medium or "none",
+                "signups": c.signups,
+                "percentage": round((c.signups / total_signups * 100) if total_signups > 0 else 0, 2)
+            }
+            for c in channels
+        ],
+        "total_signups": total_signups
+    }
 
 
 @router.post("/track")
