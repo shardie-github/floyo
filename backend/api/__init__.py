@@ -15,6 +15,7 @@ from backend.analytics import router as analytics_router
 from backend.api.referral import router as referral_router
 from backend.api.growth import router as growth_metrics_router
 from backend.api.experiments import router as experiments_router
+from backend.api.share import router as share_router
 
 
 def register_routes(app: FastAPI):
@@ -53,6 +54,9 @@ def register_routes(app: FastAPI):
     
     # Experiments routes
     app.include_router(experiments_router)
+    
+    # Share routes
+    app.include_router(share_router)
     
     # Integration-specific routes
     app.include_router(zapier.router)
