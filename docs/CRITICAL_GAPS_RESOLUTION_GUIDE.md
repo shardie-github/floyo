@@ -140,16 +140,33 @@ Even if you have 0 users or pre-revenue, document it clearly:
 
 ## Gap 3: GitHub Secrets Verification (CRITICAL)
 
-### Step 1: Check Secrets
+### ✅ AUTOMATED: GitHub Actions Workflow Created
+
+**Workflow:** `.github/workflows/metrics-auto-update.yml`
+
+**What It Does:**
+- Automatically runs on PR commits
+- Fetches metrics from Supabase
+- Updates all documentation files
+- Commits changes back to PR
+- No CLI required!
+
+**Required Secrets:**
+- `SUPABASE_URL` (or `NEXT_PUBLIC_SUPABASE_URL`)
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+### Step 1: Verify Secrets Are Set
 
 1. Go to GitHub → Your Repository → **Settings**
 2. Click **Secrets and variables** → **Actions**
 3. Verify these secrets exist:
-   - `VERCEL_TOKEN`
-   - `VERCEL_ORG_ID`
-   - `VERCEL_PROJECT_ID`
-   - `SUPABASE_ACCESS_TOKEN`
-   - `SUPABASE_PROJECT_REF`
+   - ✅ `SUPABASE_URL` (or `NEXT_PUBLIC_SUPABASE_URL`)
+   - ✅ `SUPABASE_SERVICE_ROLE_KEY`
+   - ✅ `VERCEL_TOKEN` (for deployments)
+   - ✅ `VERCEL_ORG_ID` (for deployments)
+   - ✅ `VERCEL_PROJECT_ID` (for deployments)
+   - ✅ `SUPABASE_ACCESS_TOKEN` (for migrations)
+   - ✅ `SUPABASE_PROJECT_REF` (for migrations)
 
 ### Step 2: Get Missing Secrets
 
@@ -176,14 +193,42 @@ Even if you have 0 users or pre-revenue, document it clearly:
 2. Find "Reference ID"
 3. Copy → Add to GitHub Secrets
 
-### Step 3: Test Deployment
+### Step 3: Test Metrics Auto-Update
 
-1. Create a test PR (or push to main)
-2. Check GitHub Actions → Workflows
-3. Verify deployment succeeds
-4. If it fails, check logs for secret-related errors
+**Option A: Create Test PR (Recommended)**
+1. Create a new branch
+2. Make a small change to any doc file
+3. Create PR to `main`
+4. Workflow will automatically:
+   - Fetch metrics from Supabase
+   - Update documentation files
+   - Commit changes to PR
+   - Comment on PR with summary
+5. Check GitHub Actions → "Auto-Update Metrics & Docs" workflow
 
-**Time:** 15-30 minutes
+**Option B: Manual Trigger**
+1. Go to GitHub → Actions
+2. Select "Auto-Update Metrics & Docs"
+3. Click "Run workflow"
+4. Select branch and run
+
+**Time:** 5 minutes (workflow runs automatically)
+
+---
+
+## ✅ NEW: Automated Metrics Updates
+
+**GitHub Actions workflows created:**
+- `.github/workflows/metrics-auto-update.yml` - Runs on PR commits
+- `.github/workflows/metrics-daily-update.yml` - Runs daily
+
+**Benefits:**
+- ✅ No CLI required - everything runs in GitHub Actions
+- ✅ Automatic updates on PR commits
+- ✅ Daily updates keep metrics fresh
+- ✅ Documentation always reflects current state
+
+**See:** `docs/GITHUB_ACTIONS_METRICS_SETUP.md` for complete setup guide
 
 ---
 

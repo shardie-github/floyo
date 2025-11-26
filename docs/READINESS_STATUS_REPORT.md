@@ -76,19 +76,26 @@
 - Document activation rate
 
 **How to Fix:**
+
+**Option A: Automated (Recommended)**
+1. Verify GitHub Secrets are set (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`)
+2. Create a PR - workflow will automatically fetch metrics and update docs
+3. Review updated files in PR
+
+**Option B: Manual**
 ```sql
 -- Run these queries in Supabase SQL Editor
 SELECT COUNT(*) as total_users FROM users;
-SELECT COUNT(*) as active_users_30d FROM users WHERE last_active_at >= NOW() - INTERVAL '30 days';
-SELECT COUNT(*) as new_users_30d FROM users WHERE created_at >= NOW() - INTERVAL '30 days';
+SELECT COUNT(*) as active_users_30d FROM users WHERE "updatedAt" >= NOW() - INTERVAL '30 days';
+SELECT COUNT(*) as new_users_30d FROM users WHERE "createdAt" >= NOW() - INTERVAL '30 days';
 ```
 
-**Files to Update:**
-- `/yc/YC_PRODUCT_OVERVIEW.md` - Add real metrics section
-- `/yc/YC_INTERVIEW_CHEATSHEET.md` - Add metrics snapshot
-- `/dataroom/03_METRICS_OVERVIEW.md` - Fill in real numbers
+**Files Updated Automatically:**
+- `/yc/YC_PRODUCT_OVERVIEW.md` - Auto-updated with real metrics
+- `/yc/YC_INTERVIEW_CHEATSHEET.md` - Auto-updated with metrics snapshot
+- `/dataroom/03_METRICS_OVERVIEW.md` - Auto-updated with real numbers
 
-**Estimated Time:** 1-2 hours
+**Estimated Time:** 5 minutes (workflow runs automatically) OR 30 minutes (manual)
 
 ---
 

@@ -24,6 +24,15 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('  export SUPABASE_URL=https://your-project.supabase.co');
   console.error('  export SUPABASE_SERVICE_ROLE_KEY=your-service-role-key');
   console.error('  tsx scripts/fetch-metrics-and-update-docs.ts');
+  console.error('\nOr in GitHub Actions, ensure secrets are set:');
+  console.error('  - SUPABASE_URL');
+  console.error('  - SUPABASE_SERVICE_ROLE_KEY');
+  
+  // In CI, exit with code 0 to not fail the workflow
+  if (process.env.CI) {
+    console.error('\n⚠️  Running in CI - exiting gracefully (workflow will continue)');
+    process.exit(0);
+  }
   process.exit(1);
 }
 

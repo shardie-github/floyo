@@ -1,0 +1,169 @@
+name: Auto-Update Metrics & Docs
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/fetch-metrics-and-update-docs.ts'
+      - 'yc/**/*.md'
+      - 'dataroom/**/*.md'
+      - '.github/workflows/metrics-auto-update.yml'
+  workflow_dispatch:
+  schedule:
+    # Run daily at 2 AM UTC to keep metrics fresh
+    - cron: '0 2 * * *'
+
+concurrency:
+  group: metrics-update-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  update-metrics:
+    name: Fetch Metrics & Update Docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    # Always run - script handles missing secrets gracefully
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Need full history for git operations
+          fetch-depth: 0
+          # Use token with write permissions for committing changes
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: |
+          set -euo pipefail
+          npm ci
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Fetch Metrics & Update Documentation
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          CI: 'true'
+        run: |
+          set -euo pipefail
+          
+          # Check if required secrets are set
+          if [ -z "${SUPABASE_URL:-}" ] && [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ]; then
+            echo "⚠️  SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL not set - skipping metrics fetch"
+            echo "This is expected if Supabase is not configured yet"
+            echo "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY secrets to enable auto-updates"
+            exit 0
+          fi
+          
+          if [ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
+            echo "⚠️  SUPABASE_SERVICE_ROLE_KEY not set - skipping metrics fetch"
+            echo "This is expected if Supabase is not configured yet"
+            echo "Set SUPABASE_SERVICE_ROLE_KEY secret to enable auto-updates"
+            exit 0
+          fi
+          
+          # Use NEXT_PUBLIC_SUPABASE_URL if SUPABASE_URL not set
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            export SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL"
+          fi
+          
+          echo "📊 Fetching metrics from Supabase..."
+          echo "Supabase URL: ${SUPABASE_URL:0:30}..." # Show first 30 chars only
+          
+          # Run metrics fetch script
+          npm run metrics:fetch || {
+            echo "⚠️  Metrics fetch failed - this may be expected if database is empty or not accessible"
+            echo "Error details above - continuing without metrics update..."
+            exit 0  # Don't fail the workflow if metrics fetch fails
+          }
+
+      - name: Check for changes
+        id: git-check
+        run: |
+          set -euo pipefail
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "📝 Documentation files updated with real metrics"
+            git status --short
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "✅ No changes to commit"
+          fi
+
+      - name: Commit updated documentation
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          git add yc/*.md dataroom/*.md docs/*.md || true
+          git commit -m "docs: Auto-update metrics from Supabase [skip ci]" || {
+            echo "⚠️  No changes to commit or commit failed"
+            exit 0
+          }
+
+      - name: Push changes
+        if: steps.git-check.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          git push origin HEAD:${{ github.head_ref }} || {
+            echo "⚠️  Push failed - this may be expected if branch is protected"
+            exit 0
+          }
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && steps.git-check.outputs.changed == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ **Metrics Auto-Updated**\n\nDocumentation has been automatically updated with real metrics from Supabase:\n\n- User metrics (total, new, active)\n- Revenue metrics (MRR, ARR)\n- Engagement metrics (DAU, WAU, MAU)\n- Activation rate\n\nFiles updated:\n- `/yc/YC_PRODUCT_OVERVIEW.md`\n- `/yc/YC_INTERVIEW_CHEATSHEET.md`\n- `/yc/YC_METRICS_CHECKLIST.md`\n- `/dataroom/03_METRICS_OVERVIEW.md`\n- `/dataroom/04_CUSTOMER_PROOF.md`'
+            })
+
+  check-secrets:
+    name: Verify GitHub Secrets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check GitHub Secrets Configuration
+        run: |
+          set -euo pipefail
+          npm run secrets:check || {
+            echo "⚠️  Secrets check completed - review output above"
+            exit 0  # Don't fail, just warn
+          }
+
+      - name: Generate Secrets Report
+        if: always()
+        run: |
+          echo "## GitHub Secrets Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check \`docs/GITHUB_SECRETS_CHECKLIST.md\` for verification checklist." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note:** This workflow cannot verify if secrets are actually set (GitHub doesn't allow that)." >> $GITHUB_STEP_SUMMARY
+          echo "Manually verify in GitHub → Settings → Secrets and variables → Actions" >> $GITHUB_STEP_SUMMARY
