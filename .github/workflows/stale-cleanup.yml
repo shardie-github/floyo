@@ -1,0 +1,107 @@
+name: Stale PR & Branch Cleanup
+
+on:
+  schedule:
+    # Every Monday at 2 AM UTC
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+jobs:
+  stale-prs:
+    name: Mark Stale PRs
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/stale@v9
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          stale-pr-message: |
+            This PR has been inactive for 30 days. It will be automatically closed in 7 days if no activity occurs.
+            
+            If you'd like to keep this PR open, please:
+            - Add a comment
+            - Push new commits
+            - Request a review
+          close-pr-message: |
+            This PR has been automatically closed due to inactivity. Feel free to reopen if you'd like to continue working on it.
+          days-before-pr-stale: 30
+          days-before-pr-close: 7
+          stale-pr-label: 'stale'
+          exempt-pr-labels: 'pinned,security,dependencies,automated'
+          operations-per-run: 30
+
+  stale-branches:
+    name: Cleanup Stale Branches
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete merged branches older than 30 days
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: branches } = await github.rest.repos.listBranches({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+            });
+
+            const mainBranch = 'main';
+            const protectedBranches = ['main', 'develop', 'staging'];
+            const daysOld = 30;
+            const now = new Date();
+
+            for (const branch of branches) {
+              if (protectedBranches.includes(branch.name)) {
+                continue;
+              }
+
+              // Check if branch is merged
+              const { data: compare } = await github.rest.repos.compareCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                base: mainBranch,
+                head: branch.name,
+              });
+
+              if (compare.status === 'identical' || compare.status === 'behind') {
+                // Check last commit date
+                const lastCommit = await github.rest.repos.getCommit({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: branch.commit.sha,
+                });
+
+                const commitDate = new Date(lastCommit.commit.committer.date);
+                const daysSinceCommit = (now - commitDate) / (1000 * 60 * 60 * 24);
+
+                if (daysSinceCommit > daysOld) {
+                  // Check if there's an open PR for this branch
+                  const { data: prs } = await github.rest.pulls.list({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    head: `${context.repo.owner}:${branch.name}`,
+                    state: 'open',
+                  });
+
+                  if (prs.length === 0) {
+                    console.log(`Deleting stale merged branch: ${branch.name}`);
+                    try {
+                      await github.rest.git.deleteRef({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        ref: `heads/${branch.name}`,
+                      });
+                    } catch (error) {
+                      console.log(`Failed to delete ${branch.name}: ${error.message}`);
+                    }
+                  }
+                }
+              }
+            }

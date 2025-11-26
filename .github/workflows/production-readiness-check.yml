@@ -1,0 +1,225 @@
+name: Production Readiness Check
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  readiness-check:
+    name: Production Readiness Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          pip install -r requirements.txt || true
+
+      - name: Check required files
+        id: files
+        run: |
+          MISSING_FILES=()
+          
+          # Check for critical files
+          [ ! -f ".env.example" ] && MISSING_FILES+=(".env.example")
+          [ ! -f "README.md" ] && MISSING_FILES+=("README.md")
+          [ ! -f "package.json" ] && MISSING_FILES+=("package.json")
+          [ ! -f "prisma/schema.prisma" ] && MISSING_FILES+=("prisma/schema.prisma")
+          
+          if [ ${#MISSING_FILES[@]} -gt 0 ]; then
+            echo "missing_files=${MISSING_FILES[*]}" >> $GITHUB_OUTPUT
+            echo "has_missing=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_missing=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check environment variables
+        id: env
+        run: |
+          if [ -f ".env.example" ]; then
+            # Check for required env vars in .env.example
+            REQUIRED_VARS=("DATABASE_URL" "SUPABASE_URL" "SUPABASE_ANON_KEY" "SECRET_KEY")
+            MISSING_VARS=()
+            
+            for var in "${REQUIRED_VARS[@]}"; do
+              if ! grep -q "$var" .env.example; then
+                MISSING_VARS+=("$var")
+              fi
+            done
+            
+            if [ ${#MISSING_VARS[@]} -gt 0 ]; then
+              echo "missing_vars=${MISSING_VARS[*]}" >> $GITHUB_OUTPUT
+              echo "has_missing_vars=true" >> $GITHUB_OUTPUT
+            else
+              echo "has_missing_vars=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "has_missing_vars=true" >> $GITHUB_OUTPUT
+            echo "missing_vars=.env.example file missing" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check GitHub Secrets
+        id: secrets
+        run: |
+          npm run secrets:check || {
+            echo "has_secrets_issues=true" >> $GITHUB_OUTPUT
+            exit 0
+          }
+          echo "has_secrets_issues=false" >> $GITHUB_OUTPUT
+
+      - name: Check documentation
+        id: docs
+        run: |
+          MISSING_DOCS=()
+          
+          [ ! -f "docs/SETUP_LOCAL.md" ] && [ ! -f "README.md" ] && MISSING_DOCS+=("Setup documentation")
+          [ ! -f "docs/PROJECT_READINESS_REPORT.md" ] && MISSING_DOCS+=("Readiness report")
+          
+          if [ ${#MISSING_DOCS[@]} -gt 0 ]; then
+            echo "missing_docs=${MISSING_DOCS[*]}" >> $GITHUB_OUTPUT
+            echo "has_missing_docs=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_missing_docs=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check tests
+        id: tests
+        run: |
+          HAS_TESTS=false
+          
+          if [ -d "tests" ] && [ "$(find tests -name '*.py' -o -name '*.ts' | wc -l)" -gt 0 ]; then
+            HAS_TESTS=true
+          fi
+          
+          if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
+            if grep -q '"test"' frontend/package.json; then
+              HAS_TESTS=true
+            fi
+          fi
+          
+          echo "has_tests=$HAS_TESTS" >> $GITHUB_OUTPUT
+
+      - name: Check build
+        id: build
+        run: |
+          cd frontend || exit 0
+          npm run build || {
+            echo "build_failed=true" >> $GITHUB_OUTPUT
+            exit 0
+          }
+          echo "build_failed=false" >> $GITHUB_OUTPUT
+
+      - name: Generate readiness report
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## 🚀 Production Readiness Check Results
+          
+          ### ✅ Required Files
+          - Status: ${{ steps.files.outputs.has_missing == 'false' && '✅ PASS' || '❌ FAIL' }}
+          ${{ steps.files.outputs.has_missing == 'true' && format('- Missing: {0}', steps.files.outputs.missing_files) || '' }}
+          
+          ### 🔐 Environment Variables
+          - Status: ${{ steps.env.outputs.has_missing_vars == 'false' && '✅ PASS' || '⚠️ REVIEW NEEDED' }}
+          ${{ steps.env.outputs.has_missing_vars == 'true' && format('- Missing vars: {0}', steps.env.outputs.missing_vars) || '' }}
+          
+          ### 🔑 GitHub Secrets
+          - Status: ${{ steps.secrets.outputs.has_secrets_issues == 'false' && '✅ PASS' || '⚠️ CHECK NEEDED' }}
+          
+          ### 📚 Documentation
+          - Status: ${{ steps.docs.outputs.has_missing_docs == 'false' && '✅ PASS' || '⚠️ INCOMPLETE' }}
+          ${{ steps.docs.outputs.has_missing_docs == 'true' && format('- Missing: {0}', steps.docs.outputs.missing_docs) || '' }}
+          
+          ### 🧪 Tests
+          - Status: ${{ steps.tests.outputs.has_tests == 'true' && '✅ FOUND' || '⚠️ NO TESTS' }}
+          
+          ### 🏗️ Build
+          - Status: ${{ steps.build.outputs.build_failed == 'false' && '✅ PASS' || '❌ FAIL' }}
+          
+          ---
+          
+          **Overall Status:** ${{ steps.files.outputs.has_missing == 'false' && steps.env.outputs.has_missing_vars == 'false' && steps.build.outputs.build_failed == 'false' && '✅ READY' || '⚠️ NEEDS ATTENTION' }}
+          EOF
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let summary = '';
+            try {
+              summary = fs.readFileSync(process.env.GITHUB_STEP_SUMMARY, 'utf8');
+            } catch (e) {
+              summary = 'Production readiness check completed. See workflow run for details.';
+            }
+            
+            // Check if comment already exists
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(c => 
+              c.user.type === 'Bot' && 
+              c.body.includes('Production Readiness Check')
+            );
+            
+            const body = `## 🚀 Production Readiness Check\n\n${summary}\n\n*This check runs automatically on every PR.*`;
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
+      - name: Set check status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isReady = '${{ steps.files.outputs.has_missing }}' === 'false' && 
+                          '${{ steps.env.outputs.has_missing_vars }}' === 'false' && 
+                          '${{ steps.build.outputs.build_failed }}' === 'false';
+            
+            await github.rest.checks.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              name: 'Production Readiness',
+              head_sha: context.payload.pull_request?.head.sha || context.sha,
+              status: 'completed',
+              conclusion: isReady ? 'success' : 'action_required',
+              output: {
+                title: isReady ? 'Production Ready ✅' : 'Needs Attention ⚠️',
+                summary: isReady 
+                  ? 'All production readiness checks passed'
+                  : 'Some checks require attention. See workflow run for details.'
+              }
+            });

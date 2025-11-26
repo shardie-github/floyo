@@ -1,0 +1,63 @@
+# Auto-label PRs based on changed files
+frontend:
+  - frontend/**/*
+  - '*.tsx'
+  - '*.ts'
+  - 'next.config.*'
+  - 'tailwind.config.*'
+
+backend:
+  - backend/**/*
+  - '*.py'
+  - requirements.txt
+  - pytest.ini
+
+infrastructure:
+  - .github/**/*
+  - infra/**/*
+  - docker-compose.yml
+  - Dockerfile
+  - '*.yml'
+  - '*.yaml'
+  - vercel.json
+
+database:
+  - prisma/**/*
+  - supabase/**/*
+  - migrations/**/*
+  - '*.sql'
+
+documentation:
+  - docs/**/*
+  - '*.md'
+  - README.md
+  - CONTRIBUTING.md
+
+yc:
+  - yc/**/*
+  - dataroom/**/*
+  - demo/**/*
+
+scripts:
+  - scripts/**/*
+  - '*.sh'
+
+tests:
+  - tests/**/*
+  - '**/*.test.ts'
+  - '**/*.test.tsx'
+  - '**/*.spec.ts'
+  - '**/*.spec.tsx'
+  - '**/*_test.py'
+
+dependencies:
+  - package.json
+  - package-lock.json
+  - requirements.txt
+  - Pipfile
+  - poetry.lock
+
+security:
+  - .github/workflows/security-scan.yml
+  - scripts/security-*.ts
+  - scripts/audit-*.ts
