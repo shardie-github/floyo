@@ -56,8 +56,8 @@ See: `/yc/YC_METRICS_CHECKLIST.md`
 
 ## Team
 
-**Founder:**
-- **Scott Hardie** - Founder/Lead Developer (Full-Stack)
+**Founder, CEO & Operator:**
+- **Scott Hardie** - Founder, CEO & Operator
 - **Current Role:** Solutions Architect at McGraw Hill (15+ years in educational SaaS)
 - **GitHub:** [shardie-github](https://github.com/shardie-github)
 - **LinkedIn:** [/scottrmhardie](https://linkedin.com/in/scottrmhardie)

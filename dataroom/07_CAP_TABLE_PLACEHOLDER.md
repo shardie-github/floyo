@@ -16,9 +16,7 @@ This is a placeholder document. Actual cap table should be maintained by founder
 
 | Shareholder | Shares | Ownership % | Type |
 |-------------|--------|--------------|------|
-| Founder 1 | [N] | [N]% | Common |
-| Founder 2 | [N] | [N]% | Common |
-| Founder 3 | [N] | [N]% | Common |
+| Scott Hardie (Founder, CEO & Operator) | [N] | [N]% | Common |
 | Employee Pool | [N] | [N]% | Options |
 | Investors (Seed) | [N] | [N]% | Preferred |
 | **Total** | [N] | 100% | |
@@ -53,4 +51,4 @@ This is a placeholder document. Actual cap table should be maintained by founder
 
 ---
 
-**Status:** ⚠️ Placeholder - Requires legal/founder input
+**Status:** ⚠️ Placeholder - Requires legal input (Founder: Scott Hardie, Founder, CEO & Operator)

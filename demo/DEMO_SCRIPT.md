@@ -8,7 +8,7 @@
 
 ## Opening (30 seconds)
 
-> "Hi, I'm [NAME], co-founder of Floyo. Floyo helps developers and small business operators discover integration opportunities they didn't know existed. Let me show you how it works."
+> "Hi, I'm Scott Hardie, Founder, CEO & Operator of Floyo. Floyo helps developers and small business operators discover integration opportunities they didn't know existed. Let me show you how it works."
 
 ---
 

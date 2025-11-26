@@ -15,8 +15,9 @@
 **Status:** ✅ Updated with Scott Hardie's information
 
 **Current Team:**
-- **Scott Hardie** - Founder/Lead Developer (Full-Stack)
+- **Scott Hardie** - Founder, CEO & Operator
 - GitHub: shardie-github | LinkedIn: /scottrmhardie
+- Email: scottrmhardie@gmail.com
 
 **What to add (optional):**
 - Education background (schools, degrees)

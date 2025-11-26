@@ -1,7 +1,7 @@
 # YC Team Notes - Floyo
 
 **Last Updated:** 2025-01-20  
-**Status:** Updated with Scott Hardie's information - Additional details welcome
+**Status:** ✅ Updated with Scott Hardie's complete information as Founder, CEO & Operator
 
 ---
 
@@ -9,8 +9,8 @@
 
 ### Founders / Core Team
 
-**Primary Founder:**
-- **Scott Hardie** - Founder/Lead Developer
+**Founder, CEO & Operator:**
+- **Scott Hardie** - Founder, CEO & Operator
 - **GitHub:** [shardie-github](https://github.com/shardie-github)
 - **LinkedIn:** [/scottrmhardie](https://linkedin.com/in/scottrmhardie)
 - **Email:** scottrmhardie@gmail.com
@@ -200,7 +200,7 @@
 
 ### Founder: Scott Hardie
 
-**Role:** Founder/Lead Developer (Full-Stack)
+**Role:** Founder, CEO & Operator (Full-Stack)
 
 **Contact:**
 - **GitHub:** [shardie-github](https://github.com/shardie-github)

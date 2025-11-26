@@ -459,3 +459,17 @@ If Floyo helps you discover and automate your workflow patterns, please consider
 ---
 
 **Built with ❤️ for developers who want to work smarter, not harder.**
+
+---
+
+## About
+
+**Floyo** is built by **Scott Hardie**, Founder, CEO & Operator.
+
+**Scott Hardie** brings 15+ years of experience helping businesses adopt SaaS tools (McGraw Hill, Pearson Education) and has recently built AI automation systems directly relevant to Floyo's target market: Hardonia OS (AI-driven Shopify commerce lab), PromptPilot (workflow automation framework), and Daily Intel Suite (agent-based insights). His combination of sales/enablement experience + recent AI automation work makes him uniquely qualified to build Floyo.
+
+- **GitHub:** [shardie-github](https://github.com/shardie-github)
+- **LinkedIn:** [/scottrmhardie](https://linkedin.com/in/scottrmhardie)
+- **Email:** scottrmhardie@gmail.com
+
+See `/yc/YC_TEAM_NOTES.md` for full founder background.

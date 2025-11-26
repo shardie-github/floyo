@@ -202,8 +202,8 @@ See: `/docs/TECH_DUE_DILIGENCE_CHECKLIST.md`
 
 ## Technical Team
 
-**Founder/Lead Developer:**
-- **Scott Hardie:** Founder/Lead Developer (Full-Stack)
+**Founder, CEO & Operator:**
+- **Scott Hardie:** Founder, CEO & Operator
   - **Current Role:** Solutions Architect at McGraw Hill (Dec 2022 - Present)
   - **GitHub:** [shardie-github](https://github.com/shardie-github)
   - **LinkedIn:** [/scottrmhardie](https://linkedin.com/in/scottrmhardie)

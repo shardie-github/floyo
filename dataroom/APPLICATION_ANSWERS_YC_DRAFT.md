@@ -155,7 +155,7 @@ See: `/yc/YC_DISTRIBUTION_PLAN.md`
 ## 9. Who are the founders?
 
 **Scott Hardie:**
-- Role: Founder/Lead Developer (Full-Stack)
+- Role: Founder, CEO & Operator
 - Current Role: Solutions Architect at McGraw Hill (Dec 2022 - Present)
 - Background: 15+ years at McGraw-Hill and Pearson Education driving SaaS adoption and enterprise integrations. Achieved 125% YOY sales growth, President's Award for Sales Excellence (2014). Recent AI automation work: Built Hardonia OS (AI-driven Shopify commerce lab replacing 7+ apps), PromptPilot (workflow automation framework), Daily Intel Suite (9 agents for TikTok/AliExpress insights). Built Floyo end-to-end (Python/FastAPI backend, Next.js/TypeScript frontend, PostgreSQL database).
 - Education: MA Political Science (Wilfrid Laurier University, 2010-2011), BA Political Science and Communication Studies (Wilfrid Laurier University, 2006-2010)

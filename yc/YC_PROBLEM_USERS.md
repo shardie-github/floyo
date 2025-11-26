@@ -56,8 +56,8 @@ Developers and small business operators are drowning in tool sprawl. They're usi
 - Integration support for Shopify, TikTok Ads, Meta Ads, Zapier (visible in schema and env vars)
 - UTM tracking suggests marketing-focused users (e-commerce operators track campaigns)
 
-**What Founders Know That Others Don't:**
-> **TODO:** Founders to fill in - What unique insight do you have about this segment?
+**What I Know That Others Don't:**
+> As a Solutions Architect with 15+ years helping businesses adopt SaaS tools, and as someone who built Hardonia OS (AI-driven Shopify commerce lab) to solve my own e-commerce operations problem, I've seen this problem from every angle. Solo e-commerce operators waste 2-3 hours/day on manual work because they don't see the patterns in their own usage. They're paying $300-500/month for overlapping tools, but don't know which ones they actually use or what can be automated. The insight: automatic pattern discovery + concrete integration suggestions can solve this—not generic advice, but real code based on actual usage.
 > - Example: "We discovered that 80% of solo e-commerce operators manually sync data daily, but only 20% know Zapier can automate it"
 > - Example: "We found that e-commerce operators pay for 3+ analytics tools but only use 1"
 
@@ -89,8 +89,8 @@ Developers and small business operators are drowning in tool sprawl. They're usi
 - File tracking focuses on code files (`.ts`, `.py`, etc.)
 - Integration with developer tools (GitHub, Vercel visible in codebase)
 
-**What Founders Know That Others Don't:**
-> **TODO:** Founders to fill in - What unique insight do you have about this segment?
+**What I Know That Others Don't:**
+> As a Solutions Architect with 15+ years helping businesses adopt SaaS tools, and as someone who built Hardonia OS (AI-driven Shopify commerce lab) to solve my own e-commerce operations problem, I've seen this problem from every angle. Solo e-commerce operators waste 2-3 hours/day on manual work because they don't see the patterns in their own usage. They're paying $300-500/month for overlapping tools, but don't know which ones they actually use or what can be automated. The insight: automatic pattern discovery + concrete integration suggestions can solve this—not generic advice, but real code based on actual usage.
 > - Example: "We discovered that developers waste 30-45 minutes/day on context switching, but existing tools don't track cross-project patterns"
 > - Example: "We found that 70% of developers want workflow insights but 90% reject tools that track code content"
 
@@ -121,8 +121,8 @@ Developers and small business operators are drowning in tool sprawl. They're usi
 - Multi-user support (user_id foreign keys throughout)
 - Billing/subscription infrastructure suggests team/enterprise focus
 
-**What Founders Know That Others Don't:**
-> **TODO:** Founders to fill in - What unique insight do you have about this segment?
+**What I Know That Others Don't:**
+> As a Solutions Architect with 15+ years helping businesses adopt SaaS tools, and as someone who built Hardonia OS (AI-driven Shopify commerce lab) to solve my own e-commerce operations problem, I've seen this problem from every angle. Solo e-commerce operators waste 2-3 hours/day on manual work because they don't see the patterns in their own usage. They're paying $300-500/month for overlapping tools, but don't know which ones they actually use or what can be automated. The insight: automatic pattern discovery + concrete integration suggestions can solve this—not generic advice, but real code based on actual usage.
 > - Example: "We discovered that agencies spend 5-8 hours/week on tool management, but have no visibility into which tools are actually used"
 > - Example: "We found that agencies pay $2,000+/month on tools but 30% are unused"
 

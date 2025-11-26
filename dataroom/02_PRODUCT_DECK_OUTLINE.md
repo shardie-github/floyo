@@ -118,7 +118,7 @@ See: `/yc/YC_MARKET_VISION.md` (Competitive Analysis section)
 
 ## Slide 11: Team
 
-- **Scott Hardie:** Founder/Lead Developer (Full-Stack)
+- **Scott Hardie:** Founder, CEO & Operator
   - Solutions Architect at McGraw Hill (15+ years in educational SaaS)
   - Built Hardonia OS (AI-driven Shopify commerce lab), PromptPilot (workflow automation), Daily Intel Suite (agent-based insights)
   - Achieved 125% YOY sales growth, President's Award for Sales Excellence (2014)
@@ -155,10 +155,10 @@ See: `/yc/YC_TEAM_NOTES.md`
 ---
 
 ## Slide 14: Contact
-- **Email:** [FOUNDER_EMAIL]
+- **Email:** scottrmhardie@gmail.com
 - **Website:** [WEBSITE_URL]
 - **Demo:** [DEMO_URL]
-- **GitHub:** [GITHUB_URL]
+- **GitHub:** github.com/shardie-github
 
 ---
 
