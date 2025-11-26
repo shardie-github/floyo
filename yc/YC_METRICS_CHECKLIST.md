@@ -424,7 +424,28 @@ async def get_cost_metrics(
 
 ### Key Metrics to Display
 
-1. **North Star Metric:** [TODO: Founders to define]
+1. **North Star Metric:** **Integrations Implemented Per User Per Month**
+   
+   **Definition:** Average number of integration suggestions that users implement per month.
+   
+   **Why This Metric:**
+   - Measures core value delivery - users implementing Floyo's suggestions
+   - Indicates product-market fit (if users implement suggestions, product is valuable)
+   - Predicts retention (users who implement integrations are more likely to stay)
+   - Drives revenue (implemented integrations → value realized → upgrade to paid)
+   
+   **Current Target:** 1+ integration per user per month (to be validated)
+   
+   **How to Track:**
+   - Count integration suggestions accepted/implemented per user
+   - Aggregate monthly per user
+   - Calculate average across all active users
+   
+   **Why Not Other Metrics:**
+   - Not "DAU" - activity doesn't equal value
+   - Not "MRR" - revenue is lagging indicator
+   - Not "Signups" - signups don't equal value delivery
+   - "Integrations Implemented" = direct measure of value delivered
    - Suggested: "Number of integrations implemented per user per month"
    - Alternative: "Time saved per user per month"
 

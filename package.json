@@ -9,6 +9,9 @@
   },
   "scripts": {
     "yc:fetch-metrics": "tsx yc/scripts/fetch_real_metrics.ts",
+    "metrics:fetch": "tsx scripts/fetch-metrics-and-update-docs.ts",
+    "metrics:update": "bash scripts/update-all-metrics.sh",
+    "secrets:check": "tsx scripts/check-github-secrets.ts",
     "yc:generate-team": "tsx yc/scripts/generate_team_template.ts",
     "yc:calculate-financials": "tsx yc/scripts/calculate_financials.ts",
     "yc:test-features": "bash yc/scripts/test_all_features.sh",

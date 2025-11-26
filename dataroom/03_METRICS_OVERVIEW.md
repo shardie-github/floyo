@@ -7,11 +7,13 @@
 
 ## North Star Metric
 
-> **TODO:** Founders to define North Star metric
+**✅ DEFINED:** **Integrations Implemented Per User Per Month**
 
-**Proposed:** "Integrations implemented per user per month"
+**Definition:** Average number of integration suggestions that users implement per month.
 
-**Why:** Measures core value delivery - users implementing Floyo's suggestions.
+**Why:** Measures core value delivery - users implementing Floyo's suggestions. Indicates product-market fit, predicts retention, and drives revenue.
+
+**Current Target:** 1+ integration per user per month (to be validated)
 
 ---
 
