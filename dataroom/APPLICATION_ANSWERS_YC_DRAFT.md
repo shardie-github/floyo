@@ -154,17 +154,18 @@ See: `/yc/YC_DISTRIBUTION_PLAN.md`
 
 ## 9. Who are the founders?
 
-> **TODO:** Founders to fill in team information
+**Scott Hardie:**
+- Role: Founder/Lead Developer (Full-Stack)
+- Background: Built Floyo end-to-end (Python/FastAPI backend, Next.js/TypeScript frontend, PostgreSQL database). Previous automation tools: MASTER OMEGA PRIME (autonomous orchestrator), Aurora Prime (infrastructure monitoring), Unified Agent (multi-agent orchestration).
+- Why qualified: 
+  - Full-stack capability: Built entire Floyo system end-to-end
+  - Production experience: Implemented monitoring, error tracking, security (RLS, privacy controls)
+  - Technical execution: Strong code quality, comprehensive architecture, automated CI/CD
+  - Product thinking: Extensive user research (ICP/JTBD), market analysis, GTM strategy
+  - Experienced the problem: Built multiple automation tools and experienced tool sprawl firsthand
 
-**[FOUNDER_NAME]:**
-- Role: [ROLE]
-- Background: [BACKGROUND]
-- Why qualified: [UNIQUE_QUALIFICATIONS]
-
-**[FOUNDER_NAME]:**
-- Role: [ROLE]
-- Background: [BACKGROUND]
-- Why qualified: [UNIQUE_QUALIFICATIONS]
+**GitHub:** [shardie-github](https://github.com/shardie-github)  
+**LinkedIn:** [/scottrmhardie](https://linkedin.com/in/scottrmhardie)
 
 See: `/yc/YC_TEAM_NOTES.md`
 

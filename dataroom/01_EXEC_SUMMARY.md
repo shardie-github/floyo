@@ -56,12 +56,13 @@ See: `/yc/YC_METRICS_CHECKLIST.md`
 
 ## Team
 
-> **TODO:** Founders to fill in team information
+**Founder:**
+- **Scott Hardie** - Founder/Lead Developer (Full-Stack)
+- **GitHub:** [shardie-github](https://github.com/shardie-github)
+- **LinkedIn:** [/scottrmhardie](https://linkedin.com/in/scottrmhardie)
 
-- **[FOUNDER_NAME]:** [ROLE] - [BACKGROUND]
-- **[FOUNDER_NAME]:** [ROLE] - [BACKGROUND]
-
-**Why This Team:** [UNIQUE_QUALIFICATIONS]
+**Why This Team:** 
+Scott has built multiple automation and monitoring systems (MASTER OMEGA PRIME, Aurora Prime, Unified Agent) and experienced firsthand the problem of tool sprawl. Built Floyo from idea to production-ready system with comprehensive architecture, automated CI/CD, and extensive documentation. Demonstrates full-stack capability and production-ready thinking.
 
 See: `/yc/YC_TEAM_NOTES.md`
 

@@ -86,14 +86,15 @@
 ---
 
 ### Risk 2: Team Information Missing
-**Impact:** HIGH  
-**Likelihood:** HIGH  
-**Mitigation:** Founders need to fill in `/yc/YC_TEAM_NOTES.md` with real team information
+**Impact:** MEDIUM (Partially Addressed)  
+**Likelihood:** LOW  
+**Mitigation:** ✅ Updated `/yc/YC_TEAM_NOTES.md` with Scott Hardie's information
 
-**Action Items:**
-- Fill in founder names, backgrounds, roles
-- Explain why this team is uniquely qualified
-- Document division of responsibilities
+**Status:**
+- ✅ Founder name and contact info added (Scott Hardie)
+- ✅ Technical background documented (full-stack, previous projects)
+- ✅ Why qualified section completed
+- ⚠️ Optional: Education background, previous companies (can be added later)
 
 ---
 

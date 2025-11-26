@@ -11,7 +11,8 @@
 
 1. **Fill in Team Information** (Priority: MUST, Owner: Founder)
    - File: `/yc/YC_TEAM_NOTES.md`
-   - Add founder names, backgrounds, why this team
+   - ✅ Updated with Scott Hardie's information
+   - ⚠️ Add education background, previous companies (optional but recommended)
    - **Why:** Required for YC application
 
 2. **Get Real User Metrics** (Priority: MUST, Owner: Founder/Tech Founder)

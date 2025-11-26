@@ -12,11 +12,17 @@
 
 **File:** `/yc/YC_TEAM_NOTES.md`
 
-**What to do:**
-- Add founder names and roles
-- Add backgrounds (previous companies, schools, achievements)
-- Explain why this team is uniquely qualified
-- Add division of responsibilities
+**Status:** ✅ Updated with Scott Hardie's information
+
+**Current Team:**
+- **Scott Hardie** - Founder/Lead Developer (Full-Stack)
+- GitHub: shardie-github | LinkedIn: /scottrmhardie
+
+**What to add (optional):**
+- Education background (schools, degrees)
+- Previous companies/roles (if applicable)
+- Notable achievements (awards, publications)
+- Co-founder information (if applicable)
 
 **Why:** Required for YC application and investor conversations.
 

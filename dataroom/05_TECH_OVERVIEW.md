@@ -202,15 +202,17 @@ See: `/docs/TECH_DUE_DILIGENCE_CHECKLIST.md`
 
 ## Technical Team
 
-> **TODO:** Founders to specify technical team
-
-- **[ENGINEER_NAME]:** [ROLE] - [EXPERTISE]
-- **[ENGINEER_NAME]:** [ROLE] - [EXPERTISE]
+**Founder/Lead Developer:**
+- **Scott Hardie:** Founder/Lead Developer (Full-Stack)
+  - **GitHub:** [shardie-github](https://github.com/shardie-github)
+  - **LinkedIn:** [/scottrmhardie](https://linkedin.com/in/scottrmhardie)
 
 **Technical Capabilities:**
-- Full-stack development (Next.js, Python, PostgreSQL)
-- DevOps (CI/CD, deployment automation)
-- Data engineering (pattern analysis, analytics)
+- Full-stack development (Next.js, TypeScript, Python/FastAPI, PostgreSQL)
+- DevOps (CI/CD automation, GitHub Actions, Vercel, Supabase)
+- Data engineering (pattern analysis, analytics infrastructure)
+- Infrastructure (monitoring, error tracking, security)
+- Previous automation tools (MASTER OMEGA PRIME, Aurora Prime, Unified Agent)
 
 ---
 

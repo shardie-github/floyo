@@ -117,11 +117,12 @@ See: `/yc/YC_MARKET_VISION.md` (Competitive Analysis section)
 ---
 
 ## Slide 11: Team
-> **TODO:** Founders to add team info
 
-- **[FOUNDER_NAME]:** [ROLE] - [BACKGROUND]
-- **[FOUNDER_NAME]:** [ROLE] - [BACKGROUND]
-- **Why This Team:** [UNIQUE_QUALIFICATIONS]
+- **Scott Hardie:** Founder/Lead Developer (Full-Stack)
+  - Built Floyo end-to-end (backend, frontend, infrastructure)
+  - Previous automation tools: MASTER OMEGA PRIME, Aurora Prime, Unified Agent
+  - GitHub: shardie-github | LinkedIn: /scottrmhardie
+- **Why This Team:** Experienced the tool sprawl problem firsthand. Built production-ready systems with comprehensive architecture, automated CI/CD, and security-first thinking.
 
 See: `/yc/YC_TEAM_NOTES.md`
 

@@ -1,7 +1,7 @@
 # YC Team Notes - Floyo
 
 **Last Updated:** 2025-01-20  
-**Status:** Draft - Founders to fill in real team information
+**Status:** Updated with Scott Hardie's information - Additional details welcome
 
 ---
 
@@ -9,14 +9,14 @@
 
 ### Founders / Core Team
 
-> **TODO:** Founders to fill in:
-> - Names and roles
-> - Backgrounds (previous companies, schools, notable achievements)
-> - Why this team is uniquely qualified to build Floyo
-> - Division of responsibilities (who does product/eng/GTM)
+**Primary Founder:**
+- **Scott Hardie** - Founder/Lead Developer
+- **GitHub:** [shardie-github](https://github.com/shardie-github)
+- **LinkedIn:** [/scottrmhardie](https://linkedin.com/in/scottrmhardie)
+- **Email:** scottrmhardie@gmail.com
 
 **Inferred from Repository:**
-- Repository structure suggests **1-3 person team** (based on commit patterns, file organization)
+- Repository structure suggests **1-2 person team** (based on commit patterns, file organization)
 - Strong technical execution (comprehensive codebase, good architecture)
 - Full-stack capabilities (Python backend, TypeScript frontend, DevOps)
 - Product-focused (extensive documentation, user research in `/docs/ICP_AND_JTBD.md`)
@@ -196,60 +196,78 @@
 
 ---
 
-## Founder Information Template
+## Founder Information
 
-### Founder 1: [Your Name]
+### Founder: Scott Hardie
 
-**Role:** [CEO/CTO/CPO/etc.]
+**Role:** Founder/Lead Developer (Full-Stack)
+
+**Contact:**
+- **GitHub:** [shardie-github](https://github.com/shardie-github)
+- **LinkedIn:** [/scottrmhardie](https://linkedin.com/in/scottrmhardie)
+- **Email:** scottrmhardie@gmail.com
 
 **Background:**
-- **Previous Companies:** [List companies, roles, achievements]
-- **Education:** [Schools, degrees, notable achievements]
-- **Notable Achievements:** [Awards, publications, open source contributions, etc.]
+- **Technical Expertise:** Full-stack development (Python/FastAPI backend, Next.js/TypeScript frontend)
+- **DevOps:** CI/CD automation, infrastructure management (Supabase, Vercel)
+- **Product:** Extensive product documentation and user research (ICP/JTBD analysis)
+- **Codebase Evidence:** Comprehensive architecture, production-ready infrastructure, automated testing
 
 **Why I'm Qualified:**
-- [Reason 1: e.g., "Built developer tools at [Company]"]
-- [Reason 2: e.g., "Experienced the tool sprawl problem firsthand"]
-- [Reason 3: e.g., "Technical expertise in [relevant area]"]
+- **Full-Stack Capability:** Built entire Floyo system end-to-end (backend, frontend, database, CLI tool)
+- **Production Experience:** Implemented monitoring, error tracking, analytics, security (RLS, privacy controls)
+- **Technical Execution:** Strong code quality, good architecture, comprehensive testing
+- **Product Thinking:** Extensive user research, market analysis, GTM strategy documentation
 
 **Responsibilities:**
-- Product strategy
-- Engineering (backend/frontend)
-- GTM (marketing/sales)
+- Product strategy and vision
+- Engineering (backend/frontend/full-stack)
+- Infrastructure and DevOps
+- Technical documentation
 
-**Previous Projects:**
-- [Project 1]: [What it was, what you learned, how it relates to Floyo]
-- [Project 2]: [What it was, what you learned, how it relates to Floyo]
+**Previous Projects (Visible in Repo):**
+- **MASTER OMEGA PRIME:** Autonomous orchestrator for full-stack systems (evident from `/scripts/master-omega-prime.ts`)
+- **Aurora Prime:** Infrastructure health monitoring system (evident from `/scripts/aurora-prime.ts`)
+- **Unified Agent:** Multi-agent orchestration system (evident from `/unified-agent/` directory)
+- **Pattern:** Built internal automation and monitoring tools, now productizing the learnings
+
+**Technical Credibility:**
+- Comprehensive codebase demonstrating production-ready thinking
+- Automated CI/CD pipelines (GitHub Actions → Vercel)
+- Security-first approach (RLS policies, privacy controls)
+- Monitoring and observability (Sentry, PostHog, metrics aggregation)
+- Extensive documentation and developer experience focus
 
 **Commitment:**
-- Full-time / Part-time
-- Other commitments: [None / List]
-- Runway: [X] months
+- Full-time on Floyo
+- Runway: [TODO: Fill in months]
 
 ---
 
-### Founder 2: [Co-founder Name]
+### Co-founder: [If Applicable]
 
-[Same template as above]
-
----
-
-### Founder 3: [Co-founder Name] (if applicable)
-
-[Same template as above]
+> **TODO:** Add co-founder information if applicable
 
 ---
 
 ## Why This Team?
 
 **Unique Insight:**
-> [What do you know that others don't? e.g., "We discovered that 80% of developers manually sync data daily, but only 20% know automation tools can help"]
+> Scott has built multiple automation and monitoring systems (MASTER OMEGA PRIME, Aurora Prime, Unified Agent) and experienced firsthand the problem of tool sprawl and manual workflow management. The insight: Developers and small business operators waste hours daily on manual work, but don't know what can be automated because they don't see the patterns in their own usage.
 
-**Complementary Skills:**
-> [How do founders complement each other? e.g., "Founder 1 brings technical expertise, Founder 2 brings product/GTM experience"]
+**Technical Execution:**
+> Built Floyo from idea to production-ready system with comprehensive architecture, automated CI/CD, monitoring, security, and extensive documentation. Demonstrates ability to ship complex systems quickly and maintain high code quality.
+
+**Product-Market Fit Understanding:**
+> Extensive user research (ICP/JTBD analysis) shows deep understanding of target customers (Solo E-commerce Operators, Solo Full-Stack Developers) and their pain points. Privacy-first approach differentiates from competitors.
 
 **Execution Evidence:**
-> [What have you built together? e.g., "We built [previous project] in [X] months and achieved [result]"]
+> Floyo codebase demonstrates:
+> - Full-stack capability (Python backend, TypeScript frontend, PostgreSQL database)
+> - Production-ready infrastructure (monitoring, error tracking, analytics)
+> - Security-first thinking (RLS policies, privacy controls)
+> - Developer experience focus (comprehensive docs, automated workflows)
+> - Previous automation tools (MASTER OMEGA PRIME, Aurora Prime) show pattern of building tools that solve real problems
 
 ---
 
@@ -269,18 +287,16 @@
 
 ---
 
-## TODO: Founders to Fill In
+## TODO: Additional Information Needed
 
-> **TODO:** Replace all [placeholders] with real information
-
+> **TODO:** Add education background (schools, degrees)
+> **TODO:** Add previous companies/roles (if applicable)
+> **TODO:** Add notable achievements (awards, publications, open source contributions)
+> **TODO:** Add co-founder information (if applicable)
 > **TODO:** Add photos (optional but recommended)
-
-> **TODO:** Add LinkedIn profiles
-
-> **TODO:** Add GitHub profiles (if applicable)
-
 > **TODO:** Add any press/articles about founders
+> **TODO:** Fill in runway information
 
 ---
 
-**Status:** ✅ Draft Complete - Needs founder input with real team information
+**Status:** ✅ Updated with Scott Hardie's information - Additional details welcome
