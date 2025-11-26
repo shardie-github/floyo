@@ -22,7 +22,7 @@
     "@aws-sdk/client-s3": "^3.490.0",
     "@aws-sdk/s3-request-presigner": "^3.490.0",
     "@hcaptcha/react-hcaptcha": "^1.14.0",
-    "@headlessui/react": "^1.7.17",
+    "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.1.1",
     "@lottiefiles/react-lottie-player": "^3.6.0",
     "@radix-ui/react-avatar": "^1.1.11",
