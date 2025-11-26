@@ -5,6 +5,124 @@
 
 ---
 
+## MASTER TODO (Top 10-20 Most Important Tasks)
+
+### MUST DO (Blockers)
+
+1. **Fill in Team Information** (Priority: MUST, Owner: Founder)
+   - File: `/yc/YC_TEAM_NOTES.md`
+   - Add founder names, backgrounds, why this team
+   - **Why:** Required for YC application
+
+2. **Get Real User Metrics** (Priority: MUST, Owner: Founder/Tech Founder)
+   - Files: `/yc/YC_PRODUCT_OVERVIEW.md`, `/yc/YC_INTERVIEW_CHEATSHEET.md`
+   - Query database for user counts, growth rate
+   - **Why:** Investors ask "How many users do you have?"
+
+3. **Document Traction** (Priority: MUST, Owner: Founder)
+   - File: `/yc/YC_METRICS_CHECKLIST.md`
+   - Document MRR, paying customers, growth rate
+   - **Why:** Traction is strongest signal for investors
+
+4. **Set Up GitHub Secrets** (Priority: MUST, Owner: Tech Founder)
+   - GitHub → Settings → Secrets
+   - Required: VERCEL_TOKEN, SUPABASE_ACCESS_TOKEN, etc.
+   - **Why:** Required for automated deployments
+
+### NEXT (High Priority)
+
+5. **Build Metrics Dashboard** (Priority: NEXT, Owner: Tech Founder)
+   - Files: `/frontend/app/admin/metrics/`, `/yc/YC_METRICS_DASHBOARD_SKETCH.md`
+   - Display DAU/WAU/MAU, retention, revenue
+   - **Why:** Can't improve what you don't measure
+
+6. **Conduct User Validation Interviews** (Priority: NEXT, Owner: Founder)
+   - File: `/yc/VALIDATION_INTERVIEWS.md` (create if needed)
+   - Target: 10-20 interviews with Solo E-commerce Operators and Solo Full-Stack Developers
+   - **Why:** Validates problem-solution fit
+
+7. **Define North Star Metric** (Priority: NEXT, Owner: Founder)
+   - File: `/yc/YC_METRICS_CHECKLIST.md`
+   - Define and document why it matters
+   - **Why:** Helps focus product development
+
+8. **Execute Distribution Experiments** (Priority: NEXT, Owner: Founder)
+   - File: `/yc/YC_DISTRIBUTION_PLAN.md`
+   - Run: Product Hunt launch, Hacker News post, SEO landing pages
+   - **Why:** Need to prove you can acquire users
+
+9. **Complete Referral System** (Priority: NEXT, Owner: Tech Founder)
+   - Files: `/backend/api/referral.py`, `/frontend/app/invite/page.tsx`
+   - Finish implementation, test end-to-end
+   - **Why:** Viral growth lever
+
+10. **Create Hypothesis Framework** (Priority: NEXT, Owner: Founder)
+    - File: `/yc/LEAN_HYPOTHESES.md`
+    - Document explicit hypotheses with test status
+    - **Why:** Critical for Lean Startup methodology
+
+### LATER (Medium Priority)
+
+11. **Create Financial Model** (Priority: LATER, Owner: Founder)
+    - File: `/yc/YC_FINANCIAL_MODEL.md`
+    - 12-24 month projections, unit economics
+    - **Why:** Helps with fundraising and planning
+
+12. **Document Founder Story** (Priority: LATER, Owner: Founder)
+    - File: `/yc/ANTLER_FOUNDER_STORY.md` or `/yc/EF_FOUNDER_JOURNEY.md`
+    - How founders discovered problem, why this team
+    - **Why:** Important for Antler/EF applications
+
+13. **Build Shareable Integration Suggestions** (Priority: LATER, Owner: Tech Founder)
+    - File: `/frontend/app/share/[id]/page.tsx`
+    - Allow users to share integration suggestions as public URLs
+    - **Why:** Viral growth lever
+
+14. **Optimize Onboarding Flow** (Priority: LATER, Owner: Tech Founder)
+    - File: `/frontend/app/onboarding/`
+    - Analyze drop-offs, add progress indicators, A/B test
+    - **Why:** Improves activation rate
+
+15. **Create SEO Landing Pages** (Priority: LATER, Owner: Tech Founder)
+    - Files: `/frontend/app/integrations/[slug]/page.tsx`, `/frontend/app/workflows/[slug]/page.tsx`
+    - Build 10-20 SEO-optimized pages
+    - **Why:** Organic growth channel
+
+16. **Add Integration Tests** (Priority: LATER, Owner: Tech Founder)
+    - Files: `/tests/integration/`
+    - API endpoint integration tests, database migration tests
+    - **Why:** Ensures reliability
+
+17. **Implement A/B Testing Framework** (Priority: LATER, Owner: Tech Founder)
+    - Files: `/backend/lib/experiments.py`, `/frontend/lib/experiments.ts`
+    - Simple framework for experiments
+    - **Why:** Data-driven optimization
+
+18. **Document Full Life Cycle Use Case** (Priority: LATER, Owner: Founder)
+    - File: `/yc/DE_LIFECYCLE.md`
+    - Map complete user journey with metrics
+    - **Why:** Helps with Disciplined Entrepreneurship framework
+
+19. **Create Experiment Tracking System** (Priority: LATER, Owner: Founder)
+    - File: `/yc/EXPERIMENT_LOG.md`
+    - Structured log for experiments with results
+    - **Why:** Build-Measure-Learn loop
+
+20. **Add Test Coverage Reporting** (Priority: LATER, Owner: Tech Founder)
+    - Configure coverage reporting, set thresholds
+    - **Why:** Ensures code quality
+
+---
+
+**How to Use This List:**
+- Focus on MUST DO items first (blockers)
+- Then work through NEXT items (high priority)
+- LATER items can wait until core functionality is complete
+- Update status as tasks are completed
+- Add new tasks as gaps are identified
+
+---
+
 ## A. PRODUCT / STORY GAPS
 
 ### Gap 1: Missing Real User Data
