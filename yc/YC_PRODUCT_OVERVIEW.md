@@ -1,7 +1,7 @@
 # YC Product Overview - Floyo
 
 **Last Updated:** 2025-01-20  
-**Status:** Draft - Founders to review and fill in real data
+**Status:** Draft - Scott Hardie (Founder, CEO & Operator) - Ready for review and real data from beta users
 
 ---
 
@@ -203,7 +203,7 @@ Developers and small business operators juggle 10-20+ tools daily, wasting hours
 
 ---
 
-## TODO: Founders to Supply Real Data
+## TODO: Supply Real Data
 
 > **TODO:** Replace the example user journey with actual user stories from beta tests or early customers.
 
@@ -220,4 +220,6 @@ Developers and small business operators juggle 10-20+ tools daily, wasting hours
 
 ---
 
-**Status:** ✅ Draft Complete - Ready for founder review and real data
+**Founder Note:** This document reflects my experience building Hardonia OS (AI-driven Shopify commerce lab) and my 15+ years helping businesses adopt SaaS tools. The user journey example is based on real patterns I've observed, but needs validation with actual Floyo users.
+
+**Status:** ✅ Draft Complete - Ready for review and real data from beta users

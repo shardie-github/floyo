@@ -55,17 +55,23 @@
 
 ### How Do You Validate Demand?
 
-> **TODO:** Founders to fill in:
-> - User interviews conducted: [X] interviews
-> - Beta testers: [X] users
-> - Early signups: [X] signups
-> - Waitlist: [X] people
-> - Other validation: [describe]
-
-**Current Evidence:**
+**Current Validation:**
 - Extensive ICP/JTBD documentation (`/docs/ICP_AND_JTBD.md`)
-- User research suggests strong demand
-- **TODO:** Add actual user interview summaries
+- Founder's personal experience: Built Hardonia OS (AI-driven Shopify commerce lab) to solve own e-commerce operations problem
+- Founder's domain expertise: 15+ years helping businesses adopt SaaS tools (McGraw Hill, Pearson)
+- Market research: $5B TAM, $2.5B SAM, $125M SOM validates market size
+
+**TODO: Add User Validation:**
+- User interviews conducted: [X] interviews (target: 10-20)
+- Beta testers: [X] users (target: 10+)
+- Early signups: [X] signups
+- Waitlist: [X] people
+- Other validation: [describe]
+
+**Next Steps:**
+- Conduct 10-20 user interviews with Solo E-commerce Operators and Solo Full-Stack Developers
+- Document findings in `/yc/VALIDATION_INTERVIEWS.md`
+- Recruit 10+ beta users
 
 ---
 
@@ -73,27 +79,33 @@
 
 ### Key Usage and Growth Metrics
 
-> **TODO:** Founders to fill in real numbers:
+**📊 To Update:** Run `tsx scripts/fetch-metrics-and-update-docs.ts` to auto-update these numbers
 
 **Usage:**
-- **DAU:** [X] users
-- **WAU:** [X] users
-- **MAU:** [X] users
-- **Growth Rate:** [X]% month-over-month
+- **Total Users:** [Run script to get] users
+- **DAU:** [Run script to get] users
+- **WAU:** [Run script to get] users
+- **MAU:** [Run script to get] users
+- **Growth Rate:** [Run script to calculate]% month-over-month
 
 **Activation:**
-- **Activation Rate:** [X]% (users who view first suggestion within 7 days)
-- **Time to Activation:** [X] days average
+- **Activation Rate:** [Run script to get]% (users who view first suggestion within 7 days)
+- **Time to Activation:** [TODO: Calculate from events] days average
 
 **Retention:**
-- **7-Day Retention:** [X]%
-- **30-Day Retention:** [X]%
-- **Churn Rate:** [X]% monthly
+- **7-Day Retention:** [TODO: Calculate from cohorts]%
+- **30-Day Retention:** [TODO: Calculate from cohorts]%
+- **Churn Rate:** [TODO: Calculate]% monthly
 
 **Engagement:**
-- **Events per User:** [X] events/day average
-- **Suggestions Viewed:** [X] suggestions/user average
-- **Integrations Implemented:** [X] integrations/user average
+- **Events per User:** [Run script to get] events/day average
+- **Suggestions Viewed:** [TODO: Query suggestions table] suggestions/user average
+- **Integrations Implemented:** [TODO: Query integrations table] integrations/user average
+
+**Revenue:**
+- **MRR:** $[Run script to get]/month
+- **ARR:** $[Run script to get]/year
+- **Paying Customers:** [Run script to get]
 
 **How You Define and Measure Engagement:**
 - **Activated User:** Views at least one integration suggestion OR connects at least one integration

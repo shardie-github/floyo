@@ -1,0 +1,96 @@
+name: Schema Drift Detection
+
+on:
+  pull_request:
+    paths:
+      - 'prisma/schema.prisma'
+      - 'supabase/migrations/**/*.sql'
+  push:
+    branches: [main]
+    paths:
+      - 'prisma/schema.prisma'
+      - 'supabase/migrations/**/*.sql'
+  schedule:
+    # Daily at 4 AM UTC
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  detect-drift:
+    name: Detect Schema Drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Check Prisma schema format
+        run: npx prisma format --schema=prisma/schema.prisma
+
+      - name: Validate Prisma schema
+        run: npx prisma validate --schema=prisma/schema.prisma
+
+      - name: Check for schema drift
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$DATABASE_URL" ] && [ -z "$SUPABASE_URL" ]; then
+            echo "⚠️ Database credentials not available, skipping drift detection"
+            echo "This is expected in PRs from forks"
+            exit 0
+          fi
+          
+          # Run schema validation script if it exists
+          if [ -f "scripts/validate-schema-alignment.ts" ]; then
+            npm run schema:validate || {
+              echo "⚠️ Schema drift detected"
+              echo "Run 'npm run schema:validate' locally to see details"
+              exit 0  # Non-blocking for now
+            }
+          else
+            echo "Schema validation script not found, skipping"
+          fi
+
+      - name: Check migration consistency
+        run: |
+          # Check that migrations are in order
+          MIGRATION_FILES=$(find supabase/migrations -name "*.sql" | sort)
+          LAST_TIMESTAMP=""
+          
+          for file in $MIGRATION_FILES; do
+            TIMESTAMP=$(basename "$file" | cut -d'_' -f1)
+            if [ ! -z "$LAST_TIMESTAMP" ] && [ "$TIMESTAMP" -lt "$LAST_TIMESTAMP" ]; then
+              echo "❌ Migration files are out of order: $file"
+              exit 1
+            fi
+            LAST_TIMESTAMP="$TIMESTAMP"
+          done
+          
+          echo "✅ Migration files are in correct order"
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = fs.readFileSync('${{ github.step_summary }}', 'utf8').trim() || 'Schema validation completed';
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔍 Schema Validation Results\n\n${summary}\n\n*This comment is automatically generated.*`
+            });

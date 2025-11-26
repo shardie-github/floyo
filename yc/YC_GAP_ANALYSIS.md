@@ -5,6 +5,130 @@
 
 ---
 
+## MASTER TODO (Top 10-20 Most Important Tasks)
+
+### MUST DO (Blockers)
+
+1. **Fill in Team Information** (Priority: ✅ COMPLETE, Owner: Founder)
+   - File: `/yc/YC_TEAM_NOTES.md`
+   - ✅ Updated with Scott Hardie's complete information as Founder, CEO & Operator
+   - ✅ Education background, previous companies, awards, certifications all documented
+   - ✅ Founder story documents created (ANTLER_FOUNDER_STORY.md, EF_FOUNDER_JOURNEY.md)
+   - **Status:** Complete - Ready for YC application
+
+2. **Get Real User Metrics** (Priority: MUST, Owner: Founder/Tech Founder)
+   - Files: `/yc/YC_PRODUCT_OVERVIEW.md`, `/yc/YC_INTERVIEW_CHEATSHEET.md`
+   - ✅ Script created: `scripts/fetch-metrics-and-update-docs.ts`
+   - ✅ Guide created: `docs/CRITICAL_GAPS_RESOLUTION_GUIDE.md`
+   - **Action:** Run script or query database manually, then update docs
+   - **Why:** Investors ask "How many users do you have?"
+
+3. **Document Traction** (Priority: MUST, Owner: Founder)
+   - File: `/yc/YC_METRICS_CHECKLIST.md`
+   - Document MRR, paying customers, growth rate
+   - **Why:** Traction is strongest signal for investors
+
+4. **Set Up GitHub Secrets** (Priority: MUST, Owner: Tech Founder)
+   - ✅ Checklist created: `docs/GITHUB_SECRETS_CHECKLIST.md`
+   - ✅ Script created: `scripts/check-github-secrets.ts`
+   - **Action:** Review checklist, verify secrets in GitHub Settings
+   - **Why:** Required for automated deployments
+
+### NEXT (High Priority)
+
+5. **Build Metrics Dashboard** (Priority: NEXT, Owner: Tech Founder)
+   - Files: `/frontend/app/admin/metrics/`, `/yc/YC_METRICS_DASHBOARD_SKETCH.md`
+   - Display DAU/WAU/MAU, retention, revenue
+   - **Why:** Can't improve what you don't measure
+
+6. **Conduct User Validation Interviews** (Priority: NEXT, Owner: Founder)
+   - File: `/yc/VALIDATION_INTERVIEWS.md` (create if needed)
+   - Target: 10-20 interviews with Solo E-commerce Operators and Solo Full-Stack Developers
+   - **Why:** Validates problem-solution fit
+
+7. **Define North Star Metric** (Priority: ✅ COMPLETE, Owner: Founder)
+   - File: `/yc/YC_METRICS_CHECKLIST.md`
+   - ✅ Defined: "Integrations Implemented Per User Per Month"
+   - ✅ Documented why it matters
+   - **Status:** Complete
+
+8. **Execute Distribution Experiments** (Priority: NEXT, Owner: Founder)
+   - File: `/yc/YC_DISTRIBUTION_PLAN.md`
+   - Run: Product Hunt launch, Hacker News post, SEO landing pages
+   - **Why:** Need to prove you can acquire users
+
+9. **Complete Referral System** (Priority: NEXT, Owner: Tech Founder)
+   - Files: `/backend/api/referral.py`, `/frontend/app/invite/page.tsx`
+   - Finish implementation, test end-to-end
+   - **Why:** Viral growth lever
+
+10. **Create Hypothesis Framework** (Priority: NEXT, Owner: Founder)
+    - File: `/yc/LEAN_HYPOTHESES.md`
+    - Document explicit hypotheses with test status
+    - **Why:** Critical for Lean Startup methodology
+
+### LATER (Medium Priority)
+
+11. **Create Financial Model** (Priority: LATER, Owner: Founder)
+    - File: `/yc/YC_FINANCIAL_MODEL.md`
+    - 12-24 month projections, unit economics
+    - **Why:** Helps with fundraising and planning
+
+12. **Document Founder Story** (Priority: LATER, Owner: Founder)
+    - File: `/yc/ANTLER_FOUNDER_STORY.md` or `/yc/EF_FOUNDER_JOURNEY.md`
+    - How founders discovered problem, why this team
+    - **Why:** Important for Antler/EF applications
+
+13. **Build Shareable Integration Suggestions** (Priority: LATER, Owner: Tech Founder)
+    - File: `/frontend/app/share/[id]/page.tsx`
+    - Allow users to share integration suggestions as public URLs
+    - **Why:** Viral growth lever
+
+14. **Optimize Onboarding Flow** (Priority: LATER, Owner: Tech Founder)
+    - File: `/frontend/app/onboarding/`
+    - Analyze drop-offs, add progress indicators, A/B test
+    - **Why:** Improves activation rate
+
+15. **Create SEO Landing Pages** (Priority: LATER, Owner: Tech Founder)
+    - Files: `/frontend/app/integrations/[slug]/page.tsx`, `/frontend/app/workflows/[slug]/page.tsx`
+    - Build 10-20 SEO-optimized pages
+    - **Why:** Organic growth channel
+
+16. **Add Integration Tests** (Priority: LATER, Owner: Tech Founder)
+    - Files: `/tests/integration/`
+    - API endpoint integration tests, database migration tests
+    - **Why:** Ensures reliability
+
+17. **Implement A/B Testing Framework** (Priority: LATER, Owner: Tech Founder)
+    - Files: `/backend/lib/experiments.py`, `/frontend/lib/experiments.ts`
+    - Simple framework for experiments
+    - **Why:** Data-driven optimization
+
+18. **Document Full Life Cycle Use Case** (Priority: LATER, Owner: Founder)
+    - File: `/yc/DE_LIFECYCLE.md`
+    - Map complete user journey with metrics
+    - **Why:** Helps with Disciplined Entrepreneurship framework
+
+19. **Create Experiment Tracking System** (Priority: LATER, Owner: Founder)
+    - File: `/yc/EXPERIMENT_LOG.md`
+    - Structured log for experiments with results
+    - **Why:** Build-Measure-Learn loop
+
+20. **Add Test Coverage Reporting** (Priority: LATER, Owner: Tech Founder)
+    - Configure coverage reporting, set thresholds
+    - **Why:** Ensures code quality
+
+---
+
+**How to Use This List:**
+- Focus on MUST DO items first (blockers)
+- Then work through NEXT items (high priority)
+- LATER items can wait until core functionality is complete
+- Update status as tasks are completed
+- Add new tasks as gaps are identified
+
+---
+
 ## A. PRODUCT / STORY GAPS
 
 ### Gap 1: Missing Real User Data
@@ -36,21 +160,27 @@ FROM users;
 
 ### Gap 2: Missing Founder/Team Information
 **YC Question:** "Who are the founders? What's your background?"  
-**Current State:** No founder names, backgrounds, or team info in repo  
-**Severity:** HIGH  
-**Effort:** LOW (founders just need to fill in)
+**Current State:** ✅ COMPLETE - Scott Hardie (Founder, CEO & Operator) information documented  
+**Severity:** ✅ RESOLVED  
+**Effort:** ✅ COMPLETE
 
-**What's Needed:**
-- Founder names and roles
-- Backgrounds (previous companies, schools, achievements)
-- Why this team is uniquely qualified
-- Division of responsibilities
+**What's Documented:**
+- ✅ Founder name and role: Scott Hardie, Founder, CEO & Operator
+- ✅ Background: 15+ years at McGraw-Hill and Pearson Education, Solutions Architect at McGraw Hill
+- ✅ Education: MA Political Science, BA Political Science and Communication Studies (Wilfrid Laurier University)
+- ✅ Recent AI/Automation Work: Hardonia OS, PromptPilot, Daily Intel Suite
+- ✅ Awards: President's Award for Sales Excellence (2014), Acquisitions Rep of the Year (2012)
+- ✅ Why qualified: Domain expertise, e-commerce experience, AI/automation expertise, sales & enablement, technical execution
+- ✅ Founder story documents: ANTLER_FOUNDER_STORY.md, EF_FOUNDER_JOURNEY.md
 
-**Where to Put It:**
-- `/yc/YC_TEAM_NOTES.md` - Fill in founder information
-- `/README.md` - Add team section (optional)
+**Where It's Documented:**
+- ✅ `/yc/YC_TEAM_NOTES.md` - Complete founder information
+- ✅ `/README.md` - About section with founder info
+- ✅ `/dataroom/` - All investor documents updated
+- ✅ `/yc/ANTLER_FOUNDER_STORY.md` - Founder-problem fit story
+- ✅ `/yc/EF_FOUNDER_JOURNEY.md` - Founder journey and iterations
 
-**TODO:** Founders to fill in `/yc/YC_TEAM_NOTES.md`
+**Status:** ✅ COMPLETE
 
 ---
 
@@ -239,20 +369,20 @@ WHERE status = 'active' AND plan != 'free';
 
 ### Gap 11: Team Information Missing
 **YC Question:** "Who are the founders? What's your background?"  
-**Current State:** No founder information in repo  
-**Severity:** HIGH  
-**Effort:** LOW (founders just need to fill in)
+**Current State:** ✅ COMPLETE - Scott Hardie (Founder, CEO & Operator) information documented  
+**Severity:** ✅ RESOLVED  
+**Effort:** ✅ COMPLETE
 
-**What's Needed:**
-- Founder names and backgrounds
-- Previous projects/companies
-- Why this team
-- Division of responsibilities
+**What's Documented:**
+- ✅ Founder name and background: Scott Hardie, Founder, CEO & Operator
+- ✅ Previous projects/companies: McGraw Hill (13+ years), Pearson Education (2 years), Hardonia OS, PromptPilot, Daily Intel Suite
+- ✅ Why this team: Unique combination of sales/enablement experience + recent AI automation work
+- ✅ Division of responsibilities: Product strategy, engineering, sales & business development, customer enablement, infrastructure
 
-**Where to Put It:**
-- `/yc/YC_TEAM_NOTES.md` - Fill in team information
+**Where It's Documented:**
+- ✅ `/yc/YC_TEAM_NOTES.md` - Complete team information
 
-**TODO:** Founders to fill in `/yc/YC_TEAM_NOTES.md`
+**Status:** ✅ COMPLETE
 
 ---
 
@@ -320,7 +450,7 @@ WHERE status = 'active' AND plan != 'free';
 
 ### HIGH Severity (Must Fix Before YC Interview)
 1. **Missing Real User Data** (Effort: LOW)
-2. **Missing Founder/Team Information** (Effort: LOW)
+2. ✅ **Missing Founder/Team Information** (Effort: LOW) - COMPLETE
 3. **Missing Traction Evidence** (Effort: MEDIUM)
 4. **Metrics Not Instrumented** (Effort: MEDIUM)
 5. **Distribution Strategy Not Executed** (Effort: HIGH)
@@ -342,7 +472,7 @@ WHERE status = 'active' AND plan != 'free';
 ## Recommended Action Plan
 
 ### Week 1: Critical Gaps (HIGH Severity)
-1. Fill in founder/team information (`/yc/YC_TEAM_NOTES.md`)
+1. ✅ Fill in founder/team information (`/yc/YC_TEAM_NOTES.md`) - COMPLETE
 2. Query database for real user metrics
 3. Document current traction (users, revenue)
 4. Define North Star metric

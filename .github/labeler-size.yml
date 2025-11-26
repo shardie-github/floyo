@@ -1,0 +1,25 @@
+# Label PRs by size
+size/XS:
+  - changed-files: '0-9'
+    additions: '0-9'
+    deletions: '0-9'
+
+size/S:
+  - changed-files: '10-30'
+    additions: '10-50'
+    deletions: '10-50'
+
+size/M:
+  - changed-files: '31-100'
+    additions: '51-200'
+    deletions: '51-200'
+
+size/L:
+  - changed-files: '101-500'
+    additions: '201-500'
+    deletions: '201-500'
+
+size/XL:
+  - changed-files: '501+'
+    additions: '501+'
+    deletions: '501+'
