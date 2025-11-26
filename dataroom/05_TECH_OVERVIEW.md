@@ -204,15 +204,24 @@ See: `/docs/TECH_DUE_DILIGENCE_CHECKLIST.md`
 
 **Founder/Lead Developer:**
 - **Scott Hardie:** Founder/Lead Developer (Full-Stack)
+  - **Current Role:** Solutions Architect at McGraw Hill (Dec 2022 - Present)
   - **GitHub:** [shardie-github](https://github.com/shardie-github)
   - **LinkedIn:** [/scottrmhardie](https://linkedin.com/in/scottrmhardie)
+  - **Education:** MA Political Science, BA Political Science and Communication Studies (Wilfrid Laurier University)
 
 **Technical Capabilities:**
 - Full-stack development (Next.js, TypeScript, Python/FastAPI, PostgreSQL)
 - DevOps (CI/CD automation, GitHub Actions, Vercel, Supabase)
+- AI automation and agent-based systems (Hardonia OS, PromptPilot, Daily Intel Suite)
+- E-commerce systems (Shopify integrations, commerce automation)
 - Data engineering (pattern analysis, analytics infrastructure)
 - Infrastructure (monitoring, error tracking, security)
-- Previous automation tools (MASTER OMEGA PRIME, Aurora Prime, Unified Agent)
+
+**Business Capabilities:**
+- 15+ years SaaS sales and enablement (McGraw Hill, Pearson Education)
+- Enterprise solution architecture and consultative selling
+- Customer enablement and training
+- Complex SaaS integration consulting
 
 ---
 

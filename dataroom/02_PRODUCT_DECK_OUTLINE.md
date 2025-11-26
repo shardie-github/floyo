@@ -119,10 +119,11 @@ See: `/yc/YC_MARKET_VISION.md` (Competitive Analysis section)
 ## Slide 11: Team
 
 - **Scott Hardie:** Founder/Lead Developer (Full-Stack)
-  - Built Floyo end-to-end (backend, frontend, infrastructure)
-  - Previous automation tools: MASTER OMEGA PRIME, Aurora Prime, Unified Agent
+  - Solutions Architect at McGraw Hill (15+ years in educational SaaS)
+  - Built Hardonia OS (AI-driven Shopify commerce lab), PromptPilot (workflow automation), Daily Intel Suite (agent-based insights)
+  - Achieved 125% YOY sales growth, President's Award for Sales Excellence (2014)
   - GitHub: shardie-github | LinkedIn: /scottrmhardie
-- **Why This Team:** Experienced the tool sprawl problem firsthand. Built production-ready systems with comprehensive architecture, automated CI/CD, and security-first thinking.
+- **Why This Team:** 15+ years helping businesses adopt SaaS tools + recent AI automation work (Hardonia OS, PromptPilot) directly addresses Floyo's target market. Unique combination of sales/enablement experience + technical execution.
 
 See: `/yc/YC_TEAM_NOTES.md`
 

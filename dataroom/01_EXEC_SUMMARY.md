@@ -58,11 +58,12 @@ See: `/yc/YC_METRICS_CHECKLIST.md`
 
 **Founder:**
 - **Scott Hardie** - Founder/Lead Developer (Full-Stack)
+- **Current Role:** Solutions Architect at McGraw Hill (15+ years in educational SaaS)
 - **GitHub:** [shardie-github](https://github.com/shardie-github)
 - **LinkedIn:** [/scottrmhardie](https://linkedin.com/in/scottrmhardie)
 
 **Why This Team:** 
-Scott has built multiple automation and monitoring systems (MASTER OMEGA PRIME, Aurora Prime, Unified Agent) and experienced firsthand the problem of tool sprawl. Built Floyo from idea to production-ready system with comprehensive architecture, automated CI/CD, and extensive documentation. Demonstrates full-stack capability and production-ready thinking.
+Scott brings 15+ years of experience helping businesses adopt SaaS tools (McGraw Hill, Pearson) and has recently built AI automation systems directly relevant to Floyo's target market: Hardonia OS (AI-driven Shopify commerce lab replacing 7+ apps), PromptPilot (workflow automation framework), and Daily Intel Suite (agent-based insights). His combination of sales/enablement experience + recent AI automation work makes him uniquely qualified to build Floyo. Achieved 125% YOY sales growth and President's Award for Sales Excellence.
 
 See: `/yc/YC_TEAM_NOTES.md`
 

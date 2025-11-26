@@ -156,13 +156,16 @@ See: `/yc/YC_DISTRIBUTION_PLAN.md`
 
 **Scott Hardie:**
 - Role: Founder/Lead Developer (Full-Stack)
-- Background: Built Floyo end-to-end (Python/FastAPI backend, Next.js/TypeScript frontend, PostgreSQL database). Previous automation tools: MASTER OMEGA PRIME (autonomous orchestrator), Aurora Prime (infrastructure monitoring), Unified Agent (multi-agent orchestration).
+- Current Role: Solutions Architect at McGraw Hill (Dec 2022 - Present)
+- Background: 15+ years at McGraw-Hill and Pearson Education driving SaaS adoption and enterprise integrations. Achieved 125% YOY sales growth, President's Award for Sales Excellence (2014). Recent AI automation work: Built Hardonia OS (AI-driven Shopify commerce lab replacing 7+ apps), PromptPilot (workflow automation framework), Daily Intel Suite (9 agents for TikTok/AliExpress insights). Built Floyo end-to-end (Python/FastAPI backend, Next.js/TypeScript frontend, PostgreSQL database).
+- Education: MA Political Science (Wilfrid Laurier University, 2010-2011), BA Political Science and Communication Studies (Wilfrid Laurier University, 2006-2010)
 - Why qualified: 
-  - Full-stack capability: Built entire Floyo system end-to-end
-  - Production experience: Implemented monitoring, error tracking, security (RLS, privacy controls)
-  - Technical execution: Strong code quality, comprehensive architecture, automated CI/CD
+  - Domain expertise: 15+ years helping businesses adopt SaaS tools - understands how businesses integrate new tools
+  - E-commerce experience: Built Hardonia OS (AI-driven Shopify commerce lab) - directly relevant to Floyo's target market
+  - AI/automation expertise: Recent work on PromptPilot and Daily Intel Suite demonstrates ability to build agent-based systems
+  - Sales & enablement: Proven track record of driving SaaS adoption, creating enablement materials, consulting on complex integrations
+  - Technical execution: Built entire Floyo system end-to-end with production-ready infrastructure
   - Product thinking: Extensive user research (ICP/JTBD), market analysis, GTM strategy
-  - Experienced the problem: Built multiple automation tools and experienced tool sprawl firsthand
 
 **GitHub:** [shardie-github](https://github.com/shardie-github)  
 **LinkedIn:** [/scottrmhardie](https://linkedin.com/in/scottrmhardie)

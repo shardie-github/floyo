@@ -208,28 +208,48 @@
 - **Email:** scottrmhardie@gmail.com
 
 **Background:**
-- **Technical Expertise:** Full-stack development (Python/FastAPI backend, Next.js/TypeScript frontend)
-- **DevOps:** CI/CD automation, infrastructure management (Supabase, Vercel)
-- **Product:** Extensive product documentation and user research (ICP/JTBD analysis)
-- **Codebase Evidence:** Comprehensive architecture, production-ready infrastructure, automated testing
+- **Current Role:** Solutions Architect at McGraw Hill (Dec 2022 - Present, 3 years)
+- **Experience:** 15+ years at McGraw-Hill and Pearson Education
+- **Sales & Business:** Achieved 125% YOY sales growth, President's Award for Sales Excellence (2014), Acquisitions Rep of the Year (2012)
+- **Education:** MA Political Science (Wilfrid Laurier University, 2010-2011), BA Political Science and Communication Studies (Wilfrid Laurier University, 2006-2010)
+- **Recent AI/Automation Work:** 
+  - Built Hardonia OS (AI-driven Shopify commerce lab replacing 7+ apps)
+  - Created PromptPilot (SaaS framework for prompt refinement and workflow automation)
+  - Developed Daily Intel Suite (9 agents delivering TikTok/AliExpress insights)
+- **Technical Skills:** Full-stack development (Python/FastAPI backend, Next.js/TypeScript frontend), DevOps (CI/CD, Supabase, Vercel), AI automation, e-commerce systems
 
 **Why I'm Qualified:**
-- **Full-Stack Capability:** Built entire Floyo system end-to-end (backend, frontend, database, CLI tool)
-- **Production Experience:** Implemented monitoring, error tracking, analytics, security (RLS, privacy controls)
-- **Technical Execution:** Strong code quality, good architecture, comprehensive testing
-- **Product Thinking:** Extensive user research, market analysis, GTM strategy documentation
+- **Domain Expertise:** 15+ years in educational SaaS, enterprise integrations, and consultative selling - understands how businesses adopt and integrate new tools
+- **E-commerce Experience:** Built Hardonia OS (AI-driven Shopify commerce lab) - directly relevant to Floyo's target market (Solo E-commerce Operators)
+- **AI/Automation Expertise:** Recent work on PromptPilot and Daily Intel Suite demonstrates ability to build agent-based systems and automation workflows
+- **Sales & Enablement:** Proven track record of driving SaaS adoption, creating enablement materials, and consulting with clients on complex integrations
+- **Technical Execution:** Built entire Floyo system end-to-end (backend, frontend, database, CLI tool) with production-ready infrastructure
+- **Product Thinking:** Extensive user research (ICP/JTBD analysis), market analysis, GTM strategy documentation
 
 **Responsibilities:**
 - Product strategy and vision
 - Engineering (backend/frontend/full-stack)
+- Sales & business development
+- Customer enablement and consulting
 - Infrastructure and DevOps
 - Technical documentation
 
-**Previous Projects (Visible in Repo):**
+**Previous Projects:**
+
+**Recent AI/Automation Projects:**
+- **Hardonia OS:** AI-driven Shopify commerce lab replacing 7+ apps with native AI workflows to run and scale eCommerce operations
+- **PromptPilot:** SaaS framework for orchestrating real-time prompt refinement and workflow automation
+- **Daily Intel Suite:** 9 agents delivering TikTok, AliExpress, and consumer trend insights twice daily
+
+**Projects Visible in Floyo Repo:**
 - **MASTER OMEGA PRIME:** Autonomous orchestrator for full-stack systems (evident from `/scripts/master-omega-prime.ts`)
 - **Aurora Prime:** Infrastructure health monitoring system (evident from `/scripts/aurora-prime.ts`)
 - **Unified Agent:** Multi-agent orchestration system (evident from `/unified-agent/` directory)
-- **Pattern:** Built internal automation and monitoring tools, now productizing the learnings
+
+**Career Highlights:**
+- **McGraw Hill:** Solutions Architect (Dec 2022 - Present), Senior Digital Solutions Consultant (Dec 2019 - Dec 2022), Portfolio Manager (Jan 2015 - Oct 2017), Account Executive (Jan 2012 - Jan 2015)
+- **Pearson:** Portfolio Manager (Oct 2017 - Dec 2019) - Managed $8.5M/yr Business publishing portfolio
+- **Wilfrid Laurier University:** Assistant Lecturer, International Trade & Development (Sep 2010 - Apr 2011)
 
 **Technical Credibility:**
 - Comprehensive codebase demonstrating production-ready thinking
@@ -253,13 +273,13 @@
 ## Why This Team?
 
 **Unique Insight:**
-> Scott has built multiple automation and monitoring systems (MASTER OMEGA PRIME, Aurora Prime, Unified Agent) and experienced firsthand the problem of tool sprawl and manual workflow management. The insight: Developers and small business operators waste hours daily on manual work, but don't know what can be automated because they don't see the patterns in their own usage.
+> Scott brings 15+ years of experience helping businesses adopt and integrate SaaS tools (McGraw Hill, Pearson Education). He's experienced firsthand the problem of tool sprawl - both as a Solutions Architect consulting with clients on complex integrations, and as a builder of AI automation systems (Hardonia OS, PromptPilot, Daily Intel Suite). The insight: Small business operators (especially e-commerce) waste hours daily on manual work across multiple tools, but don't know what can be automated because they don't see the patterns in their own usage. Scott's combination of sales/enablement experience + recent AI automation work makes him uniquely qualified to build Floyo.
 
 **Technical Execution:**
-> Built Floyo from idea to production-ready system with comprehensive architecture, automated CI/CD, monitoring, security, and extensive documentation. Demonstrates ability to ship complex systems quickly and maintain high code quality.
+> Built Floyo from idea to production-ready system with comprehensive architecture, automated CI/CD, monitoring, security, and extensive documentation. Recent AI automation projects (Hardonia OS, PromptPilot) demonstrate ability to build complex systems that replace multiple tools with intelligent workflows. Demonstrates ability to ship complex systems quickly and maintain high code quality.
 
 **Product-Market Fit Understanding:**
-> Extensive user research (ICP/JTBD analysis) shows deep understanding of target customers (Solo E-commerce Operators, Solo Full-Stack Developers) and their pain points. Privacy-first approach differentiates from competitors.
+> Extensive user research (ICP/JTBD analysis) shows deep understanding of target customers (Solo E-commerce Operators, Solo Full-Stack Developers) and their pain points. Scott's experience building Hardonia OS (AI-driven Shopify commerce lab) directly addresses the e-commerce operator segment. His 15+ years of consultative selling and SaaS enablement gives him deep insight into how businesses adopt tools and what drives adoption. Privacy-first approach differentiates from competitors.
 
 **Execution Evidence:**
 > Floyo codebase demonstrates:
@@ -267,7 +287,8 @@
 > - Production-ready infrastructure (monitoring, error tracking, analytics)
 > - Security-first thinking (RLS policies, privacy controls)
 > - Developer experience focus (comprehensive docs, automated workflows)
-> - Previous automation tools (MASTER OMEGA PRIME, Aurora Prime) show pattern of building tools that solve real problems
+> - Recent AI automation projects (Hardonia OS, PromptPilot, Daily Intel Suite) show pattern of building tools that replace multiple apps with intelligent workflows
+> - Career track record: 125% YOY sales growth, President's Award for Sales Excellence, consistent delivery of complex SaaS integrations on time and under budget
 
 ---
 
@@ -287,11 +308,38 @@
 
 ---
 
+## Additional Information
+
+**Awards & Recognition:**
+- Acquisitions Rep of the Year (2012)
+- President's Award for Sales Excellence (2014)
+- Achieved 125% YOY sales growth
+
+**Certifications:**
+- Level 3: Word Purple Belt
+- Level 3: Excel Purple Belt
+- Figma for UX Design
+- Figma: From Design to CSS Implementation
+- Learning SQL Programming
+
+**Languages:**
+- English (Native or Bilingual)
+- French (Limited Working)
+- Spanish (Limited Working)
+
+**Top Skills:**
+- Policy Research
+- International Relations
+- Collaboration
+- Solution Architecture
+- SaaS Enablement
+- AI in Education
+- Technical Integration
+
+---
+
 ## TODO: Additional Information Needed
 
-> **TODO:** Add education background (schools, degrees)
-> **TODO:** Add previous companies/roles (if applicable)
-> **TODO:** Add notable achievements (awards, publications, open source contributions)
 > **TODO:** Add co-founder information (if applicable)
 > **TODO:** Add photos (optional but recommended)
 > **TODO:** Add any press/articles about founders
@@ -299,4 +347,4 @@
 
 ---
 
-**Status:** ✅ Updated with Scott Hardie's information - Additional details welcome
+**Status:** ✅ Updated with Scott Hardie's complete LinkedIn profile information
